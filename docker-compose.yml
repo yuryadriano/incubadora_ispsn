@@ -7,7 +7,7 @@ services:
     container_name: incubadora_web
     restart: always
     ports:
-      - "80:80"
+      - "87:80"
     environment:
       - DB_HOST=db
       - DB_USER=incubadora_user
@@ -30,6 +30,7 @@ services:
       - MYSQL_ROOT_PASSWORD=root_pass
     volumes:
       - incubadora_db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - incubadora_network
 
