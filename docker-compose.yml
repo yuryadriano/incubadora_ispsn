@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  # Serviço Web (PHP + Apache)
+  web:
+    build: .
+    container_name: incubadora_web
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - DB_HOST=db
+      - DB_USER=incubadora_user
+      - DB_PASS=incubadora_pass
+      - DB_NAME=imcubadora_ispsn
+    depends_on:
+      - db
+    networks:
+      - incubadora_network
+
+  # Serviço de Base de Dados (MariaDB)
+  db:
+    image: mariadb:10.11
+    container_name: incubadora_db
+    restart: always
+    environment:
+      - MYSQL_DATABASE=imcubadora_ispsn
+      - MYSQL_USER=incubadora_user
+      - MYSQL_PASSWORD=incubadora_pass
+      - MYSQL_ROOT_PASSWORD=root_pass
+    volumes:
+      - incubadora_db_data:/var/lib/mysql
+    networks:
+      - incubadora_network
+
+networks:
+  incubadora_network:
+    driver: bridge
+
+volumes:
+  incubadora_db_data:

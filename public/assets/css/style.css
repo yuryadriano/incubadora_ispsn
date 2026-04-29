@@ -1,0 +1,90 @@
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.card {
+    backdrop-filter: blur(3px);
+}
+
+.btn-primary {
+    border-radius: 999px;
+}
+
+.btn-primary:focus,
+.btn-primary:hover {
+    transform: translateY(-1px);
+    transition: all 0.15s ease-in-out;
+}
+:root {
+    --sn-preto: #1f1f1f;
+    --sn-dourado: #f2c037;
+    --sn-branco: #ffffff;
+    --sn-cinza: #3a3a3a;
+}
+
+/* FUNDO GERAL */
+body {
+    background: #f5f5f5;
+    color: var(--sn-preto);
+}
+
+/* SIDEBAR */
+.sidebar {
+    background: linear-gradient(
+        180deg,
+        var(--sn-preto),
+        #000
+    );
+}
+
+/* LINKS DO MENU */
+.sidebar a {
+    color: var(--sn-branco);
+}
+.sidebar a.active,
+.sidebar a:hover {
+    background: rgba(242, 192, 55, 0.2);
+    border-left: 4px solid var(--sn-dourado);
+}
+
+/* BOTÕES */
+.btn-primary {
+    background: var(--sn-dourado);
+    border-color: var(--sn-dourado);
+    color: var(--sn-preto);
+    font-weight: 600;
+}
+.btn-primary:hover {
+    background: #e0ae2f;
+    border-color: #e0ae2f;
+}
+
+/* CARDS */
+.card-grad {
+    border-radius: 18px;
+    border: none;
+}
+.bg-incubadora {
+    background: linear-gradient(
+        135deg,
+        var(--sn-dourado),
+        #ffd966
+    );
+    color: var(--sn-preto);
+}
+.bg-pfc {
+    background: linear-gradient(
+        135deg,
+        #2c2c2c,
+        var(--sn-preto)
+    );
+    color: var(--sn-branco);
+}
+.bg-acomp {
+    background: linear-gradient(
+        135deg,
+        var(--sn-preto),
+        #000
+    );
+    color: var(--sn-branco);
+}
