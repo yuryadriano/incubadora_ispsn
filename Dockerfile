@@ -18,11 +18,15 @@ RUN apt-get update \
        libfreetype6-dev \
        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl 
-
 # 4. Configurar o Servidor Web (Apache)
 # Habilitar o mod_rewrite para URLs amigáveis
 RUN a2enmod rewrite
+
+# Truque de compatibilidade para caminhos fixos /incubadora_ispsn/
+RUN ln -s /var/www/html /var/www/html/incubadora_ispsn
+
+# Criar um index.php na raiz que redireciona para o website público
+RUN echo '<?php header("Location: /incubadora_ispsn/public/website/"); exit;' > /var/www/html/index.php
 
 # 5. Copiar o Código Fonte
 COPY . /var/www/html/
