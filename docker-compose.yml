@@ -34,6 +34,23 @@ services:
     networks:
       - incubadora_network
 
+  # Interface de Gestão da BD (phpMyAdmin)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: incubadora_phpmyadmin
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=incubadora_user
+      - PMA_PASSWORD=incubadora_pass
+      - MYSQL_ROOT_PASSWORD=root_pass
+    depends_on:
+      - db
+    networks:
+      - incubadora_network
+
 networks:
   incubadora_network:
     driver: bridge
