@@ -18,6 +18,8 @@ RUN apt-get update \
        libfreetype6-dev \
        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl
+
 # 4. Configurar o Servidor Web (Apache)
 # Habilitar o mod_rewrite para URLs amigáveis
 RUN a2enmod rewrite
