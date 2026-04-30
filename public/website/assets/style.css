@@ -23,9 +23,16 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 25px 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 .navbar.scrolled { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); box-shadow: 0 1px 30px rgba(0,0,0,0.1); padding: 15px 0; }
 .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
-.nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; z-index: 1001; }
-.nav-logo img { height: 50px; width: auto; border-radius: 10px; padding: 5px; background: #fff; object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.nav-logo span { font-size: 1.1rem; color: #fff; font-weight: 500; }
+.nav-logo { 
+    display: flex; align-items: center; text-decoration: none; z-index: 1001; 
+    background: #fff; padding: 12px 28px; border-radius: 15px; 
+    box-shadow: 0 15px 45px rgba(0,0,0,0.15); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.navbar.scrolled .nav-logo { background: transparent; padding: 0; box-shadow: none; }
+.nav-logo img { height: 65px; width: auto; object-fit: contain; transition: 0.4s; }
+.navbar.scrolled .nav-logo img { height: 55px; }
+
+.nav-logo span { display: none; } /* Removido para focar no logo novo */
 .navbar.scrolled .nav-logo span { color: var(--dark); }
 .nav-logo strong { color: #fff; }
 .navbar.scrolled .nav-logo strong { color: var(--primary); }

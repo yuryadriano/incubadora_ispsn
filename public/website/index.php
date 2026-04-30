@@ -66,7 +66,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 <nav class="navbar" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
+            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="#hero">Início</a>
@@ -334,7 +334,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
             <!-- Coluna 1: Marca e Social -->
             <div class="footer-brand">
                 <div class="f-logo">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN" style="height: 60px; width: auto; background: #fff; padding: 5px; border-radius: 8px;">
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN" style="height: 80px; width: auto; background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                 </div>
                 <p class="f-desc">
                     Transformando o potencial académico em inovação de mercado. Somos o berço das próximas grandes empresas de Angola.

@@ -143,8 +143,8 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
     <div class="sidebar-brand-wrapper" style="padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px;">
         <div class="d-flex align-items-center justify-content-between">
             <a href="/incubadora_ispsn/public/website/" style="text-decoration: none; flex: 1;">
-                <div class="sidebar-logo-premium" style="background: #fff; padding: 6px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 150px;">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="Logo" style="width: 100%; height: auto; display: block; object-fit: contain;">
+                <div class="sidebar-logo-premium" style="background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); width: 100%; max-width: 180px; margin: 0 auto;">
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="Logo" style="width: 100%; height: auto; display: block; object-fit: contain;">
                 </div>
             </a>
 

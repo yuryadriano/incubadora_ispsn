@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-card">
         <div class="logo-wrapper">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="Logo ISPSN" class="logo-img" style="background: #fff; padding: 10px; border-radius: 12px;">
+            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="Logo ISPSN" class="logo-img" style="background: #fff; padding: 15px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 120px;">
         </div>
 
         <div class="login-header">
