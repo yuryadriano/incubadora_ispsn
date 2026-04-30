@@ -277,8 +277,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="circle c2"></div>
 
     <div class="login-card">
-        <div class="logo-wrapper">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="Logo ISPSN" class="logo-img" style="background: #fff; padding: 15px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-height: 120px;">
+        <div class="logo-wrapper d-flex justify-content-center">
+            <div class="nav-logo" style="background: #fff; padding: 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: fit-content; gap: 20px;">
+                <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon" style="height: 80px;">
+                <div class="logo-text-wrapper" style="text-align: left;">
+                    <span class="t1" style="font-size: 0.8rem; color: #1e293b; font-weight: 700;">Incubadora de</span>
+                    <span class="t2" style="font-size: 1.8rem; color: #1e293b; font-weight: 900;">EMPRESAS</span>
+                    <span class="t3" style="font-size: 1.8rem; color: #fbbf24; font-weight: 900;">SOL NASCENTE</span>
+                </div>
+            </div>
         </div>
 
         <div class="login-header">

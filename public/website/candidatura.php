@@ -141,7 +141,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
+            <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon">
+            <div class="logo-text-wrapper">
+                <span class="t1">Incubadora de</span>
+                <span class="t2">EMPRESAS</span>
+                <span class="t3">SOL NASCENTE</span>
+            </div>
         </a>
         <div class="nav-links">
             <a href="/incubadora_ispsn/public/website/">← Voltar ao Site</a>
