@@ -43,8 +43,8 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= get_config('website_titulo', 'Incubadora Académica ISPSN — Onde as Ideias se Tornam Realidade') ?></title>
-<meta name="description" content="<?= strip_tags(get_config('hero_subtitulo', 'A Incubadora Académica do ISPSN apoia estudantes empreendedores.')) ?>">
+<title>Incubadora Académica ISPSN — Onde as Ideias se Tornam Realidade</title>
+<meta name="description" content="A Incubadora Académica do ISPSN apoia estudantes empreendedores e acelera o talento académico angolano através de mentoria e recursos.">
 
 <!-- Bootstrap 5 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -108,10 +108,10 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
     <div class="hero-content" data-aos="fade-up" data-aos-duration="1200">
         <div class="hero-badge"><i class="fa fa-sparkles me-2"></i> O Futuro Começa Aqui no ISPSN</div>
         <h1 class="hero-title">
-            <?= get_config('hero_titulo', 'Onde as <span class="hero-gradient">Ideias</span> Ganham <span class="hero-gradient">Asas</span>') ?>
+            Onde as <span class="hero-gradient">Ideias</span> Ganham <span class="hero-gradient">Asas</span>
         </h1>
         <p class="hero-subtitle">
-            <?= get_config('hero_subtitulo', 'Aceleramos o talento académico angolano através de mentoria, recursos e um ecossistema focado no sucesso empresarial.') ?>
+            Aceleramos o talento académico angolano através de mentoria, recursos e um ecossistema focado no sucesso empresarial.
         </p>
         <div class="hero-btns">
             <?php if ($processo): ?>
@@ -188,7 +188,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
         <div class="bento-header" data-aos="fade-down">
             <span class="bento-tag">HONOR – LABOR – MERITUM</span>
             <h2 class="bento-title">Nossa Base & <span class="text-warning">Propósito</span></h2>
-            <p class="mt-4 mx-auto opacity-75" style="max-width: 800px; font-size: 1.1rem;">
+            <p class="mt-4 opacity-75" style="font-size: 1.1rem;">
                 O SOL NASCENTE não pretende ser apenas mais uma instituição de ensino superior, mas uma realidade universitária distinta. Essa distinção é sustentada pela nossa missão, visão e valores.
             </p>
         </div>
@@ -379,7 +379,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
                     <i class="fa fa-envelope-open"></i>
                     <div>
                         <span>E-mail</span>
-                        <strong><?= get_config('contacto_email', 'incubadora@ispsn.org') ?></strong>
+                        <strong>incubadora@ispsn.org</strong>
                     </div>
                 </div>
                 <div class="contact-item">
