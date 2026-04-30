@@ -26,22 +26,20 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-logo { 
     display: flex; align-items: center; text-decoration: none; z-index: 1001; 
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff; /* Cor do texto no topo */
 }
 
 .nav-logo img { 
-    height: 70px; width: auto; object-fit: contain; 
+    height: 85px; width: auto; object-fit: contain; 
     transition: 0.4s; 
-    filter: invert(1); mix-blend-mode: screen; /* Torna o fundo branco em "preto transparente" e o texto preto em branco */
 }
 
-.navbar.scrolled .nav-logo img { 
-    height: 60px; 
-    filter: none; mix-blend-mode: multiply; /* Torna o fundo branco transparente sobre o navbar branco */
-}
+.navbar.scrolled .nav-logo { color: var(--dark); } /* Cor do texto no scroll */
+.navbar.scrolled .nav-logo img { height: 70px; }
 
-@media (max-width: 576px) {
-    .nav-logo img { height: 45px; }
-    .navbar.scrolled .nav-logo img { height: 40px; }
+@media (max-width: 768px) {
+    .nav-logo img { height: 60px; }
+    .navbar.scrolled .nav-logo img { height: 55px; }
 }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }

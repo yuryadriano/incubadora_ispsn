@@ -1,0 +1,17 @@
+<svg width="300" height="100" viewBox="0 0 300 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ícone da Lâmpada (Estrutura Original) -->
+  <g id="bulb-icon">
+    <!-- Parte Superior (Sol/Luz) -->
+    <path d="M15 40C15 26.1929 26.1929 15 40 15C53.8071 15 65 26.1929 65 40H15Z" fill="#FBBF24"/>
+    <!-- Base da Lâmpada (Hexágono/Caixa) -->
+    <rect x="20" y="42" width="40" height="32" rx="4" stroke="currentColor" stroke-width="3.5"/>
+    <text x="28" y="64" fill="currentColor" style="font-family:'Inter', sans-serif; font-weight:900; font-size:14px;">SN</text>
+  </g>
+
+  <!-- Texto da Marca -->
+  <g id="brand-text">
+    <text x="80" y="32" fill="currentColor" style="font-family:'Inter', sans-serif; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">INCUBADORA DE</text>
+    <text x="80" y="58" fill="currentColor" style="font-family:'Inter', sans-serif; font-weight:900; font-size:24px; text-transform:uppercase; letter-spacing:-0.02em;">EMPRESAS</text>
+    <text x="80" y="84" fill="#FBBF24" style="font-family:'Inter', sans-serif; font-weight:900; font-size:24px; text-transform:uppercase; letter-spacing:-0.02em;">SOL NASCENTE</text>
+  </g>
+</svg>
