@@ -27,10 +27,9 @@ function limpar($str) {
 // Função para buscar configurações do website
 function get_config($chave, $default = '') {
     global $mysqli;
-    static $config_cache = null;
+    static $config_cache = [];
     
-    if ($config_cache === null) {
-        $config_cache = [];
+    if (empty($config_cache)) {
         $res = $mysqli->query("SELECT chave, valor FROM config_website");
         if ($res) {
             while ($r = $res->fetch_assoc()) {
