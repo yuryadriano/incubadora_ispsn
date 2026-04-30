@@ -28,12 +28,12 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 }
 
 .nav-logo img { 
-    height: 110px; /* Logótipo bem grande como solicitado */
+    height: 110px; 
     width: auto; 
     object-fit: contain; 
     transition: 0.4s; 
-    /* Filtro para o fundo escuro: torna o preto em branco e preserva o amarelo */
-    filter: invert(1) hue-rotate(180deg) brightness(1.2);
+    /* Efeito de contorno branco para tornar o texto preto legível no escuro sem mudar as cores */
+    filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff) drop-shadow(0 0 5px rgba(255,255,255,0.5));
 }
 
 .navbar.scrolled .nav-logo img { 
