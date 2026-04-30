@@ -141,15 +141,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-            <span>Incubadora <strong>ISPSN</strong></span>
+            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="/incubadora_ispsn/public/website/">← Voltar ao Site</a>
             <a href="/incubadora_ispsn/public/login.php" class="nav-cta-solid"><i class="fa fa-right-to-bracket"></i> Portal</a>
         </div>
+        
+        <!-- HAMBURGER (SÓ VISÍVEL EM MOBILE) -->
+        <button class="nav-hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </div>
 </nav>
+
+<!-- MENU MOBILE OVERLAY -->
+<div class="nav-mobile" id="navMobile">
+    <a href="/incubadora_ispsn/public/website/" onclick="toggleMobileMenu()">← Voltar ao Site</a>
+    <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
+</div>
 
 <div class="cand-page">
     <div class="cand-wrapper">
@@ -398,6 +410,21 @@ function updateCount(inputId, countId, min) {
     el.textContent = val;
     el.style.color = val >= min ? '#22C55E' : 'rgba(255,255,255,0.35)';
 }
+
+buildResumo();
+}
+
+// Mobile menu logic
+const hamburger = document.getElementById('hamburger');
+const navMobile = document.getElementById('navMobile');
+
+function toggleMobileMenu() {
+    hamburger.classList.toggle('active');
+    navMobile.classList.toggle('open');
+    document.body.style.overflow = navMobile.classList.contains('open') ? 'hidden' : 'auto';
+}
+
+if (hamburger) hamburger.addEventListener('click', toggleMobileMenu);
 
 document.getElementById('candidaturaForm')?.addEventListener('submit', () => {
     document.getElementById('btnSubmit').innerHTML = '<i class="fa fa-spinner fa-spin"></i> A enviar...';

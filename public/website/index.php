@@ -66,8 +66,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 <nav class="navbar" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-            <span>Incubadora <strong>ISPSN</strong></span>
+            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="#hero">Início</a>
@@ -92,12 +91,12 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 <!-- MENU MOBILE OVERLAY -->
 <div class="nav-mobile" id="navMobile">
     <a href="#hero" onclick="toggleMobileMenu()">Início</a>
+    <a href="sobre.php" onclick="toggleMobileMenu()">Sobre Nós</a>
     <a href="#adn" onclick="toggleMobileMenu()">Ecossistema</a>
-    <a href="#mvv" onclick="toggleMobileMenu()">Institucional</a>
     <a href="#noticias" onclick="toggleMobileMenu()">Notícias</a>
     <a href="#galeria" onclick="toggleMobileMenu()">Galeria</a>
-    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center">Candidatar Agora</a>
-    <a href="/incubadora_ispsn/public/login.php" class="text-center">Portal do Membro</a>
+    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center" onclick="toggleMobileMenu()"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+    <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
 </div>
 
 <!-- HERO SECTION -->
@@ -335,8 +334,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
             <!-- Coluna 1: Marca e Social -->
             <div class="footer-brand">
                 <div class="f-logo">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-                    <span>Incubadora <strong>ISPSN</strong></span>
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN" style="height: 60px; width: auto; background: #fff; padding: 5px; border-radius: 8px;">
                 </div>
                 <p class="f-desc">
                     Transformando o potencial académico em inovação de mercado. Somos o berço das próximas grandes empresas de Angola.

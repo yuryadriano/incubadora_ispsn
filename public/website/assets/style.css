@@ -24,8 +24,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .navbar.scrolled { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); box-shadow: 0 1px 30px rgba(0,0,0,0.1); padding: 15px 0; }
 .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
 .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; z-index: 1001; }
-.nav-logo img { width: 45px; height: 45px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.nav-logo span { font-size: 1.2rem; color: #fff; font-weight: 500; }
+.nav-logo img { height: 50px; width: auto; border-radius: 10px; padding: 5px; background: #fff; object-fit: contain; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.nav-logo span { font-size: 1.1rem; color: #fff; font-weight: 500; }
 .navbar.scrolled .nav-logo span { color: var(--dark); }
 .nav-logo strong { color: #fff; }
 .navbar.scrolled .nav-logo strong { color: var(--primary); }
@@ -41,14 +41,37 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-hamburger { display: none; flex-direction: column; gap: 6px; cursor: pointer; background: none; border: none; padding: 10px; z-index: 1001; }
 .nav-hamburger span { display: block; width: 28px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
 .navbar.scrolled .nav-hamburger span { background: var(--dark); }
+
+@media (max-width: 1024px) {
+    .nav-links { display: none; }
+    .nav-hamburger { display: flex; }
+    .nav-container { padding: 0 20px; }
+    .navbar { padding: 15px 0; }
+}
 .nav-hamburger.active span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
 .nav-hamburger.active span:nth-child(2) { opacity: 0; }
 .nav-hamburger.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
 .nav-mobile { position: fixed; top: 0; right: -100%; width: 80%; height: 100vh; background: #fff; z-index: 999; padding: 120px 40px; display: flex; flex-direction: column; gap: 20px; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -10px 0 30px rgba(0,0,0,0.1); }
 .nav-mobile.open { right: 0; }
-.nav-mobile a { text-decoration: none; color: var(--dark); font-size: 1.2rem; font-weight: 700; padding: 15px; border-radius: 12px; transition: 0.3s; border-bottom: 1px solid var(--border); }
+.nav-mobile a { text-decoration: none; color: var(--dark); font-size: 1.2rem; font-weight: 700; padding: 15px; border-radius: 12px; transition: 0.3s; border-bottom: 1px solid var(--border); display: block; }
 .nav-mobile a:hover { background: var(--primary-light); color: var(--primary); }
+
+.nav-portal-mobile {
+    background: var(--dark) !important;
+    color: #fff !important;
+    text-align: center;
+    padding: 18px !important;
+    border-radius: 15px;
+    margin-top: 10px;
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
 
 /* HERO SECTION */
 .hero { min-height: 100vh; display: flex; align-items: center; justify-content: center; position: relative; background: #0F172A; color: #fff; overflow: hidden; }
@@ -83,6 +106,18 @@ section { padding: 100px 0; position: relative; }
 .adn-features { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 40px; }
 .adn-feat { display: flex; flex-direction: column; gap: 10px; }
 .adn-feat i { font-size: 1.2rem; color: var(--primary); background: var(--primary-light); width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+
+@media (max-width: 992px) {
+    .adn-grid { grid-template-columns: 1fr; gap: 40px; }
+    .adn-content { text-align: center; }
+    .adn-features { justify-items: center; }
+    .adn-feat { align-items: center; text-align: center; }
+    .adn-floating-box { right: 20px; bottom: 20px; }
+}
+
+@media (max-width: 576px) {
+    .adn-features { grid-template-columns: 1fr; }
+}
 
 /* SEÇÃO PROPÓSITO - BENTO CREATIVE (ORIGINAL ISPSN) */
 .propósito-bento { padding: 120px 0; background: #fff; }
@@ -263,5 +298,12 @@ section { padding: 100px 0; position: relative; }
     .mvv-card { padding: 30px 20px; }
     
     .news-grid, .gallery-grid { grid-template-columns: 1fr; }
+    
+    .stats-overlap { padding: 30px 15px; margin-top: -50px; }
+    .stat-divider { display: none; }
+    .stat-item { padding: 20px 0; }
+    
+    .nav-mobile { width: 100%; padding: 100px 20px; }
+    .nav-mobile a { font-size: 1.1rem; padding: 12px; }
 }
 

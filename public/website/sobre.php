@@ -66,17 +66,33 @@ require_once __DIR__ . '/../../config/config.php';
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-            <span>Incubadora <strong>ISPSN</strong></span>
+            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="index.php">Início</a>
-            <a href="sobre.php">Sobre Nós</a>
+            <a href="sobre.php" class="active">Sobre Nós</a>
             <a href="index.php#noticias">Notícias</a>
-            <a href="candidatura.php" class="nav-cta-solid">Candidatar-se</a>
+            <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+            <a href="/incubadora_ispsn/public/login.php" class="nav-item">Portal <i class="fa fa-arrow-right small ms-1"></i></a>
         </div>
+
+        <!-- HAMBURGER (SÓ VISÍVEL EM MOBILE) -->
+        <button class="nav-hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </div>
 </nav>
+
+<!-- MENU MOBILE OVERLAY -->
+<div class="nav-mobile" id="navMobile">
+    <a href="index.php" onclick="toggleMobileMenu()">Início</a>
+    <a href="sobre.php" class="active" onclick="toggleMobileMenu()">Sobre Nós</a>
+    <a href="index.php#noticias" onclick="toggleMobileMenu()">Notícias</a>
+    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center" onclick="toggleMobileMenu()"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+    <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
+</div>
 
 <header class="page-hero">
     <div class="container">
@@ -166,8 +182,7 @@ require_once __DIR__ . '/../../config/config.php';
         <div class="footer-main-grid">
             <div class="footer-brand">
                 <div class="f-logo">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-                    <span>Incubadora <strong>ISPSN</strong></span>
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN" style="height: 60px; width: auto; background: #fff; padding: 5px; border-radius: 8px;">
                 </div>
                 <p class="f-desc">Transformando o potencial académico em inovação de mercado.</p>
             </div>
@@ -200,6 +215,23 @@ require_once __DIR__ . '/../../config/config.php';
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
 AOS.init({ duration: 1000, once: true });
+
+// Mobile menu logic
+const hamburger = document.getElementById('hamburger');
+const navMobile = document.getElementById('navMobile');
+
+function toggleMobileMenu() {
+    hamburger.classList.toggle('active');
+    navMobile.classList.toggle('open');
+    document.body.style.overflow = navMobile.classList.contains('open') ? 'hidden' : 'auto';
+}
+
+hamburger.addEventListener('click', toggleMobileMenu);
+
+// Navbar scroll logic (already scrolled on this page, but good to have)
+window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 80 || true);
+});
 </script>
 </body>
 </html>
