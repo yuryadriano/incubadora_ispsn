@@ -7,10 +7,12 @@ define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
-$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli = mysqli_init();
+$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 if ($mysqli->connect_errno) {
-    die('Erro na ligação à base de dados: ' . $mysqli->connect_error);
+    die('Erro na ligação à base de dados (Timeout): ' . $mysqli->connect_error);
 }
 
 $mysqli->set_charset('utf8mb4');
