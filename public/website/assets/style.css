@@ -25,24 +25,26 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
 .nav-logo { 
     display: flex; align-items: center; text-decoration: none; z-index: 1001; 
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-logo img { 
-    height: 90px; width: auto; object-fit: contain; 
+    height: 110px; /* Logótipo bem grande como solicitado */
+    width: auto; 
+    object-fit: contain; 
     transition: 0.4s; 
-    /* Filtro para manter o amarelo e tornar o preto em branco no fundo escuro */
-    filter: invert(1) hue-rotate(180deg) brightness(1.2) contrast(1.2);
+    /* Filtro para o fundo escuro: torna o preto em branco e preserva o amarelo */
+    filter: invert(1) hue-rotate(180deg) brightness(1.2);
 }
 
 .navbar.scrolled .nav-logo img { 
-    height: 75px; 
-    filter: none; mix-blend-mode: multiply; /* Fundo branco desaparece no navbar branco */
+    height: 85px; 
+    filter: none; 
+    mix-blend-mode: multiply; /* Remove o fundo branco no navbar claro */
 }
 
 @media (max-width: 768px) {
-    .nav-logo img { height: 60px; }
-    .navbar.scrolled .nav-logo img { height: 50px; }
+    .nav-logo img { height: 75px; }
+    .navbar.scrolled .nav-logo img { height: 65px; }
 }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }
