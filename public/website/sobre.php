@@ -187,11 +187,11 @@ require_once __DIR__ . '/../../config/config.php';
         <div class="footer-main-grid">
             <div class="footer-brand">
                 <div class="f-logo">
-                    <div class="nav-logo" style="background: #fff; padding: 12px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: fit-content;">
-                        <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon" style="height: 50px;">
+                    <div class="nav-logo" style="padding: 0;">
+                        <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon" style="height: 50px; filter: brightness(0) invert(1);">
                         <div class="logo-text-wrapper">
-                            <span class="t1">Incubadora de</span>
-                            <span class="t2">EMPRESAS</span>
+                            <span class="t1" style="color: rgba(255,255,255,0.6);">Incubadora de</span>
+                            <span class="t2" style="color: #fff;">EMPRESAS</span>
                             <span class="t3">SOL NASCENTE</span>
                         </div>
                     </div>

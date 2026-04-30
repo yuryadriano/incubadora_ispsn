@@ -143,12 +143,12 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
     <div class="sidebar-brand-wrapper" style="padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px;">
         <div class="d-flex align-items-center justify-content-between">
             <a href="/incubadora_ispsn/public/website/" style="text-decoration: none; flex: 1;">
-                <div class="nav-logo" style="background: #fff; padding: 10px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); width: 100%; max-width: 220px; margin: 0 auto; gap: 10px;">
-                    <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon" style="height: 45px; width: auto;">
+                <div class="nav-logo" style="padding: 0; width: 100%; max-width: 220px; margin: 0 auto; gap: 10px; background: transparent;">
+                    <img src="/incubadora_ispsn/assets/img/logo_icon.png" alt="Icon" style="height: 45px; width: auto; filter: brightness(0) invert(1);">
                     <div class="logo-text-wrapper">
-                        <span class="t1" style="font-size: 0.55rem;">Incubadora de</span>
-                        <span class="t2" style="font-size: 1.1rem;">EMPRESAS</span>
-                        <span class="t3" style="font-size: 1.1rem;">SOL NASCENTE</span>
+                        <span class="t1" style="font-size: 0.55rem; color: rgba(255,255,255,0.5);">Incubadora de</span>
+                        <span class="t2" style="font-size: 1.1rem; color: #fff;">EMPRESAS</span>
+                        <span class="t3" style="font-size: 1.1rem; color: #fbbf24;">SOL NASCENTE</span>
                     </div>
                 </div>
             </a>
