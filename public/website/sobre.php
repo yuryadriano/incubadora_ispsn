@@ -66,7 +66,7 @@ require_once __DIR__ . '/../../config/config.php';
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_ispsn.svg" alt="ISPSN">
+            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="index.php">Início</a>
@@ -182,8 +182,8 @@ require_once __DIR__ . '/../../config/config.php';
         <div class="footer-main-grid">
             <div class="footer-brand">
                 <div class="f-logo">
-                    <div class="nav-logo" style="padding: 0; color: #fff;">
-                        <img src="/incubadora_ispsn/assets/img/logo_ispsn.svg" alt="ISPSN" style="height: 70px;">
+                    <div class="nav-logo" style="padding: 0;">
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN" style="height: 70px;">
                     </div>
                 </div>
                 <p class="f-desc">Transformando o potencial académico em inovação de mercado.</p>

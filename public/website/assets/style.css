@@ -26,20 +26,23 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-logo { 
     display: flex; align-items: center; text-decoration: none; z-index: 1001; 
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    color: #fff; /* Cor do texto no topo */
 }
 
 .nav-logo img { 
-    height: 85px; width: auto; object-fit: contain; 
+    height: 90px; width: auto; object-fit: contain; 
     transition: 0.4s; 
+    /* Filtro para manter o amarelo e tornar o preto em branco no fundo escuro */
+    filter: invert(1) hue-rotate(180deg) brightness(1.2) contrast(1.2);
 }
 
-.navbar.scrolled .nav-logo { color: var(--dark); } /* Cor do texto no scroll */
-.navbar.scrolled .nav-logo img { height: 70px; }
+.navbar.scrolled .nav-logo img { 
+    height: 75px; 
+    filter: none; mix-blend-mode: multiply; /* Fundo branco desaparece no navbar branco */
+}
 
 @media (max-width: 768px) {
     .nav-logo img { height: 60px; }
-    .navbar.scrolled .nav-logo img { height: 55px; }
+    .navbar.scrolled .nav-logo img { height: 50px; }
 }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }

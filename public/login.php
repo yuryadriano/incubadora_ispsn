@@ -278,8 +278,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-card">
         <div class="logo-wrapper d-flex justify-content-center">
-            <div class="nav-logo" style="padding: 0; width: fit-content; color: var(--dark);">
-                <img src="/incubadora_ispsn/assets/img/logo_ispsn.svg" alt="ISPSN" style="height: 100px;">
+            <div class="nav-logo" style="padding: 0; width: fit-content;">
+                <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN" style="height: 100px;">
             </div>
         </div>
 
