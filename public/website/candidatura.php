@@ -411,9 +411,6 @@ function updateCount(inputId, countId, min) {
     el.style.color = val >= min ? '#22C55E' : 'rgba(255,255,255,0.35)';
 }
 
-buildResumo();
-}
-
 // Mobile menu logic
 const hamburger = document.getElementById('hamburger');
 const navMobile = document.getElementById('navMobile');

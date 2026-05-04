@@ -18,7 +18,8 @@ RUN apt-get update \
        libfreetype6-dev \
        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl
+    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl \
+    && rm -rf /var/lib/apt/lists/*
 
 # 4. Configurar o Servidor Web (Apache)
 # Habilitar o mod_rewrite para URLs amigáveis
@@ -33,7 +34,10 @@ RUN echo '<?php header("Location: /incubadora_ispsn/public/website/"); exit;' > 
 # 5. Copiar o Código Fonte
 COPY . /var/www/html/
 
-# 6. Definir Permissões (Crucial para uploads)
+# 6. Copiar configuração PHP personalizada (previne timeout 504)
+COPY php.ini /usr/local/etc/php/conf.d/incubadora.ini
+
+# 7. Definir Permissões (Crucial para uploads)
 # Garantir que as pastas de imagens tenham permissões de escrita para o Apache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
@@ -42,9 +46,9 @@ RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/assets/img/blog \
     && chmod -R 775 /var/www/html/assets/img/galeria
 
-# 7. Configuração Adicional do PHP (Opcional)
-# Se necessário, você pode adicionar um php.ini personalizado
-# COPY php.ini /usr/local/etc/php/conf.d/
+# 8. Healthcheck — permite ao Docker saber se o serviço está vivo
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
 
 # O Apache expõe a porta 80 por padrão
 EXPOSE 80
