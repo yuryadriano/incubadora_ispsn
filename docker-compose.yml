@@ -13,12 +13,8 @@ services:
       - DB_USER=incubadora_user
       - DB_PASS=incubadora_pass
       - DB_NAME=imcubadora_ispsn
-    # VOLUME: monta o código fonte directamente — git pull no servidor = alterações ao vivo
-    volumes:
-      - .:/var/www/html
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - incubadora_network
 
@@ -35,12 +31,6 @@ services:
     volumes:
       - incubadora_db_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
     networks:
       - incubadora_network
 
@@ -57,8 +47,7 @@ services:
       - PMA_PASSWORD=incubadora_pass
       - MYSQL_ROOT_PASSWORD=root_pass
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - incubadora_network
 
