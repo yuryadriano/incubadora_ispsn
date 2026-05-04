@@ -7,10 +7,15 @@ define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
-$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$mysqli = mysqli_init();
+$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+$connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
-if ($mysqli->connect_errno) {
-    die('Erro na ligação à base de dados: ' . $mysqli->connect_error);
+if (!$connected || $mysqli->connect_errno) {
+    http_response_code(503);
+    header('Retry-After: 5');
+    echo "<meta http-equiv='refresh' content='5'>";
+    die('<div style="font-family: sans-serif; text-align: center; padding: 50px; color: #333;"><h2>A conectar ao servidor...</h2><p>Por favor aguarde, a página vai atualizar automaticamente em 5 segundos.</p></div>');
 }
 
 $mysqli->set_charset('utf8mb4');
