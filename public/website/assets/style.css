@@ -33,17 +33,13 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
     width: auto; 
     object-fit: contain; 
     transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-    /* Efeito Mágico Original: Inverte o preto para branco e preserva o amarelo */
-    filter: invert(1) hue-rotate(180deg) brightness(1.2);
-    mix-blend-mode: screen; /* Remove totalmente qualquer fundo preto resultante do invert */
+    /* Logo nas cores originais puras, sem fundos nem efeitos */
 }
 
 .navbar.scrolled .nav-logo { }
 
 .navbar.scrolled .nav-logo img { 
     height: 80px; 
-    filter: none;
-    mix-blend-mode: multiply; /* Fundo branco desaparece na barra branca */
 }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }
