@@ -66,7 +66,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 <nav class="navbar" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
+            <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
         </a>
         <div class="nav-links">
             <a href="#hero">Início</a>
@@ -335,7 +335,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
             <div class="footer-brand">
                 <div class="f-logo">
                     <a href="#hero" class="nav-logo" style="padding: 0; color: #fff;">
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_new.png" alt="ISPSN">
                     </a>
                 </div>
                 <p class="f-desc">
