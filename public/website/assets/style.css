@@ -25,22 +25,29 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
 .nav-logo { 
     display: flex; align-items: center; text-decoration: none; z-index: 1001; 
-    color: #fff;
 }
 
 .nav-logo img { 
-    height: 70px; 
+    height: 60px; 
     width: auto; 
     object-fit: contain; 
-    transition: 0.4s; 
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    background: #ffffff; 
+    padding: 8px 16px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
 .navbar.scrolled .nav-logo { 
-    color: var(--dark); 
+    /* color n/a here */
 }
 
 .navbar.scrolled .nav-logo img { 
-    height: 60px; 
+    height: 55px; 
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+    mix-blend-mode: multiply; 
 }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }

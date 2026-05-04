@@ -144,7 +144,7 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
         <div class="d-flex align-items-center justify-content-between">
             <a href="/incubadora_ispsn/public/website/" style="text-decoration: none; flex: 1;">
                 <div class="nav-logo" style="padding: 0; width: 100%; max-width: 200px; margin: 0 auto; background: transparent; justify-content: center;">
-                    <img src="/incubadora_ispsn/assets/img/logo_ispsn.svg" alt="Logo" style="width: 100%; height: auto;">
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="Logo" style="width: 100%; height: auto;">
                 </div>
             </a>
 
