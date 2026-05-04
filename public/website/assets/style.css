@@ -19,37 +19,36 @@
 html { scroll-behavior: smooth; overflow-x: hidden; }
 body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
 
-/* NAVBAR PREMIUM */
-.navbar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; padding: 25px 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-.navbar.scrolled { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px); box-shadow: 0 1px 30px rgba(0,0,0,0.1); padding: 15px 0; }
+/* NAVBAR PREMIUM (SEMPRE BRANCA PARA FUNDIR COM O LOGO) */
+.navbar { 
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000; 
+    padding: 15px 0; 
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.98); 
+    backdrop-filter: blur(15px); 
+    box-shadow: 0 1px 30px rgba(0,0,0,0.1); 
+}
+
 .nav-container { max-width: 1400px; margin: 0 auto; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
 .nav-logo { 
     display: flex; align-items: center; text-decoration: none; z-index: 1001; 
 }
 
 .nav-logo img { 
-    height: 90px; 
+    height: 80px; 
     width: auto; 
     object-fit: contain; 
     transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-    /* Brilho branco subtil para o texto escuro do logo ser legível no fundo escuro */
-    filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 4px rgba(255,255,255,0.8));
+    mix-blend-mode: multiply; /* Mistura o fundo do logo com a navbar branca */
 }
 
-.navbar.scrolled .nav-logo { 
-    /* color n/a here */
-}
-
-.navbar.scrolled .nav-logo img { 
-    height: 75px; 
-    filter: none; 
-}
+/* Removemos a lógica de ".scrolled" pois agora é sempre branca */
+.navbar.scrolled .nav-logo { }
+.navbar.scrolled .nav-logo img { height: 70px; }
 
 .nav-links { display: flex; align-items: center; gap: 10px; }
-.nav-links a { text-decoration: none; color: rgba(255,255,255,0.8); font-size: 0.95rem; font-weight: 600; padding: 10px 18px; border-radius: 12px; transition: 0.3s; }
-.navbar.scrolled .nav-links a { color: var(--text-muted); }
-.nav-links a:hover, .nav-links a.active { color: #fff; background: rgba(255,255,255,0.1); }
-.navbar.scrolled .nav-links a:hover { color: var(--primary); background: var(--primary-light); }
+.nav-links a { text-decoration: none; color: var(--text-muted); font-size: 0.95rem; font-weight: 600; padding: 10px 18px; border-radius: 12px; transition: 0.3s; }
+.nav-links a:hover, .nav-links a.active { color: var(--primary); background: var(--primary-light); }
 .nav-cta-solid { background: var(--primary) !important; color: #fff !important; box-shadow: 0 8px 20px rgba(217,119,6,0.3); }
 
 /* Buttons */
@@ -66,8 +65,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 
 /* MOBILE MENU HAMBURGER */
 .nav-hamburger { display: none; flex-direction: column; gap: 6px; cursor: pointer; background: none; border: none; padding: 10px; z-index: 1001; }
-.nav-hamburger span { display: block; width: 28px; height: 2px; background: #fff; border-radius: 2px; transition: 0.3s; }
-.navbar.scrolled .nav-hamburger span { background: var(--dark); }
+.nav-hamburger span { display: block; width: 28px; height: 2px; background: var(--dark); border-radius: 2px; transition: 0.3s; }
 
 @media (max-width: 1024px) {
     .nav-links { display: none; }
