@@ -335,7 +335,7 @@ if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
             <div class="footer-brand">
                 <div class="f-logo">
                     <a href="#hero" class="nav-logo" style="padding: 0;">
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN" style="height: 80px;">
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
                     </a>
                 </div>
                 <p class="f-desc">

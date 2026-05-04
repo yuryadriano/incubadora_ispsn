@@ -183,7 +183,7 @@ require_once __DIR__ . '/../../config/config.php';
             <div class="footer-brand">
                 <div class="f-logo">
                     <div class="nav-logo" style="padding: 0;">
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN" style="height: 70px;">
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_premium.png" alt="ISPSN">
                     </div>
                 </div>
                 <p class="f-desc">Transformando o potencial académico em inovação de mercado.</p>
