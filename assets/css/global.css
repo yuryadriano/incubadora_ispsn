@@ -609,10 +609,15 @@ body {
   .page-content { padding: 20px 16px 32px; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .topbar { padding: 0 16px; }
+  .topbar-breadcrumb { display: none; } /* Ocultar breadcrumb em mobile */
+  .card-body-custom { padding: 16px; }
+  .card-header-custom { padding: 14px 16px; }
+  .page-header { margin-bottom: 20px; }
 }
 
 @media (max-width: 576px) {
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-grid { grid-template-columns: 1fr; } /* Coluna única no mobile para KPIs */
   .page-header { flex-direction: column; align-items: stretch; }
   .kpi-value { font-size: 1.6rem; }
+  .page-content { padding: 16px 12px 24px; }
 }

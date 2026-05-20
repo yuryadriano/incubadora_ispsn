@@ -24,6 +24,12 @@ $projetos = $res->fetch_all(MYSQLI_ASSOC);
         .hero::before { content: ''; position: absolute; top: -50%; right: -10%; width: 500px; height: 500px; background: radial-gradient(circle, rgba(37,99,235,0.2) 0%, transparent 70%); }
         .hero h1 { font-size: 3.5rem; font-weight: 800; margin-bottom: 20px; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
+        @media (max-width: 768px) {
+            .hero { padding: 90px 0 60px; }
+            .hero h1 { font-size: 2.2rem; }
+            .hero::before { width: 300px; height: 300px; }
+        }
+        
         /* PROJECT CARDS */
         .card-vitrine { border: none; border-radius: 24px; overflow: hidden; background: white; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); height: 100%; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .card-vitrine:hover { transform: translateY(-10px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }

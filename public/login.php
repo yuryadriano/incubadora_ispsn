@@ -117,6 +117,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             z-index: 10;
         }
 
+        @media (max-width: 576px) {
+            .login-card {
+                padding: 24px 20px;
+                border-radius: 12px;
+            }
+            .login-header h1 {
+                font-size: 1.25rem;
+            }
+            .c1 { width: 200px; height: 200px; top: -50px; left: -50px; }
+            .c2 { width: 150px; height: 150px; bottom: -20px; right: -20px; }
+        }
+
         .logo-wrapper {
             margin-bottom: 30px;
             text-align: center;
