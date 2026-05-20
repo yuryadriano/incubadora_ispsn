@@ -33,10 +33,37 @@ $noticias = [];
 $res = $mysqli->query("SELECT * FROM publicacoes_website WHERE status='publicado' ORDER BY criado_em DESC LIMIT 4");
 if ($res) while ($row = $res->fetch_assoc()) $noticias[] = $row;
 
+if (empty($noticias)) {
+    // Dados Dummy para preencher a página
+    $noticias = [
+        ['id'=>1, 'titulo'=>'Lançamento da Incubadora ISPSN', 'resumo'=>'Um novo marco para os estudantes do Huambo. Trazemos inovação e empreendedorismo!', 'imagem'=>'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80', 'criado_em'=>date('Y-m-d')],
+        ['id'=>2, 'titulo'=>'Abertas as Candidaturas 2026', 'resumo'=>'Não percas a oportunidade de transformar a tua ideia num negócio de sucesso.', 'imagem'=>'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-2 days'))],
+        ['id'=>3, 'titulo'=>'Workshop de Marketing Digital', 'resumo'=>'Aprende a usar o poder da internet para alcançar milhares de clientes com o teu MVP.', 'imagem'=>'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-5 days'))],
+        ['id'=>4, 'titulo'=>'Parceria com Bancos Locais', 'resumo'=>'Novas linhas de crédito aprovadas para financiar as melhores ideias da nossa academia.', 'imagem'=>'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-10 days'))]
+    ];
+}
+
 // Buscar galeria
 $galeria = [];
 $resG = $mysqli->query("SELECT * FROM galeria_website WHERE ativo=1 ORDER BY ordem ASC, criado_em DESC LIMIT 8");
 if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
+
+if (empty($galeria)) {
+    $galeria = [
+        ['titulo'=>'Mentorias', 'descricao'=>'Sessões de partilha', 'imagem'=>'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80'],
+        ['titulo'=>'Trabalho em Equipa', 'descricao'=>'Colaboração criativa', 'imagem'=>'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80'],
+        ['titulo'=>'Apresentações', 'descricao'=>'Pitch final para investidores', 'imagem'=>'https://images.unsplash.com/photo-1559223607-b4d0555ae227?w=800&q=80'],
+        ['titulo'=>'Laboratórios', 'descricao'=>'Espaço maker ISPSN', 'imagem'=>'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80']
+    ];
+}
+
+// Dummy Stats if empty
+if ($stats['startups'] == 0) {
+    $stats['startups'] = 12;
+    $stats['mentores'] = 8;
+    $stats['incubados'] = 5;
+    $stats['membros'] = 45;
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">

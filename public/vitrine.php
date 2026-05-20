@@ -4,7 +4,16 @@ require_once __DIR__ . '/../config/config.php';
 // Buscar apenas projetos marcados para destaque público
 $sql = "SELECT p.*, u.nome as autor FROM projetos p JOIN usuarios u ON u.id = p.criado_por WHERE p.destaque_publico = 1 ORDER BY p.criado_em DESC";
 $res = $mysqli->query($sql);
-$projetos = $res->fetch_all(MYSQLI_ASSOC);
+$projetos = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
+
+if (empty($projetos)) {
+    // Dados Dummy para preencher a vitrine
+    $projetos = [
+        ['titulo'=>'EducaTech Angola', 'descricao'=>'Plataforma inovadora de ensino à distância para conectar estudantes do ensino médio a tutores universitários em tempo real.', 'fase'=>'mvp', 'tipo'=>'tecnologica', 'area_tematica'=>'tecnologia'],
+        ['titulo'=>'AgroConnect', 'descricao'=>'Sistema integrado para gestão de colheitas e ligação direta entre pequenos agricultores locais e grandes mercados da capital.', 'fase'=>'mercado', 'tipo'=>'tradicional', 'area_tematica'=>'ambiente'],
+        ['titulo'=>'MedISPSN', 'descricao'=>'Aplicação mobile para marcação de consultas e triagem inteligente utilizando IA, focada em clínicas de baixo custo.', 'fase'=>'ideacao', 'tipo'=>'social', 'area_tematica'=>'saude']
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt">
