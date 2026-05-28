@@ -36,12 +36,20 @@ if ($res) while ($row = $res->fetch_assoc()) $noticias[] = $row;
 if (empty($noticias)) {
     // Dados Dummy para preencher a página
     $noticias = [
-        ['id'=>99, 'titulo'=>'Candidaturas Abertas Brevemente - ISPSN 2026', 'resumo'=>'Prepare o seu projecto! O ecossistema de inovação do ISPSN está prestes a abrir portas para novas ideias transformadoras.', 'imagem'=>'/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png', 'criado_em'=>date('Y-m-d')],
         ['id'=>1, 'titulo'=>'Lançamento da Incubadora ISPSN', 'resumo'=>'Um novo marco para os estudantes do Huambo. Trazemos inovação e empreendedorismo!', 'imagem'=>'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80', 'criado_em'=>date('Y-m-d')],
         ['id'=>2, 'titulo'=>'Workshop de Marketing Digital', 'resumo'=>'Aprende a usar o poder da internet para alcançar milhares de clientes com o teu MVP.', 'imagem'=>'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-5 days'))],
         ['id'=>4, 'titulo'=>'Parceria com Bancos Locais', 'resumo'=>'Novas linhas de crédito aprovadas para financiar as melhores ideias da nossa academia.', 'imagem'=>'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-10 days'))]
     ];
 }
+
+// Forçar item de "Candidaturas Brevemente" no topo
+array_unshift($noticias, [
+    'id'=>99, 
+    'titulo'=>'Candidaturas Abertas Brevemente - ISPSN 2026', 
+    'resumo'=>'Prepare o seu projecto! O ecossistema de inovação do ISPSN está prestes a abrir portas para novas ideias transformadoras.', 
+    'imagem'=>'/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png', 
+    'criado_em'=>date('Y-m-d')
+]);
 
 // Buscar galeria
 $galeria = [];
