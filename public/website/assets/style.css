@@ -37,7 +37,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
     filter: drop-shadow(0 0 2px rgba(255,255,255,0.9)) drop-shadow(0 0 5px rgba(255,255,255,0.5));
 }
 
-.navbar.scrolled .nav-logo { }
+
 
 .navbar.scrolled .nav-logo img { 
     height: 80px; 
@@ -239,69 +239,161 @@ section { padding: 100px 0; position: relative; }
     .side-card-img { width: 100px; min-width: 100px; height: 100px; }
 }
 
-/* GALLERY MODERN */
+/* GALLERY MODERN - BENTO REESTRUTURADO */
 .gallery-modern-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
+    grid-auto-rows: 280px;
+    grid-auto-flow: dense;
+    gap: 20px;
 }
+
 .gallery-card {
-    background: #fff;
-    border-radius: 16px;
+    position: relative;
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    border: 1px solid var(--border);
-    transition: 0.3s;
+    background: var(--dark);
+    border: none;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
 }
+
+/* Classes de Variação Bento */
+.gallery-card.g-wide { grid-column: span 2; }
+.gallery-card.g-tall { grid-row: span 2; }
+
+@media (max-width: 768px) {
+    .gallery-card.g-wide { grid-column: span 1; }
+    .gallery-card.g-tall { grid-row: span 1; }
+}
+
 .gallery-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+    z-index: 10;
 }
+
 .gallery-photo {
-    height: 220px;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
     position: relative;
 }
+
 .gallery-photo img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: 0.5s;
+    transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .gallery-card:hover .gallery-photo img {
-    transform: scale(1.05);
+    transform: scale(1.1);
+    filter: brightness(0.6) blur(2px);
 }
+
 .photo-zoom {
     position: absolute;
     inset: 0;
-    background: rgba(15,23,42,0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: 0.3s;
+    z-index: 3;
+    transition: 0.4s;
+    background: radial-gradient(circle, rgba(217, 119, 6, 0.2) 0%, transparent 70%);
 }
+
 .gallery-card:hover .photo-zoom {
     opacity: 1;
 }
+
 .photo-zoom i {
     color: #fff;
-    font-size: 2rem;
+    font-size: 2.5rem;
+    transform: scale(0.5);
+    transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+.gallery-card:hover .photo-zoom i {
+    transform: scale(1);
+}
+
 .gallery-caption {
-    padding: 20px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 30px;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.95), transparent);
+    color: #fff;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    backdrop-filter: blur(0);
 }
+
+.gallery-card:hover .gallery-caption {
+    transform: translateY(0);
+    opacity: 1;
+    backdrop-filter: blur(10px);
+}
+
 .gallery-caption h5 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 5px;
-    color: var(--dark);
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #FCD34D;
 }
+
 .gallery-caption p {
     font-size: 0.9rem;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.8);
     margin: 0;
+    line-height: 1.4;
 }
+
+/* Modal Lightbox Light */
+#lightboxModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.98);
+    z-index: 9999;
+    padding: 40px;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+}
+
+#lightboxModal img {
+    max-width: 90%;
+    max-height: 85vh;
+    border-radius: 12px;
+    box-shadow: 0 0 100px rgba(0,0,0,0.5);
+    transform: scale(0.9);
+    transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#lightboxModal.open {
+    display: flex;
+}
+
+#lightboxModal.open img {
+    transform: scale(1);
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    color: #fff;
+    font-size: 2.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.lightbox-close:hover { color: var(--primary); }
 
 /* FOOTER PREMIUM STYLES */
 .footer { background: #0F172A; color: rgba(255,255,255,0.6); padding: 100px 0 40px; border-top: 1px solid rgba(255,255,255,0.05); }

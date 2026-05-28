@@ -337,11 +337,16 @@ if ($stats['startups'] == 0) {
             <?php if (empty($galeria)): ?>
                 <div class="col-12 text-center py-5 opacity-20"><i class="fa fa-images fa-4x mb-3"></i><p>A carregar momentos...</p></div>
             <?php else: ?>
-                <?php foreach ($galeria as $i => $g): ?>
-                <div class="gallery-card" data-aos="fade-up" data-aos-delay="<?= $i * 50 ?>">
+                <?php foreach ($galeria as $i => $g): 
+                    // Lógica para variação Bento
+                    $bentoClass = '';
+                    if ($i % 5 == 0) $bentoClass = 'g-wide';
+                    elseif ($i % 5 == 3) $bentoClass = 'g-tall';
+                ?>
+                <div class="gallery-card <?= $bentoClass ?>" data-aos="fade-up" data-aos-delay="<?= $i * 50 ?>" onclick="openLightbox('<?= $g['imagem'] ?>')">
                     <div class="gallery-photo">
-                        <img src="<?= $g['imagem'] ?>" alt="Gallery">
-                        <div class="photo-zoom"><i class="fa fa-search-plus"></i></div>
+                        <img src="<?= $g['imagem'] ?>" alt="Gallery" loading="lazy">
+                        <div class="photo-zoom"><i class="fa fa-expand"></i></div>
                     </div>
                     <div class="gallery-caption">
                         <h5><?= htmlspecialchars($g['titulo']) ?></h5>
@@ -353,6 +358,12 @@ if ($stats['startups'] == 0) {
         </div>
     </div>
 </section>
+
+<!-- LIGHTBOX MODAL -->
+<div id="lightboxModal" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightboxImg" src="" alt="Zoom">
+</div>
 
 <!-- FOOTER - PREMIUM REDESIGN -->
 <footer class="footer">
@@ -496,6 +507,26 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             });
         }
     });
+});
+
+// Lightbox Logic
+const lightbox = document.getElementById('lightboxModal');
+const lightboxImg = document.getElementById('lightboxImg');
+
+function openLightbox(src) {
+    lightboxImg.src = src;
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    lightbox.classList.remove('open');
+    document.body.style.overflow = 'auto';
+}
+
+// Close lightbox on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
 });
 </script>
 </body>
