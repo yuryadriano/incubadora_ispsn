@@ -304,7 +304,11 @@ if ($stats['startups'] == 0) {
                         <h3 class="feat-title"><?= htmlspecialchars($feat['titulo']) ?></h3>
                         <p class="feat-excerpt"><?= htmlspecialchars($feat['resumo']) ?></p>
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            <a href="noticia.php?id=<?= $feat['id'] ?>" class="btn-feat-more">Ler mais</a>
+                            <?php if ($feat['id'] == 99): ?>
+                                <a href="javascript:void(0)" onclick="alert('Prepare-se! As candidaturas para a Incubadora ISPSN abrirão brevemente no nosso portal. Fique atento para o anúncio oficial do edital.')" class="btn-feat-more">Saber mais</a>
+                            <?php else: ?>
+                                <a href="noticia.php?id=<?= $feat['id'] ?>" class="btn-feat-more">Ler mais</a>
+                            <?php endif; ?>
                             <span class="feat-date"><?= date('d/m/Y', strtotime($feat['criado_em'])) ?></span>
                         </div>
                     </div>
@@ -321,7 +325,11 @@ if ($stats['startups'] == 0) {
                             <h5 class="side-card-title"><?= htmlspecialchars($n['titulo']) ?></h5>
                             <p class="side-card-excerpt"><?= htmlspecialchars($n['resumo']) ?></p>
                             <div class="side-card-footer">
-                                <a href="noticia.php?id=<?= $n['id'] ?>" class="side-card-link">LER MAIS</a>
+                                <?php if ($n['id'] == 99): ?>
+                                    <a href="javascript:void(0)" onclick="alert('As candidaturas para a Incubadora ISPSN abrirão brevemente!')" class="side-card-link">SABER MAIS</a>
+                                <?php else: ?>
+                                    <a href="noticia.php?id=<?= $n['id'] ?>" class="side-card-link">LER MAIS</a>
+                                <?php endif; ?>
                                 <span class="side-card-date"><?= date('d/m/Y', strtotime($n['criado_em'])) ?></span>
                             </div>
                         </div>
