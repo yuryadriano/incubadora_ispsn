@@ -1,8 +1,12 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
-// Cache busting
-$css_version = time();
+// Headers de cache — permite Cloudflare e browsers cachear a página pública
+header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+header('Vary: Accept-Encoding');
+
+// Cache busting (versão fixa definida no config, muda apenas no deploy)
+$css_version = ASSET_VERSION;
 
 // Buscar processo de candidatura ativo
 $processo = null;
@@ -21,12 +25,22 @@ $res = $mysqli->query("
 ");
 if ($res) while ($row = $res->fetch_assoc()) $projetos[] = $row;
 
-// Estatísticas reais
-$stats = [];
-$r = $mysqli->query("SELECT COUNT(*) n FROM projetos WHERE estado NOT IN ('rejeitado')"); $stats['startups'] = (int)$r->fetch_assoc()['n'];
-$r = $mysqli->query("SELECT COUNT(*) n FROM usuarios WHERE perfil='mentor' AND activo=1"); $stats['mentores'] = (int)$r->fetch_assoc()['n'];
-$r = $mysqli->query("SELECT COUNT(*) n FROM projetos WHERE estado='incubado'"); $stats['incubados'] = (int)$r->fetch_assoc()['n'];
-$r = $mysqli->query("SELECT COUNT(*) n FROM usuarios WHERE activo=1"); $stats['membros'] = (int)$r->fetch_assoc()['n'];
+// Estatísticas reais — UMA ÚNICA query combinada em vez de 4 separadas
+$stats = ['startups' => 0, 'mentores' => 0, 'incubados' => 0, 'membros' => 0];
+$r = $mysqli->query("
+    SELECT 
+        (SELECT COUNT(*) FROM projetos WHERE estado NOT IN ('rejeitado')) AS startups,
+        (SELECT COUNT(*) FROM usuarios WHERE perfil='mentor' AND activo=1) AS mentores,
+        (SELECT COUNT(*) FROM projetos WHERE estado='incubado') AS incubados,
+        (SELECT COUNT(*) FROM usuarios WHERE activo=1) AS membros
+");
+if ($r) {
+    $row = $r->fetch_assoc();
+    $stats['startups']  = (int)$row['startups'];
+    $stats['mentores']  = (int)$row['mentores'];
+    $stats['incubados'] = (int)$row['incubados'];
+    $stats['membros']   = (int)$row['membros'];
+}
 
 // Buscar publicações recentes (4 para o layout ISPTEC)
 $noticias = [];

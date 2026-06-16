@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
+
+// Headers de cache — permite Cloudflare cachear a página
+header('Cache-Control: public, max-age=120, s-maxage=300, stale-while-revalidate=600');
+header('Vary: Accept-Encoding');
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">

@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
+// Headers de cache para conteúdo de notícias
+header('Cache-Control: public, max-age=120, s-maxage=300, stale-while-revalidate=600');
+header('Vary: Accept-Encoding');
+
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header("Location: index.php"); exit; }
 

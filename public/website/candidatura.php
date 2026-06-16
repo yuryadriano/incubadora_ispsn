@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
+// Cache apenas em GET (formulário de candidatura)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+    header('Vary: Accept-Encoding');
+}
+
 // Verificar se há processo aberto
 $processo = null;
 $res = $mysqli->query("SELECT * FROM processos_candidatura WHERE estado='aberto' ORDER BY criado_em DESC LIMIT 1");
