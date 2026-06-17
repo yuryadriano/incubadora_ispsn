@@ -3,7 +3,8 @@ require_once __DIR__ . '/../../config/config.php';
 
 // Cache apenas em GET (formulário de candidatura)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+    header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=3600');
+    header('CDN-Cache-Control: public, max-age=300, stale-while-revalidate=300, stale-if-error=86400');
     header('Vary: Accept-Encoding');
 }
 

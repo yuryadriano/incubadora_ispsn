@@ -3,24 +3,31 @@ require_once __DIR__ . '/../../config/config.php';
 
 // Headers de cache para conteúdo de notícias
 header('Cache-Control: public, max-age=120, s-maxage=300, stale-while-revalidate=600');
+header('CDN-Cache-Control: max-age=600');
 header('Vary: Accept-Encoding');
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header("Location: index.php"); exit; }
 
-$res = $mysqli->query("
+$stmt = $mysqli->prepare("
     SELECT p.*, u.nome as autor_nome 
     FROM publicacoes_website p 
     LEFT JOIN usuarios u ON u.id = p.criado_por 
-    WHERE p.id = $id AND p.status = 'publicado'
+    WHERE p.id = ? AND p.status = 'publicado'
+    LIMIT 1
 ");
-$noticia = $res->fetch_assoc();
+$stmt->bind_param('i', $id);
+$stmt->execute();
+$noticia = $stmt->get_result()->fetch_assoc();
 
 if (!$noticia) { header("Location: index.php"); exit; }
 
 // Buscar outras notícias para a barra lateral ou sugestões
 $sugestoes = [];
-$resS = $mysqli->query("SELECT * FROM publicacoes_website WHERE status='publicado' AND id != $id ORDER BY criado_em DESC LIMIT 3");
+$stmtS = $mysqli->prepare("SELECT id, titulo, imagem, criado_em FROM publicacoes_website WHERE status='publicado' AND id != ? ORDER BY criado_em DESC LIMIT 3");
+$stmtS->bind_param('i', $id);
+$stmtS->execute();
+$resS = $stmtS->get_result();
 if ($resS) while ($row = $resS->fetch_assoc()) $sugestoes[] = $row;
 ?>
 <!DOCTYPE html>

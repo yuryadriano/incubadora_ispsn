@@ -23,7 +23,8 @@ $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if (!$connected || $mysqli->connect_errno) {
     http_response_code(503);
     header('Retry-After: 30');
-    header('Cache-Control: no-store');
+    // Permitir que o Cloudflare sirva uma cópia antiga (stale) se existir
+    header('Cache-Control: public, max-age=0, stale-if-error=86400');
     // SEM auto-refresh — evita loop de requests que sobrecarrega o servidor
     die('<div style="font-family: sans-serif; text-align: center; padding: 50px; color: #333;">
         <h2>⚠️ Serviço Temporariamente Indisponível</h2>
