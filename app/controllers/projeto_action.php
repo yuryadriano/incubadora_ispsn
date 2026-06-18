@@ -386,6 +386,123 @@ if ($action === 'toggle_destaque') {
     exit;
 }
 
+if ($action === 'atualizar_estado_tarefa') {
+    $idTarefa = (int)$_POST['id_tarefa'];
+    $novoStatus = $_POST['status'] ?? 'concluida';
+    $evidenciaNota = trim($_POST['evidencia_nota'] ?? '');
+
+    if ($idTarefa > 0) {
+        // Garantir que a tarefa pertence ao projeto do estudante/membro
+        $checkPerm = $mysqli->prepare("
+            SELECT t.id, t.id_projeto 
+            FROM tarefas t 
+            JOIN projetos p ON p.id = t.id_projeto 
+            LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id AND mp.id_usuario = ?
+            WHERE t.id = ? AND (p.criado_por = ? OR mp.id_usuario IS NOT NULL)
+            LIMIT 1
+        ");
+        $checkPerm->bind_param('iii', $idUsuario, $idTarefa, $idUsuario);
+        $checkPerm->execute();
+        $tarefaValida = $checkPerm->get_result()->fetch_assoc();
+        $checkPerm->close();
+
+        if ($tarefaValida) {
+            if ($novoStatus === 'concluida') {
+                $evidenciaPath = null;
+                // Processar upload de arquivo de evidência
+                if (isset($_FILES['evidencia_ficheiro']) && $_FILES['evidencia_ficheiro']['error'] === UPLOAD_ERR_OK) {
+                    $file = $_FILES['evidencia_ficheiro'];
+                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                    $novoNome = "evid_" . $idTarefa . "_" . time() . "_" . uniqid() . "." . $ext;
+                    $folder = __DIR__ . "/../../uploads/evidencias/";
+                    if (!is_dir($folder)) {
+                        mkdir($folder, 0777, true);
+                    }
+                    if (move_uploaded_file($file['tmp_name'], $folder . $novoNome)) {
+                        $evidenciaPath = "uploads/evidencias/" . $novoNome;
+                    }
+                }
+
+                $stmt = $mysqli->prepare("
+                    UPDATE tarefas 
+                    SET status = 'concluida', 
+                        evidencia_path = COALESCE(?, evidencia_path), 
+                        evidencia_nota = ?, 
+                        validada_mentor = 0 
+                    WHERE id = ?
+                ");
+                $stmt->bind_param('ssi', $evidenciaPath, $evidenciaNota, $idTarefa);
+                if ($stmt->execute()) {
+                    $_SESSION['flash_ok'] = "Evidência submetida com sucesso! A aguardar validação do mentor.";
+                } else {
+                    $_SESSION['flash_erro'] = "Erro ao enviar evidência.";
+                }
+                $stmt->close();
+            } else {
+                // Atualizar apenas para 'em_progresso' ou 'pendente'
+                $stmt = $mysqli->prepare("UPDATE tarefas SET status = ?, validada_mentor = 0 WHERE id = ?");
+                $stmt->bind_param('si', $novoStatus, $idTarefa);
+                if ($stmt->execute()) {
+                    $_SESSION['flash_ok'] = "Estado da tarefa atualizado para " . strtoupper(str_replace('_', ' ', $novoStatus)) . ".";
+                }
+                $stmt->close();
+            }
+        } else {
+            $_SESSION['flash_erro'] = "Permissão negada.";
+        }
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+if ($action === 'validar_tarefa_mentor') {
+    $idTarefa = (int)$_POST['id_tarefa'];
+
+    if ($idTarefa > 0 && in_array($perfil, ['mentor', 'admin', 'superadmin'])) {
+        $chk = $mysqli->prepare("SELECT id_projeto, validada_mentor, titulo FROM tarefas WHERE id = ?");
+        $chk->bind_param('i', $idTarefa);
+        $chk->execute();
+        $tarefa = $chk->get_result()->fetch_assoc();
+        $chk->close();
+
+        if ($tarefa) {
+            if ($tarefa['validada_mentor'] == 0) {
+                $stmt = $mysqli->prepare("UPDATE tarefas SET status = 'concluida', validada_mentor = 1 WHERE id = ?");
+                $stmt->bind_param('i', $idTarefa);
+                if ($stmt->execute()) {
+                    // Atribuir 10 pontos de inovação
+                    $idProj = $tarefa['id_projeto'];
+                    $mysqli->query("UPDATE projetos SET pontos = pontos + 10 WHERE id = $idProj");
+
+                    // Notificar o dono do projeto
+                    $sqlDono = "SELECT criado_por, titulo FROM projetos WHERE id = ?";
+                    $stD = $mysqli->prepare($sqlDono);
+                    $stD->bind_param('i', $idProj);
+                    $stD->execute();
+                    $projInfo = $stD->get_result()->fetch_assoc();
+                    $stD->close();
+
+                    if ($projInfo) {
+                        $msg = "A evidência para a meta \"" . htmlspecialchars($tarefa['titulo']) . "\" foi validada pelo mentor. +10 SP atribuídos à startup!";
+                        enviarNotificacao($projInfo['criado_por'], "Meta Validada! 🎯", $msg, 'sucesso');
+                    }
+
+                    $_SESSION['flash_ok'] = "Meta validada com sucesso! +10 SP atribuídos à startup.";
+                } else {
+                    $_SESSION['flash_erro'] = "Erro ao validar meta.";
+                }
+                $stmt->close();
+            } else {
+                $_SESSION['flash_ok'] = "Esta meta já tinha sido validada anteriormente.";
+            }
+        }
+    } else {
+        $_SESSION['flash_erro'] = "Permissão negada.";
+    }
+    header("Location: $redirect");
+    exit;
+}
+
 if ($action === 'enviar_mensagem') {
     $idProjeto = (int)$_POST['id_projeto'];
     $mensagem  = trim($_POST['mensagem']);

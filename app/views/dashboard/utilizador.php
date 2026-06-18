@@ -56,7 +56,7 @@ $minhasPfcs = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
 $stmt->close();
 
 $stmt = $mysqli->prepare("
-    SELECT titulo, estado, criado_em
+    SELECT *
     FROM projetos
     WHERE criado_por=?
     ORDER BY criado_em DESC LIMIT 1
@@ -228,6 +228,37 @@ if ($ultimoProjeto) {
         'total' => $totalAval
     ];
     $stmt->close();
+
+    // ── BUSCAR DOCUMENTOS DO PROJETO ──
+    $meusDocumentos = [];
+    $stmtDoc = $mysqli->prepare("
+        SELECT f.*, u.nome as quem_submeteu, u.perfil as perfil_submeteu
+        FROM ficheiros_projeto f
+        JOIN usuarios u ON u.id = f.id_usuario_up
+        WHERE f.id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
+        ORDER BY f.criado_em DESC
+    ");
+    $stmtDoc->bind_param('i', $idUsuario);
+    $stmtDoc->execute();
+    $meusDocumentos = $stmtDoc->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtDoc->close();
+
+    // ── BUSCAR ESPAÇOS DISPONÍVEIS E RESERVAS ──
+    $espacosDisponiveis = $mysqli->query("SELECT * FROM espacos WHERE status = 'disponivel' ORDER BY tipo, nome")->fetch_all(MYSQLI_ASSOC);
+
+    $minhasReservasPainel = [];
+    $stmtRes = $mysqli->prepare("
+        SELECT r.*, e.nome as espaco_nome, e.tipo as espaco_tipo 
+        FROM reservas_espaco r 
+        JOIN espacos e ON e.id = r.id_espaco 
+        WHERE r.id_usuario = ? 
+        ORDER BY r.data_reserva DESC, r.hora_inicio DESC
+        LIMIT 4
+    ");
+    $stmtRes->bind_param('i', $idUsuario);
+    $stmtRes->execute();
+    $minhasReservasPainel = $stmtRes->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtRes->close();
 }
 ?>
 <?php
@@ -240,538 +271,815 @@ require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
 <style>
-    .task-badge {
-        font-size: 0.65rem;
-        padding: 1px 5px;
-        border-radius: 4px;
-        font-weight: 700;
-        text-transform: uppercase;
+    /* ── DESIGN TOKENS & CLASS GLASSMORPHISM ── */
+    :root {
+        --primary-glass: rgba(217, 119, 6, 0.08);
+        --success-glass: rgba(16, 185, 129, 0.08);
+        --info-glass: rgba(59, 130, 246, 0.08);
+        --purple-glass: rgba(139, 92, 246, 0.08);
+        --danger-glass: rgba(239, 68, 68, 0.08);
+        --border-glass: rgba(253, 230, 138, 0.25);
     }
-    .task-pendente { background: #fee2e2; color: #991b1b; }
-    .task-em_progresso { background: #fef3c7; color: #92400e; }
-    .task-concluida { background: #dcfce7; color: #166534; }
 
-    /* COMPACT CARDS OVERRIDE */
-    .kpi-card { 
-        padding: 1.25rem !important; 
+    .glass-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-glass);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 32px 0 rgba(139, 92, 246, 0.03);
+        transition: transform var(--transition), box-shadow var(--transition);
+        overflow: hidden;
+    }
+    .glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px 0 rgba(217, 119, 6, 0.06);
+    }
+
+    /* Cabeçalho Premium */
+    .welcome-banner {
+        background: linear-gradient(135deg, #1C1917 0%, #27272A 100%);
+        border-radius: var(--radius-lg);
+        padding: 35px 30px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.05);
+        box-shadow: var(--shadow-lg);
+        margin-bottom: 28px;
+    }
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(217, 119, 6, 0.15) 0%, transparent 70%);
+        top: -100px;
+        right: -50px;
+        z-index: 1;
+    }
+    .welcome-banner-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    /* Stepper */
+    .stepper-track-modern {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        padding: 20px 0;
+        margin-top: 10px;
+    }
+    .stepper-track-modern::before {
+        content: '';
+        position: absolute;
+        top: 38px;
+        left: 8%;
+        right: 8%;
+        height: 4px;
+        background: #F3F4F6;
+        z-index: 1;
+        border-radius: 10px;
+    }
+    .stepper-track-modern-progress {
+        position: absolute;
+        top: 38px;
+        left: 8%;
+        height: 4px;
+        background: linear-gradient(90deg, #10B981, var(--primary));
+        z-index: 1;
+        border-radius: 10px;
+        transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .step-node {
+        position: relative;
+        z-index: 2;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        min-height: 140px;
-        transition: all 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.05) !important;
+        align-items: center;
+        flex: 1;
     }
-    .kpi-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-    }
-    .kpi-value { 
-        font-size: 1.75rem !important; 
-        font-weight: 800 !important;
-        margin-bottom: 0.25rem !important;
-    }
-    .kpi-icon { 
-        width: 42px !important; 
-        height: 42px !important; 
-        font-size: 1.1rem !important; 
-        margin-bottom: 12px !important;
+    .step-icon-outer {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #E5E7EB;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 12px;
-        background: color-mix(in srgb, var(--kpi-color), transparent 90%);
-        color: var(--kpi-color);
+        font-size: 1rem;
+        color: #9CA3AF;
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
     }
-    .kpi-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: var(--text-secondary);
+    .step-node.completed .step-icon-outer {
+        background: #10B981;
+        border-color: #10B981;
+        color: #fff;
+    }
+    .step-node.active .step-icon-outer {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+        transform: scale(1.15);
+        box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.2);
+    }
+    .step-node-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #9CA3AF;
+        margin-top: 10px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
-    .kpi-trend {
-        margin-top: auto;
-        font-size: 0.75rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .card-body-custom { padding: 1.25rem !important; }
-    .card-header-custom { padding: 1rem 1.25rem !important; }
+    .step-node.completed .step-node-label { color: #10B981; }
+    .step-node.active .step-node-label { color: var(--text-primary); }
 
-    /* STEPPER PIPELINE - MODERN & COMPACT */
-    .innovation-pipeline-stepper {
-        position: relative;
-        padding: 10px 0;
+    /* Interactive Checklist */
+    .checklist-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
-    .stepper-track {
+    .checklist-item {
+        padding: 16px 20px;
+        border-radius: var(--radius);
+        background: #fff;
+        border: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
-        position: relative;
+        align-items: center;
+        transition: all 0.2s ease;
     }
-    .stepper-track::before {
-        content: '';
-        position: absolute;
-        top: 14px;
-        left: 5%;
-        right: 5%;
-        height: 2px;
-        background: #eef2f7;
-        z-index: 1;
+    .checklist-item:hover {
+        border-color: var(--primary);
+        background: #FAF7F2;
     }
-    .step-item {
-        position: relative;
-        z-index: 2;
-        text-align: center;
-        flex: 1;
+    .checklist-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
     }
-    .step-dot {
-        width: 28px;
-        height: 28px;
+    .checklist-checkbox {
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
-        background: white;
-        border: 2px solid #eef2f7;
+        border: 2px solid #CBD5E1;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 6px;
-        font-weight: 700;
-        font-size: 0.65rem;
-        color: #cbd5e1;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        color: transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
     }
-    .step-label {
-        font-size: 0.6rem;
-        font-weight: 700;
-        color: #94a3b8;
-        text-transform: uppercase;
-        letter-spacing: 0.2px;
+    .checklist-item.validated .checklist-checkbox {
+        background: #10B981;
+        border-color: #10B981;
+        color: #fff;
     }
-    .step-item.active .step-dot {
-        border-color: var(--primary);
-        color: var(--primary);
-        background: white;
-        box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary), transparent 90%);
-        transform: scale(1.1);
+    .checklist-item.awaiting .checklist-checkbox {
+        background: #F59E0B;
+        border-color: #F59E0B;
+        color: #fff;
     }
-    .step-item.active .step-label { color: var(--primary); }
-    
-    .step-item.completed .step-dot {
-        background: var(--success);
-        border-color: var(--success);
-        color: white;
+    .checklist-title {
+        font-weight: 600;
+        font-size: 0.92rem;
+        color: var(--text-primary);
     }
-    .step-item.completed .step-label { color: #64748b; }
+    .checklist-desc {
+        font-size: 0.78rem;
+        color: var(--text-secondary);
+        margin-top: 2px;
+    }
 
-    .step-item.rejected .step-dot {
-        background: var(--danger);
-        border-color: var(--danger);
-        color: white;
+    /* Badges de Estado customizados */
+    .badge-status-custom {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
     }
-    .step-item.rejected .step-label { color: var(--danger); }
+    .badge-status-pending { background: #E5E7EB; color: #4B5563; }
+    .badge-status-progress { background: #DBEAFE; color: #1D4ED8; }
+    .badge-status-awaiting { background: #FEF3C7; color: #D97706; }
+    .badge-status-valid { background: #D1FAE5; color: #065F46; }
+
+    /* Documents lists */
+    .doc-tab-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+    }
+
+    /* Reservations custom widget */
+    .space-room-card {
+        border: 1px solid rgba(0,0,0,0.06);
+        border-radius: 12px;
+        padding: 12px;
+        background: #FDFDFD;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .space-room-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: var(--primary-glass);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
 </style>
 
 <!-- FLASH -->
-<?php if ($flashOk):   ?><div class="alert-custom alert-success mb-4"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
-<?php if ($flashErro): ?><div class="alert-custom alert-danger  mb-4"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
+<?php if ($flashOk):   ?><div class="alert-custom alert-success mb-4 shadow-sm"><i class="fa fa-check-circle me-2"></i> <?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
+<?php if ($flashErro): ?><div class="alert-custom alert-danger mb-4 shadow-sm"><i class="fa fa-triangle-exclamation me-2"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
 
-    <!-- TÍTULO -->
-    <div class="page-header">
+<!-- BANNER DE BOAS-VINDAS PREMIUM -->
+<?php 
+$horaAtual = (int)date('H');
+$saudacao = 'Bem-vindo';
+if ($horaAtual >= 5 && $horaAtual < 12) $saudacao = 'Bom dia';
+elseif ($horaAtual >= 12 && $horaAtual < 18) $saudacao = 'Boa tarde';
+else $saudacao = 'Boa noite';
+?>
+<div class="welcome-banner">
+    <div class="welcome-banner-content d-flex justify-content-between align-items-center flex-wrap g-3">
         <div>
-            <div class="page-header-title">
-                <i class="fa fa-house me-2" style="color:var(--primary)"></i>
-                Meu Painel
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-warning text-dark px-3 py-1.5 fw-bold rounded-pill" style="font-size:0.75rem">
+                    <i class="fa fa-trophy me-1"></i> <?= $ultimoProjeto['pontos'] ?? 0 ?> SP (Startup Points)
+                </span>
+                <?php if($ultimoProjeto): ?>
+                    <span class="badge bg-success px-3 py-1.5 fw-bold rounded-pill" style="font-size:0.75rem">
+                        <i class="fa fa-circle-play me-1"></i> Fase: <?= strtoupper(str_replace('_', ' ', $ultimoProjeto['fase'] ?? 'ideacao')) ?>
+                    </span>
+                <?php endif; ?>
             </div>
-            <div class="page-header-sub">
-                Acompanhe os seus projectos e monografias
-            </div>
+            <h2 class="fw-800 mb-1" style="font-size:1.85rem; letter-spacing:-0.5px"><?= $saudacao ?>, <?= htmlspecialchars(explode(' ', $nome)[0]) ?>! 👋</h2>
+            <p class="text-white-50 small mb-0">
+                <?php if ($ultimoProjeto): ?>
+                    Startup Activa: <strong><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong> · Progresso Global: <strong><?= $progresso ?>%</strong>
+                <?php else: ?>
+                    Bem-vindo à Incubadora Académica do ISPSN. Registe a sua ideia para começar a acelerar.
+                <?php endif; ?>
+            </p>
         </div>
+        
         <div class="d-flex gap-2">
             <?php if ($ultimoProjeto): ?>
-                <?php if (!empty($meusKpis)): ?>
-                <button class="btn-ghost" data-bs-toggle="modal" data-bs-target="#modalKPIs">
-                    <i class="fa fa-chart-line"></i> Actualizar KPIs
+                <button class="btn btn-warning btn-sm fw-bold px-3 py-2 text-dark" style="border-radius:10px" data-bs-toggle="modal" data-bs-target="#modalNovaReservaDashboard">
+                    <i class="fa fa-calendar-plus me-1"></i> Reservar Sala
                 </button>
-                <?php endif; ?>
-
-                <?php if (!empty($meusFinanciamentos)): ?>
-                <button class="btn-ghost" data-bs-toggle="modal" data-bs-target="#modalDespesa">
-                    <i class="fa fa-receipt"></i> Registar Despesa
+                <button class="btn btn-outline-light btn-sm fw-bold px-3 py-2" style="border-radius:10px" data-bs-toggle="modal" data-bs-target="#modalUploadDocumentoDashboard">
+                    <i class="fa fa-upload me-1"></i> Mandar Documento
                 </button>
-                <?php endif; ?>
+            <?php else: ?>
+                <button class="btn btn-warning btn-sm fw-bold px-3 py-2 text-dark" style="border-radius:10px" data-bs-toggle="modal" data-bs-target="#modalProjeto">
+                    <i class="fa fa-plus me-1"></i> Submeter Ideia
+                </button>
             <?php endif; ?>
-            <button class="btn-primary-custom"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalProjeto">
-                <i class="fa fa-plus"></i> Submeter Projecto
-            </button>
         </div>
-    </div>
-
-    <!-- KPI CARDS -->
-    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px;">
-
-        <div class="kpi-card" style="--kpi-color:var(--primary)">
-            <div class="kpi-icon"><i class="fa fa-rocket"></i></div>
-            <div class="kpi-value"><?= $meusProjetos ?></div>
-            <div class="kpi-label">Meus Projectos</div>
-            <div class="kpi-trend" style="color:var(--primary)"><i class="fa fa-circle-dot"></i> <?= $ultimoProjeto ? $labels[$ultimoProjeto['estado']] : 'Sem projectos' ?></div>
-        </div>
-
-        <div class="kpi-card" style="--kpi-color:var(--success)">
-            <div class="kpi-icon"><i class="fa fa-money-bill-trend-up"></i></div>
-            <div class="kpi-value"><?= number_format($totalFinanciamento, 0, ',', '.') ?> <small style="font-size:0.5em">Kz</small></div>
-            <div class="kpi-label">Capital Levantado</div>
-            <div class="kpi-trend" style="color:var(--success)"><i class="fa fa-wallet"></i> Total aprovado</div>
-        </div>
-
-        <div class="kpi-card" style="--kpi-color:#8B5CF6">
-            <div class="kpi-icon"><i class="fa fa-list-check"></i></div>
-            <div class="kpi-value"><?= count($minhasTarefas) ?></div>
-            <div class="kpi-label">Tarefas Atribuídas</div>
-            <div class="kpi-trend" style="color:#8B5CF6"><i class="fa fa-tasks"></i> Do seu mentor</div>
-        </div>
-
-        <div class="kpi-card" style="--kpi-color:#EC4899">
-            <div class="kpi-icon"><i class="fa fa-chart-line"></i></div>
-            <div class="kpi-value"><?= $progresso ?>%</div>
-            <div class="kpi-label">Progresso</div>
-            <div class="kpi-trend" style="color:#EC4899"><i class="fa fa-arrow-trend-up"></i> Projecto actual</div>
-        </div>
-
-    </div>
-
-
-<!-- ACOMPANHAMENTO -->
-<div class="card-custom mb-4">
-    <div class="card-header-custom">
-        <div class="card-title-custom">
-            <i class="fa fa-chart-line"></i> Acompanhamento do Projecto
-        </div>
-    </div>
-    <div class="card-body-custom">
-    <?php if($ultimoProjeto): ?>
-        <div class="row g-4">
-            <!-- GRÁFICO E KPI DE SCORE -->
-            <div class="col-md-3 text-center d-flex flex-column justify-content-center border-end">
-                <div class="position-relative d-inline-block mx-auto mb-2">
-                    <canvas id="graficoProgresso" style="max-width:90px;max-height:90px"></canvas>
-                    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:1.1rem; font-weight:800; color:var(--primary)"><?= $progresso ?>%</div>
-                </div>
-                <small class="text-muted d-block fw-bold mb-3" style="font-size:0.65rem; text-transform:uppercase; letter-spacing:0.5px">Progresso Geral</small>
-
-                <?php if($mediaAvaliacaoAdmin && $mediaAvaliacaoAdmin['total'] > 0): ?>
-                    <div class="p-2 rounded" style="background:var(--surface-1); border:1px solid var(--border-color)">
-                        <div class="fw-bold text-muted" style="font-size:0.6rem; text-transform:uppercase">Score Médio</div>
-                        <div class="mb-0 fw-800" style="font-size:1.1rem; color:<?= $mediaAvaliacaoAdmin['media'] >= 7 ? 'var(--success)' : ($mediaAvaliacaoAdmin['media'] >= 4 ? 'var(--warning)' : 'var(--danger)') ?>">
-                            <?= number_format($mediaAvaliacaoAdmin['media'], 1) ?> <small style="font-size:0.6em; color:#94a3b8">/ 10</small>
-                        </div>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- PIPELINE DE INOVAÇÃO -->
-            <div class="col-md-9">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h5 class="fw-800 mb-1" style="color:var(--text-primary); letter-spacing:-0.5px"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></h5>
-                        <div class="d-flex align-items-center gap-2">
-                            <?php
-                            $cor = $corBadge[$ultimoProjeto['estado']] ?? 'info';
-                            ?>
-                            <span class="badge-estado badge-<?= $cor ?>" style="font-size:0.65rem; padding: 4px 12px; border-radius: 20px;">
-                                <i class="fa fa-circle me-1" style="font-size:0.5rem"></i>
-                                <?= $labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado'] ?>
-                            </span>
-                        </div>
-                    </div>
-                    <?php if(!empty($minhasAvaliacosMentor)): ?>
-                       <div class="text-end p-2 px-3 rounded-3" style="background: color-mix(in srgb, var(--primary), transparent 95%); border: 1px solid color-mix(in srgb, var(--primary), transparent 90%)">
-                           <div class="small fw-bold text-muted" style="font-size:0.6rem; text-transform:uppercase">Maturidade</div>
-                           <div class="h5 mb-0 fw-800" style="color:var(--primary)"><?= $minhasAvaliacosMentor[0]['progresso_geral'] ?>%</div>
-                       </div>
-                    <?php endif; ?>
-                </div>
-                
-                <!-- STEPPER DO PIPELINE -->
-                <div class="innovation-pipeline-stepper mb-3">
-                    <?php 
-                    $pipelineSteps = [
-                        ['id' => 'submetido',          'label' => 'Submetido'],
-                        ['id' => 'em_avaliacao',       'label' => 'Avaliação'],
-                        ['id' => 'aprovado',           'label' => 'Seleccionado'],
-                        ['id' => 'incubado',           'label' => 'Incubação'],
-                        ['id' => 'fundo_investimento', 'label' => 'Investimento'],
-                        ['id' => 'concluido',          'label' => 'Graduação']
-                    ];
-                    
-                    $currentState = $ultimoProjeto['estado'];
-                    $currentIdx = 0;
-                    if($currentState == 'rejeitado') $currentIdx = -1;
-                    else {
-                        foreach($pipelineSteps as $idx => $step) {
-                            if($currentState == $step['id']) {
-                                $currentIdx = $idx;
-                            }
-                        }
-                    }
-                    ?>
-                    <div class="stepper-track">
-                        <?php foreach($pipelineSteps as $idx => $step): 
-                            $status = ($idx < $currentIdx) ? 'completed' : (($idx === $currentIdx) ? 'active' : 'pending');
-                            if($currentState == 'rejeitado' && $idx == 0) $status = 'rejected';
-                        ?>
-                            <div class="step-item <?= $status ?>">
-                                <div class="step-dot" style="width:28px; height:28px; font-size:0.7rem; border-width:2px">
-                                    <?php if($status == 'completed'): ?><i class="fa fa-check"></i>
-                                    <?php elseif($status == 'rejected'): ?><i class="fa fa-times"></i>
-                                    <?php else: ?><?= $idx + 1 ?><?php endif; ?>
-                                </div>
-                                <div class="step-label" style="font-size:0.6rem"><?= $step['label'] ?></div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-7">
-                        <div class="p-2 bg-light rounded border-start border-4 border-primary" style="font-size:0.75rem">
-                            <?php if($currentState == 'submetido'): ?>
-                                <p class="mb-0">A sua ideia está em <strong>Triagem Inicial</strong>. Verifique o seu e-mail nos próximos dias para agendar a apresentação técnica.</p>
-                            <?php elseif($currentState == 'em_avaliacao'): ?>
-                                <p class="mb-0">Os avaliadores estão a analisar a viabilidade do seu projecto. Certifique-se de que o seu <strong>Pitch Deck</strong> está actualizado.</p>
-                            <?php elseif($currentState == 'aprovado'): ?>
-                                <p class="mb-0">Parabéns! O seu projecto foi aprovado para o programa. O próximo passo é a <strong>Assinatura do Acordo de Incubação</strong>.</p>
-                            <?php elseif($currentState == 'incubado'): ?>
-                                <p class="mb-0">Em fase de aceleração. Foque no cumprimento das <strong>Tarefas do Mentor</strong> e na validação do seu modelo de negócio.</p>
-                            <?php elseif($currentState == 'fundo_investimento'): ?>
-                                <p class="mb-0">Excelente progresso! O seu projecto está em preparação para <strong>Rodada de Investimento</strong>. Prepare os seus relatórios financeiros.</p>
-                            <?php elseif($currentState == 'concluido'): ?>
-                                <p class="mb-0"><strong>Projecto Graduado!</strong> Parabéns pela jornada. Continue a utilizar a nossa rede de contactos para escalar.</p>
-                            <?php else: ?>
-                                <p class="mb-0">Consulte a administração para orientações sobre a fase actual do seu projecto.</p>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <?php if(!empty($minhasTarefas)): ?>
-                            <div class="d-flex flex-column gap-1 mb-2">
-                            <?php foreach(array_slice($minhasTarefas, 0, 2) as $t): ?>
-                                <div class="p-1 px-2 border rounded small bg-white d-flex align-items-center gap-2" style="font-size:0.7rem">
-                                    <i class="fa <?= $t['status']=='concluida'?'fa-check-circle text-success':'fa-circle-notch text-muted' ?>"></i>
-                                    <span class="text-truncate"><?= htmlspecialchars($t['titulo']) ?></span>
-                                </div>
-                            <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if(!empty($ultimasAvaliacoesOficiais)): ?>
-                            <div class="p-1 px-2 border rounded bg-white" style="border-left: 3px solid var(--primary) !important; font-size:0.7rem">
-                                <div class="fw-bold mb-0">Feedback: <?= $ultimasAvaliacoesOficiais[0]['pontuacao_total'] ?>/10</div>
-                                <div class="text-muted text-truncate">
-                                    <?= htmlspecialchars($ultimasAvaliacoesOficiais[0]['observacoes'] ?? 'Sem comentários.') ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php else: ?>
-        <div class="empty-state">
-            <div class="empty-state-icon"><i class="fa fa-diagram-project"></i></div>
-            <div class="empty-state-title">Nenhum projecto submetido</div>
-            <div class="empty-state-text">Clique em "Submeter Projecto" para começar</div>
-        </div>
-    <?php endif; ?>
     </div>
 </div>
 
+<?php if ($ultimoProjeto): ?>
+<!-- ── PIPELINE DE INOVAÇÃO & MATURIDADE ── -->
+<div class="glass-card mb-4 p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="fw-bold mb-1"><i class="fa fa-road me-2 text-primary"></i>Pipeline de Evolução da Startup</h5>
+            <p class="text-muted small mb-0">Cumpra as metas exigidas em cada estágio para subir de nível e aceder ao Fundo de Investimento.</p>
+        </div>
+        <div class="text-end">
+            <div class="small fw-bold text-muted" style="font-size:0.65rem; text-transform:uppercase">Prontidão para Financiamento</div>
+            <div class="h5 mb-0 fw-800 text-success"><?= $progresso ?>%</div>
+        </div>
+    </div>
+
+    <!-- Progress Tracker -->
+    <?php 
+    $pipelineSteps = [
+        ['id' => 'ideacao',          'label' => 'Ideação',      'icon' => 'lightbulb'],
+        ['id' => 'validacao',       'label' => 'Validação',    'icon' => 'vial'],
+        ['id' => 'mvp',             'label' => 'MVP',          'icon' => 'cube'],
+        ['id' => 'tracao',          'label' => 'Tração',       'icon' => 'chart-line'],
+        ['id' => 'mercado',         'label' => 'Mercado',      'icon' => 'shop'],
+        ['id' => 'fundo_investimento', 'label' => 'Financiado',  'icon' => 'sack-dollar']
+    ];
+    $currentFase = $ultimoProjeto['fase'] ?? 'ideacao';
+    $currentIdx = 0;
+    foreach($pipelineSteps as $idx => $step) {
+        if($currentFase == $step['id']) {
+            $currentIdx = $idx;
+        }
+    }
+    // Calcular percentagem da barra
+    $progressPct = ($currentIdx / (count($pipelineSteps) - 1)) * 84 + 8;
+    ?>
+    <div class="position-relative mb-2">
+        <div class="stepper-track-modern">
+            <div class="stepper-track-modern-progress" style="width: <?= $progressPct ?>%"></div>
+            <?php foreach($pipelineSteps as $idx => $step): 
+                $status = ($idx < $currentIdx) ? 'completed' : (($idx === $currentIdx) ? 'active' : 'pending');
+            ?>
+                <div class="step-node <?= $status ?>">
+                    <div class="step-icon-outer">
+                        <i class="fa fa-<?= $step['icon'] ?>"></i>
+                    </div>
+                    <div class="step-node-label"><?= $step['label'] ?></div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<!-- GRID CENTRAL -->
 <div class="row g-4 mb-4">
-    <!-- COLUNA TAREFAS -->
+    
+    <!-- ESQUERDA: CHECKLIST INTERATIVO DE METAS (Metas) -->
     <div class="col-lg-7">
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa fa-tasks"></i> Plano de Trabalho (Tarefas)</div>
+        <div class="glass-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa fa-list-check me-2 text-primary"></i>Metas & Objetivos de Incubação</h5>
+                    <p class="text-muted small mb-0">Envie evidências do cumprimento das metas para ganhar pontos e avançar de fase.</p>
+                </div>
+                <span class="badge bg-light text-dark border px-2 py-1.5 small fw-bold">
+                    <?= count(array_filter($minhasTarefas, fn($t) => $t['status'] === 'concluida' && $t['validada_mentor'] == 1)) ?> / <?= count($minhasTarefas) ?> Concluídas
+                </span>
             </div>
-            <div class="card-body-custom">
-                <?php if(empty($minhasTarefas)): ?>
-                    <p class="text-muted text-center py-4">Sem tarefas atribuídas.</p>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle" style="font-size:0.875rem">
-                            <thead>
-                                <tr>
-                                    <th>Tarefa</th>
-                                    <th>Prazo</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach($minhasTarefas as $t): ?>
-                                <tr>
+
+            <?php if(empty($minhasTarefas)): ?>
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-clipboard-check fa-3x mb-3 text-black-50" style="opacity:0.2"></i>
+                    <p class="mb-0 small">O seu mentor ainda não atribuiu metas ao seu plano de ação.</p>
+                </div>
+            <?php else: ?>
+                <div class="checklist-container">
+                    <?php foreach($minhasTarefas as $t): 
+                        $statusClass = 'pending';
+                        $statusText = 'Pendente';
+                        $statusBadge = 'badge-status-pending';
+                        
+                        if ($t['status'] === 'concluida') {
+                            if ($t['validada_mentor'] == 1) {
+                                $statusClass = 'validated';
+                                $statusText = 'Validada';
+                                $statusBadge = 'badge-status-valid';
+                            } else {
+                                $statusClass = 'awaiting';
+                                $statusText = 'Aguardando Validação';
+                                $statusBadge = 'badge-status-awaiting';
+                            }
+                        } elseif ($t['status'] === 'em_progresso') {
+                            $statusClass = 'progress';
+                            $statusText = 'Em Progresso';
+                            $statusBadge = 'badge-status-progress';
+                        }
+                    ?>
+                        <div class="checklist-item <?= $statusClass ?>">
+                            <div class="checklist-content">
+                                <div class="checklist-checkbox">
+                                    <i class="fa fa-<?= $statusClass === 'validated' ? 'check' : ($statusClass === 'awaiting' ? 'hourglass-half' : '') ?>"></i>
+                                </div>
+                                <div>
+                                    <div class="checklist-title"><?= htmlspecialchars($t['titulo']) ?></div>
+                                    <div class="checklist-desc"><?= htmlspecialchars($t['descricao']) ?></div>
+                                    <?php if($t['data_limite']): ?>
+                                        <div class="x-small text-muted mt-1">
+                                            <i class="fa fa-calendar-alt me-1"></i> Limite: <?= date('d/m/Y', strtotime($t['data_limite'])) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge-status-custom <?= $statusBadge ?>">
+                                    <?= $statusText ?>
+                                </span>
+
+                                <?php if ($statusClass === 'pending'): ?>
+                                    <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" style="margin:0">
+                                        <input type="hidden" name="action" value="atualizar_estado_tarefa">
+                                        <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
+                                        <input type="hidden" name="status" value="em_progresso">
+                                        <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+                                        <button type="submit" class="btn btn-sm btn-ghost" title="Iniciar meta">
+                                            Começar
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+
+                                <?php if ($statusClass === 'pending' || $statusClass === 'progress'): ?>
+                                    <button class="btn btn-sm btn-primary-custom" style="padding: 5px 10px; font-size:0.75rem" data-bs-toggle="modal" data-bs-target="#modalEvidencia_<?= $t['id'] ?>">
+                                        Anexar Evidência
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <!-- MODAL ENVIAR EVIDÊNCIA -->
+                        <div class="modal fade" id="modalEvidencia_<?= $t['id'] ?>" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content modal-content-custom">
+                                    <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
+                                        <input type="hidden" name="action" value="atualizar_estado_tarefa">
+                                        <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
+                                        <input type="hidden" name="status" value="concluida">
+                                        <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+                                        
+                                        <div class="modal-header-custom">
+                                            <h5 class="modal-title fw-bold"><i class="fa fa-envelope-open-text me-2"></i> Submeter Evidência de Meta</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body-custom">
+                                            <div class="mb-3 p-3 bg-light rounded border-start border-4 border-warning">
+                                                <strong>Meta:</strong> <?= htmlspecialchars($t['titulo']) ?>
+                                                <div class="small text-muted mt-1"><?= htmlspecialchars($t['descricao']) ?></div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label-custom">Descrição / Notas de Conclusão *</label>
+                                                <textarea name="evidencia_nota" class="form-control-custom" rows="3" required placeholder="Descreva sucintamente como cumpriu esta meta (ex: link do site no ar, funcionalidades integradas, etc.)."></textarea>
+                                            </div>
+
+                                            <div class="mb-0">
+                                                <label class="form-label-custom">Anexo Comprovativo (PDF, Imagem, ZIP) *</label>
+                                                <input type="file" name="evidencia_ficheiro" class="form-control-custom" required>
+                                                <small class="text-muted d-block mt-1">Carregue um arquivo contendo a evidência do desenvolvimento (Pitch, Mockup, Relatório).</small>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer-custom">
+                                            <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn-primary-custom"><i class="fa fa-upload"></i> Entregar Meta</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- DIREITA: DOCUMENTOS (Enviar/Receber) -->
+    <div class="col-lg-5">
+        <div class="glass-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa fa-folder-open me-2 text-primary"></i>Repositório de Documentos</h5>
+                    <p class="text-muted small mb-0">Partilhe relatórios e receba materiais didáticos ou contratos.</p>
+                </div>
+                <button class="btn btn-sm btn-ghost" data-bs-toggle="modal" data-bs-target="#modalUploadDocumentoDashboard">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+
+            <?php if(empty($meusDocumentos)): ?>
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-file-arrow-up fa-3x mb-3 text-black-50" style="opacity:0.2"></i>
+                    <p class="mb-0 small">Ainda não partilhou documentos neste projeto.</p>
+                </div>
+            <?php else: ?>
+                <!-- Documentos Recebidos (Incubadora/Mentor) -->
+                <div class="doc-tab-title">Recebidos da Incubadora / Mentor</div>
+                <div class="list-group list-group-flush mb-4" style="max-height: 200px; overflow-y: auto;">
+                    <?php 
+                    $recebidos = array_filter($meusDocumentos, fn($d) => $d['perfil_submeteu'] !== 'utilizador');
+                    if(empty($recebidos)):
+                    ?>
+                        <div class="text-center py-3 text-muted small">Nenhum documento recebido.</div>
+                    <?php else: ?>
+                        <?php foreach($recebidos as $d): ?>
+                            <div class="list-group-item px-0 d-flex justify-content-between align-items-center" style="background:transparent;border-color:rgba(0,0,0,0.04)">
+                                <div>
+                                    <div class="fw-bold text-truncate" style="font-size:0.82rem; max-width: 220px;"><?= htmlspecialchars($d['titulo']) ?></div>
+                                    <small class="text-muted" style="font-size:0.7rem">Por: <?= htmlspecialchars($d['quem_submeteu']) ?> · <?= date('d/m/Y', strtotime($d['criado_em'])) ?></small>
+                                </div>
+                                <a href="/incubadora_ispsn/<?= $d['path'] ?>" target="_blank" class="btn btn-sm btn-ghost text-primary p-2">
+                                    <i class="fa fa-download"></i>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Documentos Enviados (Startup) -->
+                <div class="doc-tab-title">Submetidos pela nossa Equipa</div>
+                <div class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">
+                    <?php 
+                    $enviados = array_filter($meusDocumentos, fn($d) => $d['perfil_submeteu'] === 'utilizador');
+                    if(empty($enviados)):
+                    ?>
+                        <div class="text-center py-3 text-muted small">Nenhum documento submetido.</div>
+                    <?php else: ?>
+                        <?php foreach($enviados as $d): ?>
+                            <div class="list-group-item px-0 d-flex justify-content-between align-items-center" style="background:transparent;border-color:rgba(0,0,0,0.04)">
+                                <div>
+                                    <div class="fw-bold text-truncate" style="font-size:0.82rem; max-width: 220px;"><?= htmlspecialchars($d['titulo']) ?></div>
+                                    <small class="text-muted" style="font-size:0.7rem">Ficheiro: <?= $d['tipo'] ?> · <?= date('d/m/Y', strtotime($d['criado_em'])) ?></small>
+                                </div>
+                                <a href="/incubadora_ispsn/<?= $d['path'] ?>" target="_blank" class="btn btn-sm btn-ghost text-primary p-2">
+                                    <i class="fa fa-download"></i>
+                                </a>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+</div>
+
+<!-- ABAIXO: ESPAÇOS FÍSICOS & RESERVAS DA INCUBADORA -->
+<div class="row g-4 mb-4">
+    <!-- WIDGET DE RESERVAS DE ESPAÇO -->
+    <div class="col-lg-8">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa fa-bookmark me-2 text-primary"></i>Reserva de Espaço Físico (Coworking & Salas)</h5>
+                    <p class="text-muted small mb-0">Disponibilizamos salas de reuniões e espaço de coworking para as suas atividades operacionais.</p>
+                </div>
+                <button class="btn btn-sm btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovaReservaDashboard">
+                    <i class="fa fa-calendar-plus me-1"></i> Nova Reserva
+                </button>
+            </div>
+
+            <!-- Listagem de reservas ativas -->
+            <div class="table-responsive">
+                <table class="table table-sm align-middle" style="font-size: 0.85rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #F3F4F6;">
+                            <th>Sala / Espaço</th>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($minhasReservasPainel)): ?>
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted small">Não possui nenhuma reserva pendente ou ativa.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($minhasReservasPainel as $r): 
+                                $statusClass = ($r['status'] == 'confirmada' ? 'success' : ($r['status'] == 'pendente' ? 'warning' : 'danger'));
+                            ?>
+                                <tr style="border-bottom: 1px solid rgba(0,0,0,0.02);">
                                     <td>
-                                        <div class="fw-bold"><?= htmlspecialchars($t['titulo']) ?></div>
-                                        <div class="text-muted x-small"><?= htmlspecialchars($t['descricao']) ?></div>
+                                        <div class="fw-bold"><?= htmlspecialchars($r['espaco_nome']) ?></div>
+                                        <small class="text-muted" style="font-size:0.7rem;"><?= ucfirst($r['espaco_tipo']) ?></small>
                                     </td>
-                                    <td><?= $t['data_limite'] ? date('d/m/Y', strtotime($t['data_limite'])) : '—' ?></td>
+                                    <td><?= date('d/m/Y', strtotime($r['data_reserva'])) ?></td>
+                                    <td><?= substr($r['hora_inicio'], 0, 5) ?> - <?= substr($r['hora_fim'], 0, 5) ?></td>
                                     <td>
-                                        <span class="task-badge task-<?= $t['status'] ?>">
-                                            <?= str_replace('_',' ',$t['status']) ?>
+                                        <span class="badge bg-<?= $statusClass ?>-subtle text-<?= $statusClass ?> px-3 py-1.5 rounded-pill" style="font-size:0.65rem">
+                                            <?= strtoupper($r['status']) ?>
                                         </span>
                                     </td>
+                                    <td>
+                                        <?php if($r['status'] == 'pendente'): ?>
+                                            <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" onsubmit="return confirm('Cancelar esta reserva?')" style="margin:0">
+                                                <input type="hidden" name="action" value="gestao_reserva">
+                                                <input type="hidden" name="id_reserva" value="<?= $r['id'] ?>">
+                                                <input type="hidden" name="novo_status" value="cancelada">
+                                                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="fa fa-trash"></i></button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    <!-- COLUNA AVALIAÇÕES MENTOR -->
-    <div class="col-lg-5">
-        <div class="card-custom mb-4" style="border-left: 4px solid var(--primary)">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa-solid fa-calendar-days"></i> Próximas Reuniões</div>
-            </div>
-            <div class="card-body-custom">
-                <?php if(empty($minhasReunioes)): ?>
-                    <p class="text-muted text-center py-3 small">Sem reuniões agendadas.</p>
+
+    <!-- REGRAS DE ESPAÇOS E SALAS DISPONÍVEIS -->
+    <div class="col-lg-4">
+        <div class="glass-card h-100 p-4">
+            <h5 class="fw-bold mb-3"><i class="fa fa-circle-info me-2 text-primary"></i>Salas Disponíveis</h5>
+            <div class="mb-3">
+                <?php if (empty($espacosDisponiveis)): ?>
+                    <p class="text-muted small">Nenhum espaço cadastrado ou disponível hoje.</p>
                 <?php else: ?>
-                    <?php foreach($minhasReunioes as $r): ?>
-                    <div class="p-3 mb-2 rounded bg-light border">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <div class="fw-bold small"><?= htmlspecialchars($r['titulo']) ?></div>
-                                <div class="text-muted" style="font-size:0.75rem">
-                                    <i class="fa-solid fa-clock me-1"></i> <?= date('d/m/Y H:i', strtotime($r['data_reuniao'])) ?>
+                    <?php foreach(array_slice($espacosDisponiveis, 0, 3) as $e): ?>
+                        <div class="space-room-card">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="space-room-icon">
+                                    <i class="fa fa-<?= $e['tipo'] === 'coworking' ? 'laptop-code' : ($e['tipo'] === 'reuniao' ? 'users-gear' : 'lightbulb') ?>"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold small"><?= htmlspecialchars($e['nome']) ?></div>
+                                    <small class="text-muted" style="font-size:0.68rem;">Lotação: <?= $e['capacidade'] ?> pessoas</small>
                                 </div>
                             </div>
-                            <?php if($r['link_reuniao']): ?>
-                                <a href="<?= $r['link_reuniao'] ?>" target="_blank" class="btn-primary-custom" style="padding:4px 8px; font-size:0.7rem">
-                                    <i class="fa-solid fa-video"></i> Entrar
-                                </a>
-                            <?php endif; ?>
+                            <span class="badge bg-success-subtle text-success small rounded-pill">LIVRE</span>
                         </div>
-                        <div class="small text-muted">
-                            <i class="fa-solid fa-user-tie me-1"></i> Mentor: <?= htmlspecialchars($r['mentor_nome']) ?>
-                        </div>
-                    </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-        </div>
-
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa-solid fa-star"></i> Feedback do Mentor</div>
-            </div>
-            <div class="card-body-custom">
-                <?php if(empty($minhasAvaliacosMentor)): ?>
-                    <p class="text-muted text-center py-4">Aguardando primeira avaliação.</p>
-                <?php else: ?>
-                    <div style="display:flex; flex-direction:column; gap:12px">
-                        <?php foreach(array_slice($minhasAvaliacosMentor, 0, 3) as $av): ?>
-                        <div class="p-3 border rounded">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="fw-bold text-primary"><?= htmlspecialchars($av['periodo']) ?></span>
-                                <span class="badge bg-primary"><?= $av['progresso_geral'] ?>%</span>
-                            </div>
-                            <p class="small text-muted mb-0"><?= mb_strimwidth(htmlspecialchars($av['feedback']), 0, 100, '...') ?></p>
-                            <div class="text-end mt-2">
-                                <small class="text-muted fst-italic">Por: <?= htmlspecialchars($av['mentor_nome']) ?></small>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
+            <div class="p-3 bg-light rounded" style="border-left: 4px solid var(--primary);">
+                <div class="fw-bold small mb-1">Nota da Recepção:</div>
+                <p class="x-small text-muted mb-0">Solicite a sua reserva de sala com antecedência para evitar conflitos de horário. O tempo máximo por reserva é de 4 horas.</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- COMENTÁRIOS E SESSÕES -->
+<!-- DETALHES DE SESSÕES & FEEDBACK -->
 <div class="row g-4">
+    <!-- FEEDBACK DO ORIENTADOR -->
     <div class="col-lg-6">
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom">
-                    <i class="fa fa-comments"></i> Comentários da Incubadora
-                </div>
-            </div>
-            <div class="card-body-custom">
-            <?php if (!empty($comentarios)): ?>
-                <div style="display:flex;flex-direction:column;gap:16px">
-                <?php foreach ($comentarios as $c): ?>
-                <div style="padding:14px 16px;background:var(--surface-2);border-radius:var(--radius);border-left:4px solid var(--primary)">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <strong style="font-size:0.875rem"><?= htmlspecialchars($c['nome']) ?></strong>
-                        <small class="text-muted"><?= date('d/m/Y H:i', strtotime($c['criado_em'])) ?></small>
-                    </div>
-                    <span class="badge-estado badge-<?= str_replace(' ','_',$c['fase']) ?>" style="margin-bottom:8px;display:inline-block">
-                        <?= strtoupper(str_replace('_',' ',$c['fase'])) ?>
-                    </span>
-                    <p style="margin:0;font-size:0.875rem;color:var(--text-primary)"><?= nl2br(htmlspecialchars($c['comentario'])) ?></p>
-                </div>
-                <?php endforeach; ?>
+        <div class="glass-card h-100 p-4">
+            <h5 class="fw-bold mb-4"><i class="fa fa-comment-dots text-primary me-2"></i>Feedback & Comentários do Orientador</h5>
+            <?php if (empty($comentarios)): ?>
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-comments-slash fa-3x mb-3 text-black-50" style="opacity:0.2"></i>
+                    <p class="mb-0 small">A sua startup ainda não possui feedbacks do orientador.</p>
                 </div>
             <?php else: ?>
-                <div class="empty-state" style="padding:32px">
-                    <div class="empty-state-icon"><i class="fa fa-comment-slash"></i></div>
-                    <div class="empty-state-title">Sem comentários ainda</div>
-                    <div class="empty-state-text">O seu orientador ainda não adicionou comentários.</div>
+                <div style="display:flex;flex-direction:column;gap:16px; max-height: 380px; overflow-y: auto; padding-right:5px;">
+                    <?php foreach ($comentarios as $c): ?>
+                        <div style="padding:14px 16px;background:var(--surface-2);border-radius:var(--radius);border-left:4px solid var(--primary)">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong style="font-size:0.85rem"><?= htmlspecialchars($c['nome']) ?></strong>
+                                <small class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y H:i', strtotime($c['criado_em'])) ?></small>
+                            </div>
+                            <span class="badge-estado badge-<?= str_replace(' ','_',$c['fase']) ?>" style="margin-bottom:8px;display:inline-block; font-size:0.6rem">
+                                <?= strtoupper(str_replace('_',' ',$c['fase'])) ?>
+                            </span>
+                            <p class="small mb-0" style="color:var(--text-primary)"><?= nl2br(htmlspecialchars($c['comentario'])) ?></p>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-            </div>
         </div>
     </div>
 
+    <!-- SESSÕES DE MENTORIA REALIZADAS -->
     <div class="col-lg-6">
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom">
-                    <i class="fa fa-handshake"></i> Sessões de Mentoria Realizadas
-                </div>
-            </div>
-            <div class="card-body-custom">
-            <?php if (!empty($sessoesMentoria)): ?>
-                <div style="display:flex;flex-direction:column;gap:16px">
-                <?php foreach ($sessoesMentoria as $s): ?>
-                <div style="padding:14px 16px;background:var(--surface-1);border-radius:var(--radius);border:1px solid var(--border-color)">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <strong style="font-size:0.875rem"><i class="fa fa-user-tie me-1"></i> <?= htmlspecialchars($s['mentor_nome']) ?></strong>
-                        <small class="text-muted"><?= date('d/m/Y', strtotime($s['data_sessao'])) ?></small>
-                    </div>
-                    <div class="mb-2">
-                        <small class="badge bg-light text-dark"><?= $s['duracao_min'] ?> min</small>
-                        <small class="ms-1 text-warning">
-                            <?php for($i=0; $i<$s['avaliacao_equipa']; $i++) echo '★'; ?>
-                        </small>
-                    </div>
-                    <p style="margin:0;font-size:0.875rem;font-weight:600;color:var(--text-primary)">Tópicos: <?= nl2br(htmlspecialchars($s['topicos'])) ?></p>
-                    <?php if($s['proximos_passos']): ?>
-                        <p class="mt-2 mb-0" style="font-size:0.8rem;color:var(--primary)">
-                            <strong>Próximos Passos:</strong> <?= htmlspecialchars($s['proximos_passos']) ?>
-                        </p>
-                    <?php endif; ?>
-                </div>
-                <?php endforeach; ?>
+        <div class="glass-card h-100 p-4">
+            <h5 class="fw-bold mb-4"><i class="fa fa-handshake text-primary me-2"></i>Histórico de Sessões de Mentoria</h5>
+            <?php if (empty($sessoesMentoria)): ?>
+                <div class="text-center py-5 text-muted">
+                    <i class="fa fa-calendar-xmark fa-3x mb-3 text-black-50" style="opacity:0.2"></i>
+                    <p class="mb-0 small">Nenhuma sessão de mentoria logada.</p>
                 </div>
             <?php else: ?>
-                <div class="empty-state" style="padding:32px">
-                    <div class="empty-state-icon"><i class="fa fa-calendar-xmark"></i></div>
-                    <div class="empty-state-title">Nenhuma sessão logada</div>
-                    <div class="empty-state-text">As suas sessões com mentores aparecerão aqui.</div>
+                <div style="display:flex;flex-direction:column;gap:16px; max-height: 380px; overflow-y: auto; padding-right:5px;">
+                    <?php foreach ($sessoesMentoria as $s): ?>
+                        <div style="padding:14px 16px;background:var(--surface-1);border-radius:var(--radius);border:1px solid var(--border-color)">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <strong style="font-size:0.85rem"><i class="fa fa-user-tie me-1"></i> Mentor: <?= htmlspecialchars($s['mentor_nome']) ?></strong>
+                                <small class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y', strtotime($s['data_sessao'])) ?></small>
+                            </div>
+                            <div class="mb-2">
+                                <small class="badge bg-light text-dark"><?= $s['duracao_min'] ?> minutos</small>
+                                <small class="ms-1 text-warning">
+                                    <?php for($i=0; $i<$s['avaliacao_equipa']; $i++) echo '★'; ?>
+                                </small>
+                            </div>
+                            <p class="small mb-0"><strong>Tópicos:</strong> <?= nl2br(htmlspecialchars($s['topicos'])) ?></p>
+                            <?php if($s['proximos_passos']): ?>
+                                <div class="mt-2 pt-2 border-top x-small" style="color:var(--primary)">
+                                    <strong>Próximos Passos:</strong> <?= htmlspecialchars($s['proximos_passos']) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- MODAL SUBMETER PROJECTO -->
+<!-- ── MODAL RESERVA DE ESPAÇO ── -->
+<div class="modal fade" id="modalNovaReservaDashboard" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-custom">
+            <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
+                <input type="hidden" name="action" value="solicitar_reserva">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+                
+                <div class="modal-header-custom">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-bookmark me-2"></i> Reservar Espaço da Incubadora</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body-custom">
+                    <div class="mb-3">
+                        <label class="form-label-custom">Escolha o Espaço *</label>
+                        <select name="id_espaco" class="form-select form-control-custom" required>
+                            <option value="">Selecione...</option>
+                            <?php foreach($espacosDisponiveis as $e): ?>
+                                <option value="<?= $e['id'] ?>"><?= $e['nome'] ?> (<?= ucfirst($e['tipo']) ?>) - Capacidade: <?= $e['capacidade'] ?>p</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Data *</label>
+                        <input type="date" name="data_reserva" class="form-control-custom" min="<?= date('Y-m-d') ?>" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Hora Início *</label>
+                            <input type="time" name="hora_inicio" class="form-control-custom" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label-custom">Hora Fim *</label>
+                            <input type="time" name="hora_fim" class="form-control-custom" required>
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label-custom">Objetivo da Reserva</label>
+                        <textarea name="objetivo" class="form-control-custom" rows="2" placeholder="Ex: Reunião de equipa para discutir MVP"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom">Solicitar reserva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ── MODAL UPLOAD DOCUMENTO ── -->
+<div class="modal fade" id="modalUploadDocumentoDashboard" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-custom">
+            <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="upload_documento">
+                <input type="hidden" name="id_projeto" value="<?= $ultimoProjeto['id'] ?>">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+                <div class="modal-header-custom">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-upload me-2"></i>Carregar Documento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body-custom">
+                    <div class="mb-3">
+                        <label class="form-label-custom">Título do Documento *</label>
+                        <input type="text" name="titulo" class="form-control-custom" required placeholder="Ex: Pitch Deck 2026, Business Canvas">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Tipo</label>
+                        <select name="tipo" class="form-control-custom">
+                            <option value="Pitch">Pitch / Apresentação</option>
+                            <option value="Plano de Negócio">Plano de Negócio</option>
+                            <option value="Contrato">Contrato / Documento Legal</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label-custom">Ficheiro (PDF/PPTX/ZIP/Imagem) *</label>
+                        <input type="file" name="ficheiro" class="form-control-custom" required>
+                    </div>
+                </div>
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom">Fazer Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<?php else: ?>
+<!-- CASO NÃO TENHA PROJETO AINDA -->
+<div class="glass-card p-5 text-center my-5">
+    <div class="empty-state-icon text-primary mb-4"><i class="fa fa-diagram-project fa-4x"></i></div>
+    <h3 class="fw-800 text-dark mb-2">Ainda não tem ideias submetidas</h3>
+    <p class="text-muted small mx-auto mb-4" style="max-width: 480px;">O ecossistema da Incubadora Académica do ISPSN apoia-o a validar e estruturar a sua ideia de negócio. Clique abaixo para registar o seu projeto ou trabalho.</p>
+    <button class="btn btn-warning fw-bold text-dark px-4 py-2.5" style="border-radius:10px" data-bs-toggle="modal" data-bs-target="#modalProjeto">
+        <i class="fa fa-plus me-1"></i> Submeter Primeiro Projeto
+    </button>
+</div>
+<?php endif; ?>
+
+<!-- MODAL SUBMETER IDEIA -->
 <div class="modal fade" id="modalProjeto" tabindex="-1" aria-labelledby="modalProjetoLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content modal-content-custom">
@@ -781,16 +1089,14 @@ require_once __DIR__ . '/../partials/_layout.php';
         <div class="modal-header-custom">
             <h5 class="modal-title fw-bold" id="modalProjetoLabel">
                 <i class="fa fa-rocket me-2" style="color:var(--primary)"></i>
-                Registar Startup / Ideia
+                Submeter Ideia de Startup / Projecto
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body-custom">
-
             <div class="mb-3">
                 <label class="form-label-custom">Nome da Startup ou Projecto *</label>
-                <input type="text" name="titulo" class="form-control-custom" required
-                       placeholder="Ex: App de Transporte de Carga Local">
+                <input type="text" name="titulo" class="form-control-custom" required placeholder="Ex: App de Transporte de Carga Local">
             </div>
 
             <div class="row g-3 mb-3">
@@ -818,136 +1124,28 @@ require_once __DIR__ . '/../partials/_layout.php';
 
             <div class="mb-3">
                 <label class="form-label-custom">Descrição do Projecto *</label>
-                <textarea name="descricao" class="form-control-custom" rows="3" required
-                          placeholder="Descreva o seu projecto em detalhe (mínimo 20 caracteres)"></textarea>
+                <textarea name="descricao" class="form-control-custom" rows="3" required placeholder="Descreva o seu projecto em detalhe (mínimo 20 caracteres)"></textarea>
             </div>
 
             <div class="mb-3">
                 <label class="form-label-custom">Problema Identificado</label>
-                <textarea name="problema" class="form-control-custom" rows="2"
-                          placeholder="Qual é o problema que o seu projecto resolve?"></textarea>
+                <textarea name="problema" class="form-control-custom" rows="2" placeholder="Qual é o problema que o seu projecto resolve?"></textarea>
             </div>
 
             <div class="mb-0">
                 <label class="form-label-custom">Solução Proposta</label>
-                <textarea name="solucao" class="form-control-custom" rows="2"
-                          placeholder="Como o seu projecto resolve o problema?"></textarea>
+                <textarea name="solucao" class="form-control-custom" rows="2" placeholder="Como o seu projecto resolve o problema?"></textarea>
             </div>
-
         </div>
         <div class="modal-footer-custom">
             <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
             <button type="submit" class="btn-primary-custom">
-                <i class="fa fa-paper-plane"></i> Submeter Projecto
+                <i class="fa fa-paper-plane"></i> Submeter Projeto
             </button>
         </div>
       </form>
     </div>
   </div>
-</div>
-
-<!-- MODAL REGISTAR DESPESA -->
-<div class="modal fade" id="modalDespesa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-custom">
-            <form method="post" action="/incubadora_ispsn/app/controllers/operacoes_action.php" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="registar_despesa">
-                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
-                <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-receipt me-2"></i>Registar Despesa</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body-custom">
-                    <div class="mb-3">
-                        <label class="form-label-custom">Fonte de Financiamento *</label>
-                        <select name="id_financiamento" class="form-control-custom" required>
-                            <option value="">— Seleccione o financiamento —</option>
-                            <?php foreach (($meusFinanciamentos ?? []) as $f): ?>
-                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['fonte']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label-custom">Descrição da Despesa *</label>
-                        <input type="text" name="descricao" class="form-control-custom" required placeholder="Ex: Compra de Servidor, Material de Escritório">
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label-custom">Valor (Kz) *</label>
-                            <input type="number" name="valor" class="form-control-custom" required min="0" step="0.01">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label-custom">Data *</label>
-                            <input type="date" name="data_despesa" class="form-control-custom" required value="<?= date('Y-m-d') ?>">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label-custom">Categoria</label>
-                        <select name="categoria" class="form-control-custom">
-                            <option value="Tecnologia">Tecnologia</option>
-                            <option value="Equipamento">Equipamento</option>
-                            <option value="Marketing">Marketing</option>
-                            <option value="Recursos Humanos">Recursos Humanos</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label-custom">Justificativo (PDF/Imagem)</label>
-                        <input type="file" name="justificativo" class="form-control-custom">
-                    </div>
-                </div>
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-primary-custom"><i class="fa fa-check"></i> Salvar Despesa</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL ACTUALIZAR KPIs -->
-<div class="modal fade" id="modalKPIs" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-custom">
-            <form method="post" action="/incubadora_ispsn/app/controllers/operacoes_action.php">
-                <input type="hidden" name="action" value="registar_kpi">
-                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
-                <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-chart-line me-2"></i>Actualizar Indicador (KPI)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body-custom">
-                    <div class="mb-3">
-                        <label class="form-label-custom">Indicador *</label>
-                        <select name="id_kpi" class="form-control-custom" required>
-                            <option value="">— Seleccione o KPI —</option>
-                            <?php foreach (($meusKpis ?? []) as $k): ?>
-                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nome']) ?> (<?= $k['unidade'] ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label-custom">Valor *</label>
-                            <input type="number" name="valor" class="form-control-custom" required step="0.01">
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label-custom">Período *</label>
-                            <input type="text" name="periodo" class="form-control-custom" required placeholder="Ex: 2026-04, 2026-Q2">
-                        </div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label-custom">Observações</label>
-                        <textarea name="observacoes" class="form-control-custom" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-primary-custom"><i class="fa fa-save"></i> Guardar Valor</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 
 <?php
