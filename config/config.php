@@ -63,12 +63,12 @@ function get_config($chave, $default = '') {
 }
 
 // Configurações de E-mail (SMTP)
-define('MAIL_HOST', 'smtp.office365.com');
-define('MAIL_USER', 'evaristo.adriano@ispsn.org');
-define('MAIL_PASS', 'escoladohuambo');
-define('MAIL_PORT', 587);
-define('MAIL_FROM', 'evaristo.adriano@ispsn.org');
-define('MAIL_NAME', 'Incubadora Académica ISPSN');
+define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp.office365.com');
+define('MAIL_USER', getenv('MAIL_USER') ?: 'evaristo.adriano@ispsn.org');
+define('MAIL_PASS', getenv('MAIL_PASS') ?: 'escoladohuambo');
+define('MAIL_PORT', getenv('MAIL_PORT') ? (int)getenv('MAIL_PORT') : 587);
+define('MAIL_FROM', getenv('MAIL_FROM') ?: 'evaristo.adriano@ispsn.org');
+define('MAIL_NAME', getenv('MAIL_NAME') ?: 'Incubadora Académica ISPSN');
 
 // Autoload do Composer
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {

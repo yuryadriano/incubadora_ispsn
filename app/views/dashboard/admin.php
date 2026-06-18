@@ -14,6 +14,9 @@ $r = $mysqli->query("SELECT estado, COUNT(*) n FROM projetos GROUP BY estado");
 $porEstado = [];
 while ($row = $r->fetch_assoc()) $porEstado[$row['estado']] = (int)$row['n'];
 
+$labels_chart = array_keys($porEstado);
+$values_chart = array_values($porEstado);
+
 $stats['total_projectos']   = array_sum($porEstado);
 $stats['submetidos']        = $porEstado['submetido']   ?? 0;
 $stats['em_avaliacao']      = $porEstado['em_avaliacao'] ?? 0;

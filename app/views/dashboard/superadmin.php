@@ -427,10 +427,10 @@ require_once __DIR__ . '/../partials/_layout.php';
         new Chart(ctx, {
             type: 'pie',
             data: {
-                labels: ['Mentores','Admin','Empreendedores'],
+                labels: ['Mentores','Staff/Receção','Admin','Empreendedores'],
                 datasets: [{
-                    data: [<?= $porPerfil['funcionario'] ?? 0 ?>, <?= ($porPerfil['admin'] ?? 0) + ($porPerfil['superadmin'] ?? 0) ?>, <?= $porPerfil['utilizador'] ?? 0 ?>],
-                    backgroundColor: ['#10B981', '#3730A3', '#FBBF24'],
+                    data: [<?= $porPerfil['mentor'] ?? 0 ?>, <?= $porPerfil['funcionario'] ?? 0 ?>, <?= ($porPerfil['admin'] ?? 0) + ($porPerfil['superadmin'] ?? 0) ?>, <?= $porPerfil['utilizador'] ?? 0 ?>],
+                    backgroundColor: ['#8B5CF6', '#10B981', '#3730A3', '#FBBF24'],
                     borderWidth: 0
                 }]
             },

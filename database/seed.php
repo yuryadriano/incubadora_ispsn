@@ -8,7 +8,10 @@ $res = $mysqli->query("SELECT id FROM usuarios WHERE email='admin_seeder@ispsn.o
 if ($res && $res->num_rows > 0) {
     $user_id = $res->fetch_assoc()['id'];
 } else {
-    $mysqli->query("INSERT INTO usuarios (nome, email, senha_hash, perfil, tipo_utilizador, activo) VALUES ('Admin Seeder', 'admin_seeder@ispsn.org', '123', 'admin', 'docente', 1)");
+    $hash = password_hash('123', PASSWORD_DEFAULT);
+    $stmt = $mysqli->prepare("INSERT INTO usuarios (nome, email, senha_hash, perfil, tipo_utilizador, activo) VALUES ('Admin Seeder', 'admin_seeder@ispsn.org', ?, 'admin', 'docente', 1)");
+    $stmt->bind_param('s', $hash);
+    $stmt->execute();
     $user_id = $mysqli->insert_id;
 }
 
