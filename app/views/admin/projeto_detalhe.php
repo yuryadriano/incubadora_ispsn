@@ -112,6 +112,16 @@ $stmtDoc->execute();
 $documentos = $stmtDoc->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmtDoc->close();
 
+// ── Metas / Tarefas ────────────────────────
+$tarefasProjeto = [];
+$stmtT = $mysqli->prepare("SELECT * FROM tarefas WHERE id_projeto = ? ORDER BY data_limite ASC");
+if ($stmtT) {
+    $stmtT->bind_param('i', $idProjeto);
+    $stmtT->execute();
+    $tarefasProjeto = $stmtT->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtT->close();
+}
+
 $isDono = ($idUsuario === (int)$projeto['criado_por']);
 $podeGerirMembros = $isDono || in_array($perfil, ['admin','superadmin']);
 
@@ -242,7 +252,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 </div>
 
 <!-- ANÁLISE DE INTELIGÊNCIA ARTIFICIAL -->
-<?php if (!empty($projeto['feedback_ia'])): ?>
+<?php if ($perfil !== 'utilizador' && !empty($projeto['feedback_ia'])): ?>
     <div class="card-custom mb-4" style="background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-left: 5px solid #8b5cf6;">
         <div class="card-body-custom">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -262,6 +272,60 @@ require_once __DIR__ . '/../partials/_layout.php';
                     </button>
                 </form>
             </div>
+        </div>
+    </div>
+<?php elseif ($perfil === 'utilizador'): ?>
+    <!-- METAS E EVIDÊNCIAS (Para o Estudante) -->
+    <div class="card-custom mb-4" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-left: 5px solid #d97706;">
+        <div class="card-body-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold text-warning-dark mb-0" style="color: #b45309;"><i class="fa fa-list-check me-2"></i>Metas & Progresso da Startup</h5>
+                <span class="badge bg-warning text-dark small fw-bold">Próximos Passos</span>
+            </div>
+            
+            <?php if (empty($tarefasProjeto)): ?>
+                <p class="text-muted small mb-0">Nenhuma meta atribuída a esta startup de momento. O seu orientador irá definir as metas para a fase atual em breve.</p>
+            <?php else: 
+                $concluidas = count(array_filter($tarefasProjeto, fn($t) => $t['validada_mentor'] == 1));
+                $totalT = count($tarefasProjeto);
+                $pctT = $totalT > 0 ? round(($concluidas / $totalT) * 100) : 0;
+            ?>
+                <div class="row align-items-center g-3">
+                    <div class="col-md-8">
+                        <p class="small text-muted mb-2">Completou <strong><?= $concluidas ?> de <?= $totalT ?> metas</strong> obrigatórias para avançar de nível e qualificar-se para o financiamento.</p>
+                        <div class="progress-custom mb-3" style="height: 8px;">
+                            <div class="progress-bar-custom" style="width: <?= $pctT ?>%; background: #d97706;"></div>
+                        </div>
+                        
+                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 200px; overflow-y: auto; padding-right: 5px;">
+                            <?php foreach(array_slice($tarefasProjeto, 0, 3) as $t): 
+                                $statusIcon = $t['validada_mentor'] 
+                                    ? '<i class="fa fa-circle-check text-success"></i>' 
+                                    : ($t['status'] === 'concluida' 
+                                        ? '<i class="fa fa-clock text-warning" title="Aguardando validação"></i>' 
+                                        : ($t['status'] === 'em_progresso' 
+                                            ? '<i class="fa fa-spinner fa-spin text-primary"></i>' 
+                                            : '<i class="fa fa-circle text-muted"></i>'));
+                            ?>
+                                <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.03);">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <?= $statusIcon ?>
+                                        <span class="small fw-semibold <?= $t['validada_mentor'] ? 'text-decoration-line-through text-muted' : '' ?>"><?= htmlspecialchars($t['titulo']) ?></span>
+                                    </div>
+                                    <span class="badge" style="font-size: 0.65rem; background: <?= $t['validada_mentor'] ? '#d1fae5; color:#065f46' : ($t['status'] === 'concluida' ? '#fef3c7; color:#92400e' : '#f3f4f6; color:#4b5563') ?>">
+                                        <?= $t['validada_mentor'] ? 'Validada (+10 SP)' : ($t['status'] === 'concluida' ? 'Aguardando Aprovação' : 'Pendente') ?>
+                                    </span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="/incubadora_ispsn/public/index.php" class="btn-primary-custom d-inline-block text-center" style="background:#d97706; border-color:#d97706; padding: 10px 20px; font-size:0.82rem; text-decoration:none; color:#fff;">
+                            <i class="fa fa-arrow-right me-1"></i> Ir para o Painel Geral
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 <?php endif; ?>
