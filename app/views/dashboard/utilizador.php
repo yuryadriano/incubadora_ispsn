@@ -259,6 +259,41 @@ if ($ultimoProjeto) {
     $stmtRes->execute();
     $minhasReservasPainel = $stmtRes->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmtRes->close();
+
+    // --- METAS DO PROJETO ---
+    $metasFase = [];
+    $percentMetasConcluidas = 0;
+    $metaActiva = null;
+    if ($ultimoProjeto && $ultimoProjeto['estado'] === 'incubado') {
+        $faseActual = $ultimoProjeto['fase'] ?? 'ideacao';
+        
+        $stmtM = $mysqli->prepare("
+            SELECT mp.*, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
+                   mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual, mpd.prazo_dias
+            FROM metas_projeto mp
+            JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+            WHERE mp.id_projeto = ? AND mpd.fase = ?
+            ORDER BY mpd.numero
+        ");
+        $idProj = $ultimoProjeto['id'];
+        $stmtM->bind_param('is', $idProj, $faseActual);
+        $stmtM->execute();
+        $metasFase = $stmtM->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtM->close();
+        
+        $pesoTotal = 0;
+        $pesoConcluido = 0;
+        foreach ($metasFase as $m) {
+            $pesoTotal += $m['peso_percentual'];
+            if ($m['estado'] === 'concluida') {
+                $pesoConcluido += $m['peso_percentual'];
+            }
+            if ($m['estado'] === 'activa' || $m['estado'] === 'reprovada') {
+                $metaActiva = $m;
+            }
+        }
+        $percentMetasConcluidas = $pesoTotal > 0 ? round(($pesoConcluido / $pesoTotal) * 100) : 0;
+    }
 }
 ?>
 <?php
@@ -513,6 +548,126 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
         </div>
     </div>
 </div>
+
+<?php if ($ultimoProjeto && $ultimoProjeto['estado'] === 'incubado'): ?>
+<!-- ══ METAS DA FASE ══ -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+    <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-bullseye me-2 text-warning"></i>Metas da Fase: <?= $faseLabel ?></h6>
+        <span class="badge bg-warning text-dark font-weight-bold"><?= $percentMetasConcluidas ?>% Concluído</span>
+    </div>
+    <div class="card-body">
+        <div class="progress mb-4" style="height: 10px; border-radius: 5px;">
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $percentMetasConcluidas ?>%" aria-valuenow="<?= $percentMetasConcluidas ?>" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="list-group list-group-flush mb-3">
+                    <?php if (empty($metasFase)): ?>
+                        <div class="text-center p-3 text-muted">
+                            <i class="fa fa-info-circle me-1"></i>Nenhuma meta inicializada para esta fase. Aguarde a activação pelo Administrador.
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($metasFase as $m): 
+                            $est = $m['estado'];
+                            $itemClass = '';
+                            $badge = '';
+                            if ($est === 'concluida') {
+                                $itemClass = 'list-group-item-light';
+                                $badge = '<span class="badge bg-success float-end"><i class="fa fa-check-circle me-1"></i>Concluída</span>';
+                            } elseif ($est === 'activa') {
+                                $itemClass = 'list-group-item-warning';
+                                $badge = '<span class="badge bg-warning text-dark float-end"><i class="fa fa-bolt me-1"></i>Activa</span>';
+                            } elseif ($est === 'em_avaliacao') {
+                                $itemClass = 'list-group-item-info';
+                                $badge = '<span class="badge bg-info float-end"><i class="fa fa-clock me-1"></i>A avaliar</span>';
+                            } elseif ($est === 'reprovada') {
+                                $itemClass = 'list-group-item-danger';
+                                $badge = '<span class="badge bg-danger float-end"><i class="fa fa-triangle-exclamation me-1"></i>Devolvida</span>';
+                            } else {
+                                $badge = '<span class="badge bg-light text-muted float-end"><i class="fa fa-lock me-1"></i>Bloqueada</span>';
+                            }
+                        ?>
+                            <div class="list-group-item d-flex justify-content-between align-items-center <?= $itemClass ?> border-0 mb-2 rounded shadow-sm py-3 px-3">
+                                <div>
+                                    <div class="fw-bold text-gray-800" style="font-size:0.9rem;"><?= $m['numero'] ?>. <?= htmlspecialchars($m['meta_titulo']) ?></div>
+                                    <small class="text-muted d-block"><?= htmlspecialchars(substr($m['meta_descricao'], 0, 75)) ?>...</small>
+                                </div>
+                                <?= $badge ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <!-- Meta Activa em Destaque / Submissão -->
+                <?php if ($metaActiva): ?>
+                    <div class="card border border-warning shadow-sm" style="border-radius: 12px; background: #fffdf6;">
+                        <div class="card-body">
+                            <span class="badge bg-warning text-dark mb-2"><i class="fa fa-star me-1"></i>Meta em Foco</span>
+                            <h5 class="card-title fw-bold text-gray-900"><?= htmlspecialchars($metaActiva['meta_titulo']) ?></h5>
+                            <p class="card-text text-muted small"><?= htmlspecialchars($metaActiva['meta_descricao']) ?></p>
+                            
+                            <div class="mb-3 small">
+                                <strong><i class="fa fa-paperclip me-1 text-primary"></i>Evidência Esperada:</strong><br>
+                                <span class="text-secondary"><?= htmlspecialchars($metaActiva['evidencia_desc']) ?> (Tipo: <?= ucfirst($metaActiva['evidencia_tipo']) ?>)</span>
+                            </div>
+
+                            <?php if ($metaActiva['feedback_mentor']): ?>
+                                <div class="alert alert-danger py-2 px-3 small mb-3">
+                                    <strong><i class="fa fa-circle-exclamation me-1"></i>Feedback de Correção:</strong><br>
+                                    <?= htmlspecialchars($metaActiva['feedback_mentor']) ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- Formulário de Submissão -->
+                            <form action="/incubadora_ispsn/app/controllers/metas_action.php" method="POST" enctype="multipart/form-data" class="bg-white p-3 border rounded shadow-sm">
+                                <input type="hidden" name="action" value="submeter_evidencia">
+                                <input type="hidden" name="id_meta_projeto" value="<?= $metaActiva['id'] ?>">
+                                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
+
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold text-gray-700">Descrição/Relatório de Execução:</label>
+                                    <textarea name="evidencia_texto" class="form-control form-control-sm" rows="3" required placeholder="Especifique em detalhe as tarefas que realizou..."><?= htmlspecialchars($metaActiva['evidencia_texto'] ?? '') ?></textarea>
+                                </div>
+
+                                <?php if ($metaActiva['evidencia_tipo'] === 'link' || $metaActiva['evidencia_tipo'] === 'ficheiro'): ?>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-bold text-gray-700">Link Externo (URL):</label>
+                                        <input type="url" name="evidencia_link" class="form-control form-control-sm" value="<?= htmlspecialchars($metaActiva['evidencia_link'] ?? '') ?>" placeholder="https://exemplo.com/doc-ou-drive">
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if ($metaActiva['evidencia_tipo'] === 'ficheiro'): ?>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-gray-700">Ficheiro Comprovativo (PDF, Zip, Imagem):</label>
+                                        <input type="file" name="evidencia_ficheiro" class="form-control form-control-sm">
+                                        <?php if ($metaActiva['evidencia_path']): ?>
+                                            <small class="text-muted d-block mt-1">Já tens um ficheiro enviado. <a href="/incubadora_ispsn/<?= htmlspecialchars($metaActiva['evidencia_path']) ?>" target="_blank">Ver Ficheiro Atual</a></small>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+
+                                <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold py-2">
+                                    <i class="fa fa-paper-plane me-1"></i> Submeter Evidência
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div class="card border bg-light h-100 d-flex flex-column justify-content-center align-items-center text-center p-4" style="border-radius: 12px;">
+                        <i class="fa fa-hourglass-half fa-2x text-muted mb-2"></i>
+                        <h6 class="fw-bold">Nenhuma Meta Activa</h6>
+                        <p class="text-muted small mb-0">Quando o Administrador activar a sua próxima meta, ela aparecerá aqui para submissão de evidências.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ══ AÇÕES RÁPIDAS ══ -->
 <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#9CA3AF; margin-bottom:10px;">Acções Rápidas</div>

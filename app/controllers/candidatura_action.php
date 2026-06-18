@@ -38,13 +38,23 @@ if ($action === 'criar_processo') {
 if ($action === 'toggle_processo') {
     $id = (int)($_POST['id_processo'] ?? 0);
     if ($id) {
-        $res = $mysqli->query("SELECT estado FROM processos_candidatura WHERE id=$id");
-        $proc = $res->fetch_assoc();
-        $novoEstado = ($proc['estado'] === 'aberto') ? 'fechado' : 'aberto';
-        $mysqli->query("UPDATE processos_candidatura SET estado='$novoEstado', atualizado_em=NOW() WHERE id=$id");
-        $_SESSION['flash_ok'] = $novoEstado === 'aberto'
-            ? '✅ Inscrições abertas ao público!'
-            : '🔒 Inscrições encerradas. Novos formulários bloqueados.';
+        $stmt = $mysqli->prepare("SELECT estado FROM processos_candidatura WHERE id=?");
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $proc = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if ($proc) {
+            $novoEstado = ($proc['estado'] === 'aberto') ? 'fechado' : 'aberto';
+            $stmtUp = $mysqli->prepare("UPDATE processos_candidatura SET estado=?, atualizado_em=NOW() WHERE id=?");
+            $stmtUp->bind_param('si', $novoEstado, $id);
+            $stmtUp->execute();
+            $stmtUp->close();
+            
+            $_SESSION['flash_ok'] = $novoEstado === 'aberto'
+                ? '✅ Inscrições abertas ao público!'
+                : '🔒 Inscrições encerradas. Novos formulários bloqueados.';
+        }
     }
     header("Location: $redirect"); exit;
 }

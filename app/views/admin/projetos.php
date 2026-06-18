@@ -87,10 +87,11 @@ require_once __DIR__ . '/../partials/_layout.php';
 <div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:24px">
     <?php
     $estadosMeta = [
-        'em_analise'   => ['label'=>'Em Análise',   'cor'=>'#F59E0B', 'icon'=>'fa-hourglass-half'],
-        'em_andamento' => ['label'=>'Em Andamento',  'cor'=>'#3B82F6', 'icon'=>'fa-circle-play'],
-        'concluido'    => ['label'=>'Concluídos',    'cor'=>'#10B981', 'icon'=>'fa-circle-check'],
-        'cancelado'    => ['label'=>'Cancelados',    'cor'=>'#EF4444', 'icon'=>'fa-circle-xmark'],
+        'submetido'          => ['label'=>'Submetidos',   'cor'=>'#64748B', 'icon'=>'fa-inbox'],
+        'em_avaliacao'       => ['label'=>'Em Avaliação', 'cor'=>'#F59E0B', 'icon'=>'fa-magnifying-glass'],
+        'aprovado'           => ['label'=>'Aprovados',    'cor'=>'#10B981', 'icon'=>'fa-circle-check'],
+        'incubado'           => ['label'=>'Incubados',    'cor'=>'#3B82F6', 'icon'=>'fa-rocket'],
+        'rejeitado'          => ['label'=>'Rejeitados',   'cor'=>'#EF4444', 'icon'=>'fa-circle-xmark'],
     ];
     foreach ($estadosMeta as $est => $meta):
         $n = $contadores[$est] ?? 0;
@@ -130,10 +131,13 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <label class="form-label-custom">Estado</label>
                 <select name="estado" class="form-control-custom">
                     <option value="">Todos os estados</option>
-                    <option value="em_analise"   <?= $filtroEstado==='em_analise'   ? 'selected':'' ?>>Em Análise</option>
-                    <option value="em_andamento" <?= $filtroEstado==='em_andamento' ? 'selected':'' ?>>Em Andamento</option>
-                    <option value="concluido"    <?= $filtroEstado==='concluido'    ? 'selected':'' ?>>Concluído</option>
-                    <option value="cancelado"    <?= $filtroEstado==='cancelado'    ? 'selected':'' ?>>Cancelado</option>
+                    <option value="submetido"          <?= $filtroEstado==='submetido'          ? 'selected':'' ?>>Submetido</option>
+                    <option value="em_avaliacao"       <?= $filtroEstado==='em_avaliacao'       ? 'selected':'' ?>>Em Avaliação</option>
+                    <option value="aprovado"           <?= $filtroEstado==='aprovado'           ? 'selected':'' ?>>Aprovado</option>
+                    <option value="rejeitado"          <?= $filtroEstado==='rejeitado'          ? 'selected':'' ?>>Rejeitado</option>
+                    <option value="incubado"           <?= $filtroEstado==='incubado'           ? 'selected':'' ?>>Incubado</option>
+                    <option value="fundo_investimento" <?= $filtroEstado==='fundo_investimento' ? 'selected':'' ?>>Pronto p/ Investimento</option>
+                    <option value="concluido"          <?= $filtroEstado==='concluido'          ? 'selected':'' ?>>Graduado / Concluído</option>
                 </select>
             </div>
             <div style="min-width:140px">
@@ -246,7 +250,17 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 <i class="fa fa-sliders"></i>
                             </button>
                             <ul class="dropdown-menu shadow-sm border-0">
-                                <?php foreach (['em_analise'=>'Em Análise','em_andamento'=>'Em Andamento','concluido'=>'Concluído','cancelado'=>'Cancelado'] as $est => $lbl): ?>
+                                <?php 
+                                $estadosDisponiveis = [
+                                    'submetido' => 'Submetido',
+                                    'em_avaliacao' => 'Em Avaliação',
+                                    'aprovado' => 'Aprovado',
+                                    'rejeitado' => 'Rejeitado',
+                                    'fundo_investimento' => 'Fundo Investimento',
+                                    'concluido' => 'Concluído'
+                                ];
+                                foreach ($estadosDisponiveis as $est => $lbl): 
+                                ?>
                                 <li>
                                     <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
                                         <input type="hidden" name="action" value="mudar_estado">

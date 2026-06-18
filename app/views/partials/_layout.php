@@ -75,6 +75,7 @@ $menus = [
         ['icon'=>'fa-bookmark',        'label'=>'Gestão de Espaços','href'=>'/incubadora_ispsn/app/views/admin/gestao_espacos.php','id'=>'gestao_espacos'],
         ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php',    'id'=>'ranking'],
         ['icon'=>'fa-star',            'label'=>'Avaliações',       'href'=>'/incubadora_ispsn/app/views/admin/avaliacoes.php',      'id'=>'avaliacoes'],
+        ['icon'=>'fa-bullseye',        'label'=>'Gestão de Metas',  'href'=>'/incubadora_ispsn/app/views/admin/gestao_metas.php',   'id'=>'gestao_metas'],
         ['icon'=>'fa-plus-circle',     'label'=>'Simular Submissão','href'=>'/incubadora_ispsn/app/views/dashboard/utilizador.php',  'id'=>'meu_painel'],
         // ── Gestão Operacional ─────────────
         ['icon'=>'fa-handshake',       'label'=>'Mentorias',        'href'=>'/incubadora_ispsn/app/views/funcionario/mentorias.php', 'id'=>'mentorias'],

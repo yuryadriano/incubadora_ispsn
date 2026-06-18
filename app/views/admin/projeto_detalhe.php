@@ -72,6 +72,25 @@ if (in_array($perfil, ['admin','superadmin'])) {
     $r4->bind_param('i', $idProjeto);
     $r4->execute();
     $mediaAval = $r4->get_result()->fetch_assoc();
+    $r4->close();
+
+    // Média de cada um dos 8 critérios
+    $stmtAvg = $mysqli->prepare("
+        SELECT 
+            AVG(nota_inovacao) avg_inovacao,
+            AVG(nota_sustentabilidade) avg_sustentabilidade,
+            AVG(nota_escalabilidade) avg_escalabilidade,
+            AVG(nota_impacto) avg_impacto,
+            AVG(nota_viabilidade) avg_viabilidade,
+            AVG(nota_equipa) avg_equipa,
+            AVG(nota_mercado) avg_mercado,
+            AVG(nota_proposta) avg_proposta
+        FROM avaliacoes WHERE id_projeto = ?
+    ");
+    $stmtAvg->bind_param('i', $idProjeto);
+    $stmtAvg->execute();
+    $mediaCrit = $stmtAvg->get_result()->fetch_assoc();
+    $stmtAvg->close();
 }
 
 // ── Dados Financeiros ──────────────────────
@@ -556,6 +575,20 @@ require_once __DIR__ . '/../partials/_layout.php';
         </div>
         <?php endif; ?>
 
+        <!-- Radar Chart da Avaliação -->
+        <?php if (!empty($mediaAval['n']) && $mediaAval['n'] > 0): ?>
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <div class="card-title-custom"><i class="fa fa-chart-pie text-warning"></i> Desempenho 8D</div>
+            </div>
+            <div class="card-body-custom text-center">
+                <div style="max-width: 100%; height: 260px; margin: 0 auto; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="radarChartAvaliacao"></canvas>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Execução Financeira -->
         <div class="card-custom mb-4">
             <div class="card-header-custom">
@@ -950,17 +983,20 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <div class="row g-3 mb-3">
                         <?php
                         $criteria = [
-                            'nota_inovacao'    => ['label'=>'Inovação',    'icon'=>'fa-lightbulb',   'val'=>$avaliacao['nota_inovacao']    ?? 5],
-                            'nota_viabilidade' => ['label'=>'Viabilidade', 'icon'=>'fa-chart-line',  'val'=>$avaliacao['nota_viabilidade'] ?? 5],
-                            'nota_impacto'     => ['label'=>'Impacto',     'icon'=>'fa-globe',       'val'=>$avaliacao['nota_impacto']     ?? 5],
-                            'nota_equipa'      => ['label'=>'Equipa',      'icon'=>'fa-users',       'val'=>$avaliacao['nota_equipa']      ?? 5],
+                            'nota_inovacao'         => ['label'=>'🔬 Inovação (20%)', 'icon'=>'fa-lightbulb',   'val'=>$avaliacao['nota_inovacao'] ?? 5],
+                            'nota_sustentabilidade' => ['label'=>'💰 Autossustentabilidade (15%)', 'icon'=>'fa-wallet', 'val'=>$avaliacao['nota_sustentabilidade'] ?? 5],
+                            'nota_escalabilidade'   => ['label'=>'📈 Escalabilidade (10%)', 'icon'=>'fa-arrow-up-right-dots', 'val'=>$avaliacao['nota_escalabilidade'] ?? 5],
+                            'nota_impacto'          => ['label'=>'🌍 Impacto Social (15%)', 'icon'=>'fa-globe', 'val'=>$avaliacao['nota_impacto'] ?? 5],
+                            'nota_viabilidade'      => ['label'=>'⚙️ Viabilidade Técnica (10%)', 'icon'=>'fa-gears', 'val'=>$avaliacao['nota_viabilidade'] ?? 5],
+                            'nota_equipa'           => ['label'=>'👥 Qualidade da Equipa (10%)', 'icon'=>'fa-users', 'val'=>$avaliacao['nota_equipa'] ?? 5],
+                            'nota_mercado'          => ['label'=>'📊 Viabilidade de Mercado (10%)', 'icon'=>'fa-chart-simple', 'val'=>$avaliacao['nota_mercado'] ?? 5],
+                            'nota_proposta'         => ['label'=>'📝 Qualidade da Proposta (10%)', 'icon'=>'fa-file-signature', 'val'=>$avaliacao['nota_proposta'] ?? 5],
                         ];
                         foreach ($criteria as $field => $meta):
                         ?>
                         <div class="col-md-6">
                             <label class="form-label-custom">
-                                <i class="fa <?= $meta['icon'] ?> me-1"></i>
-                                <?= $meta['label'] ?> (0-10)
+                                <?= $meta['label'] ?>
                             </label>
                             <div class="d-flex align-items-center gap-3">
                                 <input type="range" name="<?= $field ?>" min="0" max="10" step="1"
@@ -1032,6 +1068,65 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 <?php endif; ?>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    <?php if (!empty($mediaAval['n']) && $mediaAval['n'] > 0): ?>
+    const ctxRadar = document.getElementById('radarChartAvaliacao');
+    if (ctxRadar) {
+        new Chart(ctxRadar, {
+            type: 'radar',
+            data: {
+                labels: [
+                    'Inovação', 
+                    'Autossustentabilidade', 
+                    'Escalabilidade', 
+                    'Impacto Social', 
+                    'Viabilidade Técnica', 
+                    'Qualidade Equipa', 
+                    'Viabilidade Mercado', 
+                    'Qualidade Proposta'
+                ],
+                datasets: [{
+                    label: 'Média (0-10)',
+                    data: [
+                        <?= number_format($mediaCrit['avg_inovacao'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_sustentabilidade'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_escalabilidade'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_impacto'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_viabilidade'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_equipa'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_mercado'] ?? 0, 1) ?>,
+                        <?= number_format($mediaCrit['avg_proposta'] ?? 0, 1) ?>
+                    ],
+                    backgroundColor: 'rgba(217, 119, 6, 0.2)',
+                    borderColor: '#D97706',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#D97706',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#D97706'
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: { display: true },
+                        suggestedMin: 0,
+                        suggestedMax: 10,
+                        ticks: { stepSize: 2, display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+    <?php endif; ?>
+});
+</script>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>
 

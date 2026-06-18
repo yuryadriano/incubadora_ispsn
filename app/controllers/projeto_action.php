@@ -89,15 +89,42 @@ if ($action === 'mudar_estado' && in_array($perfil, ['admin','superadmin','funci
     $estadosValidos = ['submetido', 'em_avaliacao', 'aprovado', 'rejeitado', 'incubado', 'fundo_investimento', 'concluido'];
 
     if ($idProjeto && in_array($novoEstado, $estadosValidos)) {
+        // Bloquear transição directa para incubado - deve ir pelo fluxo de termo + assinatura digital
+        if ($novoEstado === 'incubado') {
+            $_SESSION['flash_erro'] = 'O estado Incubado só pode ser activado através da assinatura digital do Termo de Incubação.';
+            header("Location: $redirect");
+            exit;
+        }
+
+        // Buscar estado anterior para o histórico
+        $stmtEst = $mysqli->prepare("SELECT estado FROM projetos WHERE id = ?");
+        $stmtEst->bind_param('i', $idProjeto);
+        $stmtEst->execute();
+        $projData = $stmtEst->get_result()->fetch_assoc();
+        $stmtEst->close();
+        $estadoAnterior = $projData ? $projData['estado'] : '';
+
         $stmt = $mysqli->prepare("UPDATE projetos SET estado=?, motivo_rejeicao=? WHERE id=?");
         $stmt->bind_param('ssi', $novoEstado, $motivo, $idProjeto);
         $stmt->execute();
+        $stmt->close();
+
+        // Gravar histórico
+        if ($estadoAnterior !== $novoEstado) {
+            $stmtLog = $mysqli->prepare("INSERT INTO historico_estados (id_projeto, estado_anterior, estado_novo, id_usuario, motivo) VALUES (?, ?, ?, ?, ?)");
+            $motivoLog = "Mudança de estado manual pelo administrador. " . ($motivo ? "Motivo: $motivo" : "");
+            $stmtLog->bind_param('issis', $idProjeto, $estadoAnterior, $novoEstado, $idUsuario, $motivoLog);
+            $stmtLog->execute();
+            $stmtLog->close();
+        }
 
         // Notificar o criador do projecto
         $rp = $mysqli->prepare("SELECT criado_por, titulo FROM projetos WHERE id=?");
         $rp->bind_param('i', $idProjeto);
         $rp->execute();
         $proj = $rp->get_result()->fetch_assoc();
+        $rp->close();
+
         if ($proj) {
             $labelEstado = [
                 'submetido'          => 'Submetido (Aguardando Triagem)',
@@ -113,7 +140,6 @@ if ($action === 'mudar_estado' && in_array($perfil, ['admin','superadmin','funci
             $msg = "O estado do seu projecto foi actualizado para: **$nomeEstado**."
                 . ($motivo ? "\n\n**Nota do Administrador:** $motivo" : '');
             
-            // Notificar o criador do projecto
             enviarNotificacao($proj['criado_por'], $tit, $msg, ($novoEstado === 'rejeitado' ? 'erro' : 'sucesso'));
         }
         $_SESSION['flash_ok'] = 'Estado actualizado com sucesso.';
@@ -163,55 +189,123 @@ if ($action === 'adicionar_comentario') {
    Salva avaliação formal (admin/superadmin)
 ════════════════════════════════════════════════ */
 if ($action === 'avaliar_projeto' && in_array($perfil, ['admin','superadmin'])) {
-    $idProjeto      = (int)($_POST['id_projeto'] ?? 0);
-    $notaInovacao   = min(10, max(0, (int)($_POST['nota_inovacao']    ?? 0)));
-    $notaViabilidade= min(10, max(0, (int)($_POST['nota_viabilidade'] ?? 0)));
-    $notaImpacto    = min(10, max(0, (int)($_POST['nota_impacto']     ?? 0)));
-    $notaEquipa     = min(10, max(0, (int)($_POST['nota_equipa']      ?? 0)));
-    $observacoes    = trim($_POST['observacoes'] ?? '');
-    $decisao        = $_POST['decisao'] ?? 'pendente';
-    $total          = (int)round(($notaInovacao + $notaViabilidade + $notaImpacto + $notaEquipa) / 4);
+    $idProjeto            = (int)($_POST['id_projeto'] ?? 0);
+    $notaInovacao         = min(10, max(0, (int)($_POST['nota_inovacao']         ?? 0)));
+    $notaViabilidade      = min(10, max(0, (int)($_POST['nota_viabilidade']      ?? 0)));
+    $notaImpacto          = min(10, max(0, (int)($_POST['nota_impacto']          ?? 0)));
+    $notaEquipa           = min(10, max(0, (int)($_POST['nota_equipa']           ?? 0)));
+    $notaSustentabilidade = min(10, max(0, (int)($_POST['nota_sustentabilidade'] ?? 0)));
+    $notaEscalabilidade   = min(10, max(0, (int)($_POST['nota_escalabilidade']   ?? 0)));
+    $notaMercado          = min(10, max(0, (int)($_POST['nota_mercado']          ?? 0)));
+    $notaProposta         = min(10, max(0, (int)($_POST['nota_proposta']         ?? 0)));
+    $observacoes          = trim($_POST['observacoes'] ?? '');
+    
+    // Pesos dos 8 critérios
+    $totalFloat = (
+        $notaInovacao * 0.20 + 
+        $notaSustentabilidade * 0.15 +
+        $notaEscalabilidade * 0.10 + 
+        $notaImpacto * 0.15 +
+        $notaViabilidade * 0.10 + 
+        $notaEquipa * 0.10 +
+        $notaMercado * 0.10 + 
+        $notaProposta * 0.10
+    );
+    $total = (int)round($totalFloat);
+
+    // Lógica de decisão recomendada
+    $notas = [$notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta];
+    $minNota = min($notas);
+
+    if ($notaInovacao < 5 || $notaSustentabilidade < 4) {
+        $decisaoSugerida = 'em_revisao'; // Veto automático
+    } elseif ($totalFloat >= 7.0 && $minNota >= 4) {
+        $decisaoSugerida = 'aprovado';
+    } elseif ($totalFloat < 5.5) {
+        $decisaoSugerida = 'rejeitado';
+    } else {
+        $decisaoSugerida = 'em_revisao';
+    }
+
+    $decisao = $_POST['decisao'] ?? $decisaoSugerida;
+    // Forçar em_revisao se veto estiver ativo mas admin tentou aprovar
+    if ($decisao === 'aprovado' && ($notaInovacao < 5 || $notaSustentabilidade < 4)) {
+        $decisao = 'em_revisao';
+        $_SESSION['flash_aviso'] = 'Aprovado impedido devido a critérios eliminatórios (Inovação < 5 ou Autossustentabilidade < 4). Definido como Em Revisão.';
+    }
 
     $decisoesValidas = ['pendente','aprovado','rejeitado','em_revisao'];
     if (!in_array($decisao, $decisoesValidas)) $decisao = 'pendente';
 
     if ($idProjeto) {
-        // Verificar se já avaliou — se sim, actualiza; se não, insere
+        // Verificar se já avaliou
         $check = $mysqli->prepare("SELECT id FROM avaliacoes WHERE id_projeto=? AND id_avaliador=?");
         $check->bind_param('ii', $idProjeto, $idUsuario);
         $check->execute();
         $jaExiste = $check->get_result()->fetch_assoc();
+        $check->close();
 
         if ($jaExiste) {
             $stmt = $mysqli->prepare("
                 UPDATE avaliacoes SET
                     nota_inovacao=?, nota_viabilidade=?, nota_impacto=?, nota_equipa=?,
+                    nota_sustentabilidade=?, nota_escalabilidade=?, nota_mercado=?, nota_proposta=?,
                     pontuacao_total=?, observacoes=?, decisao=?, avaliado_em=NOW()
                 WHERE id_projeto=? AND id_avaliador=?
             ");
-            $stmt->bind_param('iiiiiissii',
+            $stmt->bind_param('iiiiiiiiissii',
                 $notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa,
+                $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta,
                 $total, $observacoes, $decisao, $idProjeto, $idUsuario
             );
         } else {
             $stmt = $mysqli->prepare("
                 INSERT INTO avaliacoes
                     (id_projeto, id_avaliador, nota_inovacao, nota_viabilidade, nota_impacto,
-                     nota_equipa, pontuacao_total, observacoes, decisao)
-                VALUES (?,?,?,?,?,?,?,?,?)
+                     nota_equipa, nota_sustentabilidade, nota_escalabilidade, nota_mercado, nota_proposta,
+                     pontuacao_total, observacoes, decisao)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             ");
-            $stmt->bind_param('iiiiiiiss',
+            $stmt->bind_param('iiiiiiiiiiiss',
                 $idProjeto, $idUsuario, $notaInovacao, $notaViabilidade,
-                $notaImpacto, $notaEquipa, $total, $observacoes, $decisao
+                $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade,
+                $notaMercado, $notaProposta, $total, $observacoes, $decisao
             );
         }
         $stmt->execute();
+        $stmt->close();
 
-        // Se decisão = aprovado/rejeitado, actualizar estado do projecto conforme o novo fluxo
+        // Se decisão = aprovado/rejeitado, actualizar estado do projecto
+        $novoEstadoProj = null;
         if ($decisao === 'aprovado') {
-            $mysqli->query("UPDATE projetos SET estado='aprovado' WHERE id=$idProjeto");
+            $novoEstadoProj = 'aprovado';
         } elseif ($decisao === 'rejeitado') {
-            $mysqli->query("UPDATE projetos SET estado='rejeitado' WHERE id=$idProjeto");
+            $novoEstadoProj = 'rejeitado';
+        } elseif ($decisao === 'em_revisao') {
+            $novoEstadoProj = 'em_avaliacao'; // Volta para avaliação se for devolvido para revisão
+        }
+
+        if ($novoEstadoProj) {
+            // Buscar estado anterior para o histórico
+            $stmtEst = $mysqli->prepare("SELECT estado FROM projetos WHERE id = ?");
+            $stmtEst->bind_param('i', $idProjeto);
+            $stmtEst->execute();
+            $projData = $stmtEst->get_result()->fetch_assoc();
+            $stmtEst->close();
+            $estadoAnterior = $projData ? $projData['estado'] : '';
+
+            if ($estadoAnterior !== $novoEstadoProj) {
+                $stmtUp = $mysqli->prepare("UPDATE projetos SET estado=? WHERE id=?");
+                $stmtUp->bind_param('si', $novoEstadoProj, $idProjeto);
+                $stmtUp->execute();
+                $stmtUp->close();
+
+                $stmtLog = $mysqli->prepare("INSERT INTO historico_estados (id_projeto, estado_anterior, estado_novo, id_usuario, motivo) VALUES (?, ?, ?, ?, ?)");
+                $motivoLog = "Actualizado via avaliação formal. Decisão: " . strtoupper($decisao);
+                $stmtLog->bind_param('issis', $idProjeto, $estadoAnterior, $novoEstadoProj, $idUsuario, $motivoLog);
+                $stmtLog->execute();
+                $stmtLog->close();
+            }
         }
 
         $_SESSION['flash_ok'] = 'Avaliação guardada com sucesso.';
@@ -222,8 +316,10 @@ if ($action === 'avaliar_projeto' && in_array($perfil, ['admin','superadmin'])) 
         $stD->bind_param('i', $idProjeto);
         $stD->execute();
         $dono = $stD->get_result()->fetch_assoc();
+        $stD->close();
+
         if ($dono) {
-            $msgAval = "O teu projeto foi avaliado. Resultado: " . strtoupper($decisao);
+            $msgAval = "O teu projeto foi avaliado. Decisão: " . strtoupper($decisao);
             enviarNotificacao($dono['criado_por'], "Resultado da Avaliação", $msgAval, $decisao === 'aprovado' ? 'sucesso' : 'info');
         }
     }

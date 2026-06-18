@@ -83,6 +83,23 @@ if ($idMentor > 0) {
     $stmt->execute();
     $proximasReunioes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
+
+    // Metas pendentes de validação
+    $metasAvaliar = [];
+    $stmt = $mysqli->prepare("
+        SELECT mp.*, mpd.titulo as meta_titulo, mpd.evidencia_tipo, mpd.evidencia_desc,
+               p.titulo as projeto_nome
+        FROM metas_projeto mp
+        JOIN projetos p ON p.id = mp.id_projeto
+        JOIN mentorias m ON m.id_projeto = p.id
+        JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+        WHERE m.id_mentor = ? AND m.estado = 'activa' AND mp.estado = 'em_avaliacao'
+        ORDER BY mp.evidencia_em ASC
+    ");
+    $stmt->bind_param('i', $idMentor);
+    $stmt->execute();
+    $metasAvaliar = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 }
 
 // 3. Contadores rápidos
@@ -209,7 +226,52 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="row g-4">
         <!-- LISTA DE STARTUPS -->
         <div class="col-lg-8">
-            <div class="card-custom h-100">
+            <!-- METAS PENDENTES DE VALIDAÇÃO -->
+            <div class="card-custom mb-4">
+                <div class="card-header-custom" style="border-left: 4px solid var(--warning); background-color: #fffbeb;">
+                    <div class="card-title-custom">
+                        <i class="fa fa-circle-exclamation text-warning"></i> Metas a Validar (Evidências Submetidas)
+                        <span class="badge bg-warning text-dark ms-2"><?= count($metasAvaliar) ?></span>
+                    </div>
+                </div>
+                <div class="card-body-custom p-0">
+                    <?php if (empty($metasAvaliar)): ?>
+                        <div class="text-center text-muted p-4 small">
+                            <i class="fa fa-check-circle text-success me-1"></i>Nenhuma meta pendente de validação neste momento.
+                        </div>
+                    <?php else: ?>
+                        <div class="list-group list-group-flush">
+                            <?php foreach ($metasAvaliar as $mv): ?>
+                                <div class="list-group-item p-3 border-bottom d-flex justify-content-between align-items-start gap-3 bg-white" style="border-color:#F1F5F9!important;">
+                                    <div style="flex:1;">
+                                        <div class="d-flex justify-content-between">
+                                            <span class="fw-bold text-primary" style="font-size:0.9rem;"><?= htmlspecialchars($mv['projeto_nome']) ?></span>
+                                            <small class="text-muted"><?= date('d/m/Y H:i', strtotime($mv['evidencia_em'])) ?></small>
+                                        </div>
+                                        <h6 class="mb-1 fw-bold mt-1 text-gray-800" style="font-size:0.88rem;"><?= htmlspecialchars($mv['meta_titulo']) ?></h6>
+                                        <p class="mb-2 text-muted small" style="line-height:1.4;"><?= htmlspecialchars($mv['evidencia_texto']) ?></p>
+                                        
+                                        <div class="d-flex gap-2">
+                                            <?php if ($mv['evidencia_link']): ?>
+                                                <a href="<?= htmlspecialchars($mv['evidencia_link']) ?>" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 small" style="font-size:0.75rem;"><i class="fa fa-link me-1"></i>Ver Link</a>
+                                            <?php endif; ?>
+                                            <?php if ($mv['evidencia_path']): ?>
+                                                <a href="/incubadora_ispsn/<?= htmlspecialchars($mv['evidencia_path']) ?>" target="_blank" class="btn btn-sm btn-outline-dark py-0 px-2 small" style="font-size:0.75rem;"><i class="fa fa-download me-1"></i>Ficheiro</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2" style="min-width:110px;">
+                                        <button class="btn btn-success btn-sm fw-bold w-100 py-1" style="font-size:0.75rem; border-radius:6px;" onclick="validarMeta(<?= $mv['id'] ?>, 'aprovar')"><i class="fa fa-check me-1"></i>Aprovar</button>
+                                        <button class="btn btn-outline-danger btn-sm fw-bold w-100 py-1" style="font-size:0.75rem; border-radius:6px;" onclick="validarMeta(<?= $mv['id'] ?>, 'reprovar')"><i class="fa fa-rotate-left me-1"></i>Devolver</button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="card-custom">
                 <div class="card-header-custom">
                     <div class="card-title-custom">
                         <i class="fa fa-building-rocket"></i> Minhas Startups Mentoradas
@@ -510,6 +572,52 @@ function toggleReuniaoType(val) {
     document.getElementById('div_virtual').style.display = val === 'virtual' ? 'block' : 'none';
     document.getElementById('div_presencial').style.display = val === 'presencial' ? 'block' : 'none';
 }
+function validarMeta(id, decisao) {
+    document.getElementById('validarMetaId').value = id;
+    document.getElementById('validarDecisao').value = decisao;
+    document.getElementById('validarTitulo').textContent = decisao === 'aprovar' ? '✅ Validar Evidência' : '🔄 Devolver Evidência';
+    document.getElementById('validarBtn').textContent = decisao === 'aprovar' ? 'Aprovar' : 'Devolver com Feedback';
+    document.getElementById('validarBtn').className = decisao === 'aprovar' ? 'btn btn-success fw-bold rounded-3 px-4' : 'btn btn-danger fw-bold rounded-3 px-4';
+    new bootstrap.Modal(document.getElementById('modalValidar')).show();
+}
 </script>
+
+<!-- Modal de Validação de Metas -->
+<div class="modal fade" id="modalValidar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 14px;">
+            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <input type="hidden" name="action" value="validar_evidencia">
+                <input type="hidden" name="id_meta_projeto" id="validarMetaId">
+                <input type="hidden" name="decisao" id="validarDecisao">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/mentor.php">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="validarTitulo">Validar Evidência</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Nota (1-5)</label>
+                        <select name="nota_mentor" class="form-control rounded-3" style="border-radius: 8px;">
+                            <option value="1">1 — Insuficiente</option>
+                            <option value="2">2 — Fraco</option>
+                            <option value="3" selected>3 — Suficiente</option>
+                            <option value="4">4 — Bom</option>
+                            <option value="5">5 — Excelente</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Feedback</label>
+                        <textarea name="feedback_mentor" class="form-control rounded-3" rows="3" required placeholder="Escreva o seu feedback sobre a evidência..." style="border-radius: 8px;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal" style="border-radius: 8px;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold rounded-3 px-4" id="validarBtn" style="border-radius: 8px;">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>

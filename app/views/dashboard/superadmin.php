@@ -35,6 +35,29 @@ if ($r) while ($row = $r->fetch_assoc()) $ultimosUsers[] = $row;
 
 $idUsuario    = (int)($_SESSION['usuario_id'] ?? 0);
 
+// ── Termos de Incubação Pendentes ──
+$termosPendentes = [];
+if ($mysqli->query("SHOW TABLES LIKE 'termos_incubacao'")->num_rows) {
+    $res = $mysqli->query("
+        SELECT t.id, t.codigo_termo, t.criado_em, t.estado,
+               p.titulo as proj_titulo, u.nome as autor
+        FROM termos_incubacao t
+        JOIN projetos p ON p.id = t.id_projeto
+        JOIN usuarios u ON u.id = p.criado_por
+        WHERE t.estado = 'pendente_assinatura'
+        ORDER BY t.criado_em DESC
+    ");
+    if ($res) while ($row = $res->fetch_assoc()) $termosPendentes[] = $row;
+}
+$numTermosPendentes = count($termosPendentes);
+
+// ── Metas em Avaliação ──
+$metasEmAvaliacao = 0;
+if ($mysqli->query("SHOW TABLES LIKE 'metas_projeto'")->num_rows) {
+    $res = $mysqli->query("SELECT COUNT(*) n FROM metas_projeto WHERE estado = 'em_avaliacao'");
+    if ($res) $metasEmAvaliacao = (int)$res->fetch_assoc()['n'];
+}
+
 // Lógica de Simulação de Perfil para Super Admin
 if (isset($_GET['simular_perfil']) && $_SESSION['usuario_perfil'] === 'superadmin') {
     $_SESSION['contexto_simulado'] = $_GET['simular_perfil'];
@@ -285,6 +308,28 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- TERMOS PENDENTES DE ASSINATURA -->
+<?php if (!empty($termosPendentes)): ?>
+<div class="saas-card mb-4" style="border-left:4px solid #D97706; border-radius:16px;">
+    <div class="saas-header">
+        <div class="saas-title"><i class="fa fa-file-signature me-2" style="color:#D97706"></i>Termos Pendentes de Assinatura <span class="badge bg-warning text-dark ms-2"><?= $numTermosPendentes ?></span></div>
+    </div>
+    <?php foreach ($termosPendentes as $tp): ?>
+    <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="border-color:#F1F5F9!important;">
+        <div>
+            <div style="font-weight:700; font-size:0.88rem;"><?= htmlspecialchars($tp['proj_titulo']) ?></div>
+            <div style="font-size:0.72rem; color:#94A3B8;"><span style="font-weight:700; color:#D97706;"><?= $tp['codigo_termo'] ?></span> · <?= htmlspecialchars($tp['autor']) ?> · <?= date('d/m/Y', strtotime($tp['criado_em'])) ?></div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-warning btn-sm fw-bold px-3" style="border-radius:8px;" onclick="assinarTermo(<?= $tp['id'] ?>, '<?= htmlspecialchars($tp['codigo_termo'], ENT_QUOTES) ?>')">
+                <i class="fa fa-signature me-1"></i>Assinar
+            </button>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
 <!-- CHARTS AND LISTS (SaaS Grid) -->
 <div class="saas-grid">
     
@@ -350,6 +395,38 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 </div><!-- /content-geral -->
+
+<!-- MODAL ASSINAR TERMO -->
+<div class="modal fade" id="modalAssinar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php">
+                <input type="hidden" name="action" value="assinar_termo">
+                <input type="hidden" name="id_termo" id="assinarTermoId">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/superadmin.php">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-signature me-2" style="color:#D97706"></i>Assinatura Digital</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning border-0 mb-3" style="border-radius:10px; font-size:0.85rem;">
+                        <i class="fa fa-shield-halved me-2"></i>
+                        Termo: <strong id="assinarTermoCodigo"></strong><br>
+                        <small>Ao assinar, confirma que reviu o termo e autoriza a incubação do projecto. Esta acção é <strong>irreversível</strong> e será registada com hash SHA-512.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase">Confirme com a sua senha</label>
+                        <input type="password" name="senha_confirmacao" class="form-control rounded-3" required placeholder="Introduza a sua palavra-passe" autocomplete="off">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold rounded-3 px-4"><i class="fa fa-signature me-1"></i>Assinar Digitalmente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- ABA 2: ACESSO RÁPIDO -->
 <div id="content-acesso" style="display:none">
@@ -422,6 +499,12 @@ require_once __DIR__ . '/../partials/_layout.php';
 <?php ob_start(); ?>
 <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'></script>
 <script>
+    function assinarTermo(id, codigo) {
+        document.getElementById('assinarTermoId').value = id;
+        document.getElementById('assinarTermoCodigo').textContent = codigo;
+        new bootstrap.Modal(document.getElementById('modalAssinar')).show();
+    }
+
     const ctx = document.getElementById('saasChart');
     if (ctx) {
         new Chart(ctx, {
