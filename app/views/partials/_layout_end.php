@@ -94,8 +94,7 @@ async function marcarLidas() {
     loadNotifications();
 }
 
-// Iniciar Polling (cada 15 seg)
-setInterval(checkNotifications, 15000);
+// Executar verificação uma única vez no carregamento da página para não sobrecarregar o servidor
 checkNotifications();
 
 // Carregar ao abrir o dropdown
