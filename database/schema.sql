@@ -241,6 +241,88 @@ CREATE TABLE IF NOT EXISTS `avaliacoes_mentor` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
+-- ------------------------------------------------------------
+-- TABELA: espacos
+-- Espaços físicos da incubadora para reservas
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `espacos` (
+  `id`              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `nome`            VARCHAR(150)    NOT NULL,
+  `tipo`            VARCHAR(50)     NOT NULL DEFAULT 'mesa',
+  `capacidade`      INT             NOT NULL DEFAULT 1,
+  `status`          VARCHAR(50)     NOT NULL DEFAULT 'disponivel',
+  `criado_em`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: reservas_espaco
+-- Reservas de espaços físicos pelos empreendedores
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `reservas_espaco` (
+  `id`              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `id_espaco`       INT UNSIGNED    NOT NULL,
+  `id_usuario`      INT UNSIGNED    NOT NULL,
+  `data_reserva`    DATE            NOT NULL,
+  `hora_inicio`     TIME            NOT NULL,
+  `hora_fim`        TIME            NOT NULL,
+  `objetivo`        TEXT            NULL,
+  `status`          VARCHAR(50)     NOT NULL DEFAULT 'pendente',
+  `check_in_at`     DATETIME        NULL DEFAULT NULL,
+  `criado_em`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_res_espaco` (`id_espaco`),
+  KEY `fk_res_usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: equipamentos
+-- Inventário de hardware e recursos físicos
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `equipamentos` (
+  `id`              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `nome`            VARCHAR(150)    NOT NULL,
+  `codigo_patrimonio` VARCHAR(100)  NOT NULL UNIQUE,
+  `estado`          VARCHAR(50)     NOT NULL DEFAULT 'disponivel',
+  `criado_em`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: visitantes
+-- Controlo de acessos de visitantes na incubadora
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `visitantes` (
+  `id`                  INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `nome`                VARCHAR(150)    NOT NULL,
+  `documento_identidade` VARCHAR(100)   NULL,
+  `empresa_motivo`      VARCHAR(255)    NULL,
+  `id_usuario_visitado` INT UNSIGNED    NULL,
+  `data_entrada`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `data_saida`          DATETIME        NULL DEFAULT NULL,
+  `status`              VARCHAR(50)     NOT NULL DEFAULT 'presente',
+  PRIMARY KEY (`id`),
+  KEY `fk_visit_usuario` (`id_usuario_visitado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: emprestimos_equipamento
+-- Empréstimo de equipamentos inventariados a utilizadores
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `emprestimos_equipamento` (
+  `id`                      INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `id_equipamento`          INT UNSIGNED    NOT NULL,
+  `id_usuario`              INT UNSIGNED    NOT NULL,
+  `data_emprestimo`         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `data_devolucao_prevista` DATE            NULL,
+  `data_devolucao_real`     DATETIME        NULL DEFAULT NULL,
+  `status`                  VARCHAR(50)     NOT NULL DEFAULT 'ativo',
+  PRIMARY KEY (`id`),
+  KEY `fk_emp_equip` (`id_equipamento`),
+  KEY `fk_emp_user` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 -- ============================================================
 -- VERIFICAÇÃO: Listar todas as tabelas após criação
 -- SELECT table_name FROM information_schema.tables

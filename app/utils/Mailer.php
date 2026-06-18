@@ -18,6 +18,7 @@ class Mailer {
             $mail->SMTPAuth   = true;
             $mail->Username   = MAIL_USER;
             $mail->Password   = MAIL_PASS;
+            $mail->Timeout    = 8;
             
             if (MAIL_PORT == 465) {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
