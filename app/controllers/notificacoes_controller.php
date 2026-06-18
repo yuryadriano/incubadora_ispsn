@@ -6,6 +6,9 @@ obrigarLogin();
 $idUsuario = (int)$_SESSION['usuario_id'];
 $action    = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// Liberar o lock de sessão imediatamente para evitar bloquear outros requests concorrentes (Prevenção de 504 Gateway Timeout)
+session_write_close();
+
 header('Content-Type: application/json');
 
 if ($action === 'check') {
