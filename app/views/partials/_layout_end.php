@@ -33,41 +33,58 @@ async function checkNotifications() {
     try {
         const res = await fetch('/incubadora_ispsn/app/controllers/notificacoes_controller.php?action=check');
         const data = await res.json();
-        const badge = document.getElementById('notif-badge');
-        if (data.unread > 0) {
-            badge.textContent = data.unread;
-            badge.classList.remove('d-none');
-        } else {
-            badge.classList.add('d-none');
+        
+        // Sidebar badge
+        const badgeSidebar = document.getElementById('notif-badge');
+        if (badgeSidebar) {
+            if (data.unread > 0) {
+                badgeSidebar.classList.remove('d-none');
+            } else {
+                badgeSidebar.classList.add('d-none');
+            }
+        }
+        
+        // Topbar badge
+        const badgeTopbar = document.getElementById('notif-badge-topbar');
+        if (badgeTopbar) {
+            if (data.unread > 0) {
+                badgeTopbar.textContent = data.unread;
+                badgeTopbar.classList.remove('d-none');
+            } else {
+                badgeTopbar.classList.add('d-none');
+            }
         }
     } catch (e) { console.warn("Erro ao buscar notificações"); }
 }
 
 async function loadNotifications() {
-    const list = document.getElementById('notif-list');
+    const listSidebar = document.getElementById('notif-list');
+    const listTopbar = document.getElementById('notif-list-topbar');
     try {
         const res = await fetch('/incubadora_ispsn/app/controllers/notificacoes_controller.php?action=list');
         const data = await res.json();
         
-        if (!data.notificacoes || data.notificacoes.length === 0) {
-            list.innerHTML = '<li class="p-4 text-center text-muted small">Sem notificações recentes</li>';
-            return;
-        }
-
-        list.innerHTML = data.notificacoes.map(n => `
-            <li class="p-3 border-bottom hover-surface" style="cursor:default">
-                <div class="d-flex gap-2">
-                    <div class="mt-1"><i class="fa fa-circle text-${n.tipo === 'info' ? 'primary' : (n.tipo === 'sucesso' ? 'success' : (n.tipo === 'aviso' ? 'warning' : 'danger'))}" style="font-size:0.6rem"></i></div>
-                    <div>
-                        <div class="fw-bold" style="font-size:0.85rem">${n.titulo}</div>
-                        <div class="text-muted" style="font-size:0.75rem">${n.mensagem}</div>
-                        <div class="text-muted mt-1" style="font-size:0.65rem">${new Date(n.criado_em).toLocaleString()}</div>
+        const html = (!data.notificacoes || data.notificacoes.length === 0) 
+            ? '<li class="p-4 text-center text-muted small">Sem notificações recentes</li>'
+            : data.notificacoes.map(n => `
+                <li class="p-3 border-bottom hover-surface" style="cursor:default">
+                    <div class="d-flex gap-2">
+                        <div class="mt-1"><i class="fa fa-circle text-${n.tipo === 'info' ? 'primary' : (n.tipo === 'sucesso' ? 'success' : (n.tipo === 'aviso' ? 'warning' : 'danger'))}" style="font-size:0.6rem"></i></div>
+                        <div>
+                            <div class="fw-bold" style="font-size:0.85rem">${n.titulo}</div>
+                            <div class="text-muted" style="font-size:0.75rem">${n.mensagem}</div>
+                            <div class="text-muted mt-1" style="font-size:0.65rem">${new Date(n.criado_em).toLocaleString()}</div>
+                        </div>
                     </div>
-                </div>
-            </li>
-        `).join('');
+                </li>
+            `).join('');
+            
+        if (listSidebar) listSidebar.innerHTML = html;
+        if (listTopbar) listTopbar.innerHTML = html;
     } catch (e) { 
-        list.innerHTML = '<li class="p-4 text-center text-danger small">Erro ao carregar</li>';
+        const errHtml = '<li class="p-4 text-center text-danger small">Erro ao carregar</li>';
+        if (listSidebar) listSidebar.innerHTML = errHtml;
+        if (listTopbar) listTopbar.innerHTML = errHtml;
     }
 }
 
@@ -84,6 +101,7 @@ checkNotifications();
 // Carregar ao abrir o dropdown
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notifDropdown')?.addEventListener('show.bs.dropdown', loadNotifications);
+    document.getElementById('btnNotif')?.addEventListener('show.bs.dropdown', loadNotifications);
 });
 </script>
 

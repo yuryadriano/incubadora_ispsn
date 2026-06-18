@@ -271,295 +271,184 @@ require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
 <style>
-/* ── DESIGN TOKENS ESTUDANTE ── */
-:root {
-    --amber: #D97706;
-    --amber-dark: #B45309;
-    --emerald: #10B981;
-    --violet: #8B5CF6;
-    --sky: #3B82F6;
-}
+/* ── PAINEL GERAL ESTUDANTE ── */
+:root { --amber: #D97706; --amber-dark: #B45309; --emerald: #10B981; }
 
-/* ── GLASS CARDS ── */
-.g-card {
-    background: rgba(255,255,255,0.88);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(253,230,138,0.3);
-    border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.05);
-    overflow: hidden;
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-}
-.g-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.09); }
-.g-card-header {
-    padding: 18px 20px 14px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
-}
-.g-card-title { font-weight: 700; font-size: 0.95rem; color: #1C1917; display: flex; align-items: center; gap: 8px; }
-.g-card-body { padding: 18px 20px; }
-
-/* ── BANNER ── */
+/* Hero Banner */
 .hero-banner {
-    background: linear-gradient(135deg, #1C1917 0%, #292524 60%, #1C1917 100%);
-    border-radius: 16px;
-    padding: 28px 24px;
-    color: #fff;
-    position: relative;
-    overflow: hidden;
-    margin-bottom: 24px;
+    background: linear-gradient(135deg, #1C1917 0%, #292524 70%, #1C1917 100%);
+    border-radius: 18px; padding: 30px 28px; color: #fff;
+    position: relative; overflow: hidden; margin-bottom: 24px;
 }
 .hero-banner::before {
-    content: '';
-    position: absolute;
-    width: 280px; height: 280px;
-    background: radial-gradient(circle, rgba(217,119,6,0.18) 0%, transparent 70%);
-    top: -100px; right: -60px; z-index: 1;
-    pointer-events: none;
+    content:''; position:absolute; width:300px; height:300px;
+    background: radial-gradient(circle, rgba(217,119,6,0.2) 0%, transparent 70%);
+    top:-120px; right:-60px; z-index:1; pointer-events:none;
 }
-.hero-banner::after {
-    content: '';
-    position: absolute;
-    width: 200px; height: 200px;
-    background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
-    bottom: -80px; left: 20px; z-index: 1;
-    pointer-events: none;
-}
-.hero-banner-content { position: relative; z-index: 2; }
-.hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.hero-banner-inner { position:relative; z-index:2; }
+.hero-badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
 .hero-badge {
-    padding: 4px 12px; border-radius: 20px;
-    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.3px;
+    padding:3px 12px; border-radius:20px; font-size:0.72rem;
+    font-weight:700; letter-spacing:0.3px;
 }
-.hero-badge-sp { background: rgba(217,119,6,0.25); color: #FBBF24; border: 1px solid rgba(217,119,6,0.3); }
-.hero-badge-fase { background: rgba(16,185,129,0.2); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.25); }
-.hero-name { font-size: 1.7rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.3px; line-height: 1.2; }
-.hero-subtitle { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.hero-btn {
-    padding: 9px 16px; border-radius: 10px; font-size: 0.82rem;
-    font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-    transition: all 0.2s; text-decoration: none;
+.hb-sp   { background:rgba(217,119,6,0.25); color:#FBBF24; border:1px solid rgba(217,119,6,0.3); }
+.hb-fase { background:rgba(16,185,129,0.2); color:#6EE7B7; border:1px solid rgba(16,185,129,0.3); }
+.hero-name  { font-size:1.75rem; font-weight:800; letter-spacing:-0.4px; line-height:1.2; }
+.hero-sub   { font-size:0.85rem; color:rgba(255,255,255,0.55); margin-top:4px; }
+.hero-btns  { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.hbtn {
+    padding:9px 18px; border-radius:10px; font-size:0.83rem; font-weight:600;
+    border:none; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+    transition:all 0.2s; text-decoration:none;
 }
-.hero-btn-primary { background: #D97706; color: #fff; }
-.hero-btn-primary:hover { background: #B45309; transform: translateY(-1px); color: #fff; }
-.hero-btn-outline { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); }
-.hero-btn-outline:hover { background: rgba(255,255,255,0.18); color: #fff; }
+.hbtn-primary { background:#D97706; color:#fff; }
+.hbtn-primary:hover { background:#B45309; color:#fff; transform:translateY(-1px); }
+.hbtn-outline { background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); }
+.hbtn-outline:hover { background:rgba(255,255,255,0.18); color:#fff; }
 
-/* ── PIPELINE ── */
-.pipeline-wrap {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    position: relative;
-    padding: 10px 0 6px;
-    overflow-x: auto;
-    gap: 4px;
-    -webkit-overflow-scrolling: touch;
+/* Mini Stats */
+.mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.mini-card {
+    background:#fff; border-radius:14px; padding:16px 14px;
+    text-align:center; border:1px solid #F3F4F6;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:transform 0.2s;
 }
-.pipeline-wrap::-webkit-scrollbar { height: 4px; }
-.pipeline-track {
-    position: absolute;
-    top: 28px; left: 5%; right: 5%;
-    height: 3px; background: #E5E7EB;
-    border-radius: 10px; z-index: 1;
-}
-.pipeline-fill {
-    height: 100%; border-radius: 10px;
-    background: linear-gradient(90deg, #10B981, #D97706);
-    transition: width 0.8s ease;
-}
-.pipe-step {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center;
-    min-width: 60px; flex: 1;
-}
-.pipe-icon {
-    width: 40px; height: 40px; border-radius: 50%;
-    border: 3px solid #E5E7EB; background: #fff;
-    display: flex; align-items: center; justify-content: center;
-    color: #9CA3AF; font-size: 0.9rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    transition: all 0.3s;
-    margin-bottom: 8px;
-}
-.pipe-step.done .pipe-icon { background: #10B981; border-color: #10B981; color: #fff; }
-.pipe-step.active .pipe-icon {
-    background: #D97706; border-color: #D97706; color: #fff;
-    transform: scale(1.15);
-    box-shadow: 0 0 0 5px rgba(217,119,6,0.18);
-}
-.pipe-label {
-    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.4px; color: #9CA3AF; text-align: center; white-space: nowrap;
-}
-.pipe-step.done .pipe-label { color: #10B981; }
-.pipe-step.active .pipe-label { color: #B45309; }
+.mini-card:hover { transform:translateY(-2px); }
+.mini-val { font-size:1.8rem; font-weight:800; color:#D97706; line-height:1; }
+.mini-lbl { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; color:#9CA3AF; margin-top:5px; }
+.mini-icon { font-size:1.1rem; color:#D97706; opacity:0.6; margin-bottom:8px; }
 
-/* ── METAS ── */
-.meta-item {
-    display: flex; justify-content: space-between; align-items: flex-start;
-    gap: 12px; padding: 14px 16px;
-    border-radius: 12px; border: 1px solid #F3F4F6;
-    background: #FAFAFA;
-    margin-bottom: 8px; transition: border-color 0.2s;
+/* Pipeline */
+.pipeline-card {
+    background:#fff; border-radius:16px; border:1px solid #F3F4F6;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:24px;
 }
-.meta-item:hover { border-color: #D97706; background: #FFFBF2; }
-.meta-item:last-child { margin-bottom: 0; }
-.meta-dot {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 2px solid #D1D5DB; flex-shrink: 0; margin-top: 1px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.65rem; color: transparent; transition: all 0.2s;
+.pipeline-card-header {
+    padding:16px 20px; border-bottom:1px solid #F9FAFB;
+    display:flex; align-items:center; justify-content:space-between;
 }
-.meta-item.is-valid .meta-dot { background: #10B981; border-color: #10B981; color: #fff; }
-.meta-item.is-wait .meta-dot  { background: #F59E0B; border-color: #F59E0B; color: #fff; }
-.meta-item.is-prog .meta-dot  { background: #3B82F6; border-color: #3B82F6; color: #fff; }
-.meta-title { font-weight: 600; font-size: 0.88rem; color: #1C1917; }
-.meta-desc  { font-size: 0.76rem; color: #6B7280; margin-top: 2px; }
-.meta-limit { font-size: 0.69rem; color: #9CA3AF; margin-top: 4px; }
-.meta-chip  { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
-.chip-pending  { background: #F3F4F6; color: #6B7280; }
-.chip-progress { background: #DBEAFE; color: #1D4ED8; }
-.chip-wait     { background: #FEF3C7; color: #D97706; }
-.chip-valid    { background: #D1FAE5; color: #065F46; }
-.meta-actions  { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.pipeline-card-title { font-weight:700; font-size:0.9rem; color:#1C1917; display:flex; align-items:center; gap:8px; }
+.pipeline-card-body { padding:20px; overflow-x:auto; }
+.pipe-row {
+    display:flex; align-items:flex-start; justify-content:space-between;
+    position:relative; min-width:360px; gap:4px;
+}
+.pipe-track {
+    position:absolute; top:18px; left:6%; right:6%;
+    height:3px; background:#F3F4F6; border-radius:6px; z-index:1;
+}
+.pipe-fill {
+    height:100%; border-radius:6px;
+    background:linear-gradient(90deg, #10B981, #D97706);
+    transition:width 0.8s ease;
+}
+.pipe-step { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; flex:1; }
+.pipe-dot {
+    width:36px; height:36px; border-radius:50%; border:3px solid #E5E7EB; background:#fff;
+    display:flex; align-items:center; justify-content:center; color:#9CA3AF; font-size:0.85rem;
+    box-shadow:0 2px 6px rgba(0,0,0,0.06); transition:all 0.3s; margin-bottom:7px;
+}
+.pipe-step.done   .pipe-dot { background:#10B981; border-color:#10B981; color:#fff; }
+.pipe-step.active .pipe-dot {
+    background:#D97706; border-color:#D97706; color:#fff;
+    transform:scale(1.18); box-shadow:0 0 0 5px rgba(217,119,6,0.18);
+}
+.pipe-lbl {
+    font-size:0.6rem; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.4px; color:#C4C9D4; text-align:center; white-space:nowrap;
+}
+.pipe-step.done   .pipe-lbl { color:#10B981; }
+.pipe-step.active .pipe-lbl { color:#B45309; }
 
-/* ── DOCS ── */
-.doc-item {
-    display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-    border-radius: 10px; border: 1px solid #F3F4F6; background: #FAFAFA;
-    margin-bottom: 6px; transition: border-color 0.2s;
+/* Quick Actions */
+.qa-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
+.qa-card {
+    background:#fff; border-radius:14px; border:1px solid #F3F4F6;
+    padding:20px 18px; display:flex; align-items:center; gap:14px;
+    text-decoration:none; box-shadow:0 2px 8px rgba(0,0,0,0.04);
+    transition:all 0.22s;
 }
-.doc-item:hover { border-color: #D97706; }
-.doc-icon {
-    width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
-    background: rgba(217,119,6,0.08); color: #D97706;
-    display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+.qa-card:hover {
+    border-color:#D97706; transform:translateY(-2px);
+    box-shadow:0 8px 24px rgba(217,119,6,0.1); color:inherit;
 }
-.doc-name { font-weight: 600; font-size: 0.82rem; color: #1C1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
-.doc-meta { font-size: 0.7rem; color: #9CA3AF; }
-.doc-section-label { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9CA3AF; margin-bottom: 8px; margin-top: 14px; }
-.doc-section-label:first-child { margin-top: 0; }
+.qa-icon {
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    background:rgba(217,119,6,0.08); color:#D97706;
+    display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+}
+.qa-label { font-weight:700; font-size:0.88rem; color:#1C1917; }
+.qa-desc  { font-size:0.73rem; color:#9CA3AF; margin-top:2px; }
+.qa-arrow { margin-left:auto; color:#D1D5DB; font-size:0.8rem; transition:transform 0.2s; }
+.qa-card:hover .qa-arrow { transform:translateX(4px); color:#D97706; }
 
-/* ── RESERVAS ── */
-.reserva-row {
-    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-    border-radius: 12px; border: 1px solid #F3F4F6; background: #FAFAFA;
-    margin-bottom: 8px; font-size: 0.84rem;
-}
-.reserva-row:last-child { margin-bottom: 0; }
-.reserva-icon {
-    width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 1rem;
-}
-.r-icon-confirm { background: #D1FAE5; color: #10B981; }
-.r-icon-pending { background: #FEF3C7; color: #D97706; }
-.r-icon-cancel  { background: #FEE2E2; color: #EF4444; }
+/* Progresso bar do projeto */
+.proj-progress { margin-bottom:24px; }
+.progress-track { height:8px; background:#F3F4F6; border-radius:8px; overflow:hidden; }
+.progress-fill  { height:100%; border-radius:8px; background:linear-gradient(90deg, #10B981, #D97706); transition:width 0.8s ease; }
 
-/* ── SALAS ── */
-.sala-card {
-    display: flex; align-items: center; gap: 12px; padding: 12px;
-    border-radius: 12px; border: 1px solid #F3F4F6;
-    background: #fff; margin-bottom: 8px;
-}
-.sala-icon {
-    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
-    background: rgba(217,119,6,0.08); color: #D97706;
-    display: flex; align-items: center; justify-content: center; font-size: 1rem;
-}
-.sala-name { font-weight: 600; font-size: 0.84rem; color: #1C1917; }
-.sala-cap  { font-size: 0.71rem; color: #9CA3AF; }
-
-/* ── FEEDBACK / SESSÃO ── */
-.feedback-item {
-    padding: 14px 16px; border-radius: 12px;
-    background: #F9FAFB; border-left: 4px solid #D97706;
-    margin-bottom: 10px;
-}
-.feedback-item:last-child { margin-bottom: 0; }
-.sessao-item {
-    padding: 14px 16px; border-radius: 12px;
-    border: 1px solid #F3F4F6; background: #FAFAFA;
-    margin-bottom: 10px;
+/* Sem projeto */
+.empty-hero {
+    background:#fff; border-radius:18px; padding:60px 40px;
+    text-align:center; border:1px solid #F3F4F6;
+    box-shadow:0 2px 8px rgba(0,0,0,0.04); max-width:560px; margin:40px auto;
 }
 
-/* ── MINI STATS ── */
-.mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-.mini-stat {
-    background: #fff; border-radius: 12px; padding: 14px;
-    text-align: center; border: 1px solid #F3F4F6;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.mini-stat-val { font-size: 1.5rem; font-weight: 800; color: #D97706; line-height: 1; }
-.mini-stat-lbl { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.4px; color: #9CA3AF; margin-top: 4px; font-weight: 600; }
+/* Alerts flash */
+.flash-ok  { background:#D1FAE5; color:#065F46; border-left:4px solid #10B981; padding:12px 16px; border-radius:10px; display:flex; align-items:center; gap:9px; font-size:0.87rem; margin-bottom:16px; }
+.flash-err { background:#FEE2E2; color:#991B1B; border-left:4px solid #EF4444; padding:12px 16px; border-radius:10px; display:flex; align-items:center; gap:9px; font-size:0.87rem; margin-bottom:16px; }
 
-/* ── FLASH ── */
-.alert-custom { padding: 13px 18px; border-radius: 12px; font-size: 0.875rem; display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
-.alert-success { background: #D1FAE5; color: #065F46; border-left: 4px solid #10B981; }
-.alert-danger  { background: #FEE2E2; color: #991B1B; border-left: 4px solid #EF4444; }
-
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) {
-    .hero-name { font-size: 1.3rem; }
-    .hero-banner { padding: 20px 16px; }
-    .mini-stats { gap: 8px; }
-    .mini-stat { padding: 10px 8px; }
-    .mini-stat-val { font-size: 1.2rem; }
-    .g-card-body { padding: 14px; }
-    .g-card-header { padding: 14px 14px 10px; }
-    .meta-item { flex-direction: column; }
-    .meta-actions { flex-direction: row; align-items: center; width: 100%; justify-content: flex-start; }
-    .doc-name { max-width: 100%; }
-}
-@media (max-width: 480px) {
-    .mini-stats { grid-template-columns: repeat(3, 1fr); }
-    .mini-stat-val { font-size: 1rem; }
-    .reserva-row { flex-wrap: wrap; }
-    .hero-name { font-size: 1.15rem; }
-}
+/* Responsive */
+@media (max-width: 992px) { .qa-grid { grid-template-columns:repeat(2,1fr); } .mini-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width: 576px)  { .qa-grid { grid-template-columns:1fr; } .mini-grid { grid-template-columns:repeat(2,1fr); } .hero-name { font-size:1.3rem; } .hero-banner { padding:22px 18px; } }
 </style>
 
-<?php if ($flashOk):   ?><div class="alert-custom alert-success mb-3"><i class="fa fa-check-circle me-2"></i><?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
-<?php if ($flashErro): ?><div class="alert-custom alert-danger mb-3"><i class="fa fa-triangle-exclamation me-2"></i><?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
+<?php if ($flashOk):   ?><div class="flash-ok"><i class="fa fa-check-circle"></i><?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
+<?php if ($flashErro): ?><div class="flash-err"><i class="fa fa-triangle-exclamation"></i><?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
 
 <?php
 $horaAtual = (int)date('H');
-if ($horaAtual >= 5 && $horaAtual < 12) $saudacao = 'Bom dia';
-elseif ($horaAtual >= 12 && $horaAtual < 18) $saudacao = 'Boa tarde';
-else $saudacao = 'Boa noite';
+if ($horaAtual >= 5 && $horaAtual < 12)       $saudacao = 'Bom dia';
+elseif ($horaAtual >= 12 && $horaAtual < 18)  $saudacao = 'Boa tarde';
+else                                           $saudacao = 'Boa noite';
+$primeiroNome = htmlspecialchars(explode(' ', $nome)[0]);
+$pontos       = $ultimoProjeto['pontos'] ?? 0;
+$fase         = $ultimoProjeto['fase']   ?? 'ideacao';
+$faseLabel    = strtoupper(str_replace('_', ' ', $fase));
 ?>
 
-<!-- ══ HERO BANNER ══ -->
+<!-- ══ HERO ══ -->
 <div class="hero-banner">
-    <div class="hero-banner-content">
+    <div class="hero-banner-inner">
         <div class="hero-badges">
-            <span class="hero-badge hero-badge-sp"><i class="fa fa-trophy me-1"></i><?= $ultimoProjeto['pontos'] ?? 0 ?> SP</span>
+            <span class="hero-badge hb-sp"><i class="fa fa-trophy me-1"></i><?= $pontos ?> SP</span>
             <?php if($ultimoProjeto): ?>
-            <span class="hero-badge hero-badge-fase"><i class="fa fa-circle-play me-1"></i><?= strtoupper(str_replace('_',' ', $ultimoProjeto['fase'] ?? 'IDEAÇÃO')) ?></span>
+            <span class="hero-badge hb-fase"><i class="fa fa-circle-play me-1"></i><?= $faseLabel ?></span>
             <?php endif; ?>
         </div>
-        <div class="hero-name"><?= $saudacao ?>, <?= htmlspecialchars(explode(' ', $nome)[0]) ?>! 👋</div>
-        <div class="hero-subtitle">
+        <div class="hero-name"><?= $saudacao ?>, <?= $primeiroNome ?>! 👋</div>
+        <div class="hero-sub">
             <?php if($ultimoProjeto): ?>
-                Startup: <strong style="color:#FBBF24"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong> · Progresso global: <strong><?= $progresso ?>%</strong>
+                Startup: <strong style="color:#FBBF24"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong>
+                &nbsp;·&nbsp; Progresso: <strong><?= $progresso ?>%</strong>
+                &nbsp;·&nbsp; Fase: <strong><?= $faseLabel ?></strong>
             <?php else: ?>
-                Bem-vindo à Incubadora Académica do ISPSN. Registe a sua ideia para começar.
+                Bem-vindo à Incubadora Académica do ISPSN. Submeta a sua primeira ideia para começar.
             <?php endif; ?>
         </div>
-        <div class="hero-actions">
+        <?php if($ultimoProjeto): ?>
+        <div class="mt-3" style="max-width:340px;">
+            <div class="progress-track">
+                <div class="progress-fill" style="width:<?= $progresso ?>%"></div>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="hero-btns">
             <?php if($ultimoProjeto): ?>
-                <button class="hero-btn hero-btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaReservaDashboard">
-                    <i class="fa fa-calendar-plus"></i> Reservar Sala
-                </button>
-                <button class="hero-btn hero-btn-outline" data-bs-toggle="modal" data-bs-target="#modalUploadDocumentoDashboard">
-                    <i class="fa fa-upload"></i> Enviar Documento
-                </button>
+                <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="hbtn hbtn-primary"><i class="fa fa-calendar-plus"></i>Reservar Sala</a>
+                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="hbtn hbtn-outline"><i class="fa fa-rocket"></i>Ver Startup</a>
             <?php else: ?>
-                <button class="hero-btn hero-btn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto">
-                    <i class="fa fa-plus"></i> Submeter Ideia
-                </button>
+                <button class="hbtn hbtn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto"><i class="fa fa-plus"></i>Submeter Ideia</button>
             <?php endif; ?>
         </div>
     </div>
@@ -568,494 +457,142 @@ else $saudacao = 'Boa noite';
 <?php if($ultimoProjeto): ?>
 
 <!-- ══ MINI STATS ══ -->
-<div class="mini-stats">
-    <div class="mini-stat">
-        <div class="mini-stat-val"><?= $progresso ?>%</div>
-        <div class="mini-stat-lbl">Progresso</div>
+<div class="mini-grid">
+    <div class="mini-card">
+        <div class="mini-icon"><i class="fa fa-gauge-high"></i></div>
+        <div class="mini-val"><?= $progresso ?>%</div>
+        <div class="mini-lbl">Progresso</div>
     </div>
-    <div class="mini-stat">
-        <div class="mini-stat-val"><?= count(array_filter($minhasTarefas, fn($t) => $t['validada_mentor'] == 1)) ?></div>
-        <div class="mini-stat-lbl">Metas OK</div>
+    <div class="mini-card">
+        <div class="mini-icon"><i class="fa fa-list-check"></i></div>
+        <div class="mini-val"><?= count(array_filter($minhasTarefas, fn($t)=> $t['validada_mentor']==1)) ?>/<?= count($minhasTarefas) ?></div>
+        <div class="mini-lbl">Metas Validadas</div>
     </div>
-    <div class="mini-stat">
-        <div class="mini-stat-val"><?= count($minhasReservasPainel) ?></div>
-        <div class="mini-stat-lbl">Reservas</div>
+    <div class="mini-card">
+        <div class="mini-icon"><i class="fa fa-bookmark"></i></div>
+        <div class="mini-val"><?= count($minhasReservasPainel) ?></div>
+        <div class="mini-lbl">Reservas Activas</div>
+    </div>
+    <div class="mini-card">
+        <div class="mini-icon"><i class="fa fa-trophy"></i></div>
+        <div class="mini-val"><?= $pontos ?></div>
+        <div class="mini-lbl">Startup Points</div>
     </div>
 </div>
 
-<!-- ══ PIPELINE DE MATURIDADE ══ -->
-<div class="g-card mb-4">
-    <div class="g-card-header">
-        <div class="g-card-title"><i class="fa fa-road text-warning"></i> Pipeline de Maturidade</div>
-        <small class="text-muted">Fase atual: <strong><?= strtoupper(str_replace('_',' ', $ultimoProjeto['fase'] ?? 'ideacao')) ?></strong></small>
+<!-- ══ PIPELINE ══ -->
+<div class="pipeline-card">
+    <div class="pipeline-card-header">
+        <div class="pipeline-card-title"><i class="fa fa-road" style="color:#D97706"></i> Jornada de Maturidade</div>
+        <small style="color:#9CA3AF; font-size:0.75rem;">Fase actual: <strong style="color:#D97706"><?= $faseLabel ?></strong></small>
     </div>
-    <div class="g-card-body" style="overflow-x: auto;">
+    <div class="pipeline-card-body">
         <?php
-        $pipelineSteps = [
-            ['id'=>'ideacao',          'label'=>'Ideação',     'icon'=>'lightbulb'],
-            ['id'=>'validacao',        'label'=>'Validação',   'icon'=>'vial'],
-            ['id'=>'mvp',              'label'=>'MVP',         'icon'=>'cube'],
-            ['id'=>'tracao',           'label'=>'Tração',      'icon'=>'chart-line'],
-            ['id'=>'mercado',          'label'=>'Mercado',     'icon'=>'shop'],
-            ['id'=>'fundo_investimento','label'=>'Financiado', 'icon'=>'sack-dollar'],
+        $steps = [
+            ['id'=>'ideacao',           'label'=>'Ideação',     'icon'=>'lightbulb'],
+            ['id'=>'validacao',         'label'=>'Validação',   'icon'=>'vial'],
+            ['id'=>'mvp',               'label'=>'MVP',         'icon'=>'cube'],
+            ['id'=>'tracao',            'label'=>'Tração',      'icon'=>'chart-line'],
+            ['id'=>'mercado',           'label'=>'Mercado',     'icon'=>'store'],
+            ['id'=>'fundo_investimento','label'=>'Financiado',  'icon'=>'sack-dollar'],
         ];
-        $currentFase = $ultimoProjeto['fase'] ?? 'ideacao';
-        $currentIdx = 0;
-        foreach($pipelineSteps as $idx => $step) { if($currentFase === $step['id']) $currentIdx = $idx; }
-        $pct = ($currentIdx / (count($pipelineSteps)-1)) * 84 + 8;
+        $currIdx = 0;
+        foreach($steps as $i => $s) { if($fase === $s['id']) $currIdx = $i; }
+        $pct = $currIdx > 0 ? round(($currIdx / (count($steps)-1)) * 84 + 8) : 8;
         ?>
-        <div style="min-width: 380px;">
-            <div class="pipeline-wrap">
-                <div class="pipeline-track">
-                    <div class="pipeline-fill" style="width: <?= $pct ?>%"></div>
-                </div>
-                <?php foreach($pipelineSteps as $idx => $step):
-                    $state = $idx < $currentIdx ? 'done' : ($idx === $currentIdx ? 'active' : '');
+        <div class="pipe-row">
+            <div class="pipe-track"><div class="pipe-fill" style="width:<?= $pct ?>%"></div></div>
+            <?php foreach($steps as $i => $s):
+                $state = $i < $currIdx ? 'done' : ($i === $currIdx ? 'active' : '');
+            ?>
+            <div class="pipe-step <?= $state ?>">
+                <div class="pipe-dot"><i class="fa fa-<?= $s['icon'] ?>"></i></div>
+                <div class="pipe-lbl"><?= $s['label'] ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<!-- ══ AÇÕES RÁPIDAS ══ -->
+<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#9CA3AF; margin-bottom:10px;">Acções Rápidas</div>
+<div class="qa-grid">
+
+    <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="qa-card">
+        <div class="qa-icon"><i class="fa fa-rocket"></i></div>
+        <div>
+            <div class="qa-label">Minha Startup</div>
+            <div class="qa-desc">Ver projecto, metas e progresso</div>
+        </div>
+        <i class="fa fa-chevron-right qa-arrow"></i>
+    </a>
+
+    <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="qa-card">
+        <div class="qa-icon"><i class="fa fa-calendar-check"></i></div>
+        <div>
+            <div class="qa-label">Reservas de Espaço</div>
+            <div class="qa-desc">
+                <?php
+                $pendentes = count(array_filter($minhasReservasPainel, fn($r)=>$r['status']==='pendente'));
+                $confirmadas = count(array_filter($minhasReservasPainel, fn($r)=>$r['status']==='confirmada'));
+                echo $confirmadas ? "$confirmadas confirmada" . ($confirmadas>1?'s':'') : ($pendentes ? "$pendentes pendente" . ($pendentes>1?'s':'') : 'Nenhuma reserva activa');
                 ?>
-                    <div class="pipe-step <?= $state ?>">
-                        <div class="pipe-icon"><i class="fa fa-<?= $step['icon'] ?>"></i></div>
-                        <div class="pipe-label"><?= $step['label'] ?></div>
-                    </div>
-                <?php endforeach; ?>
             </div>
         </div>
-    </div>
-</div>
+        <i class="fa fa-chevron-right qa-arrow"></i>
+    </a>
 
-<!-- ══ GRID: METAS + DOCUMENTOS ══ -->
-<div class="row g-3 mb-4">
-
-    <!-- METAS -->
-    <div class="col-lg-7 col-12">
-        <div class="g-card h-100">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-list-check text-warning"></i> Metas & Objetivos</div>
-                <span class="meta-chip chip-progress">
-                    <?= count(array_filter($minhasTarefas, fn($t)=> $t['validada_mentor']==1)) ?>/<?= count($minhasTarefas) ?> Validadas
-                </span>
-            </div>
-            <div class="g-card-body" style="max-height: 460px; overflow-y: auto;">
-                <?php if(empty($minhasTarefas)): ?>
-                    <div class="text-center py-5 text-muted">
-                        <i class="fa fa-clipboard-check fa-3x mb-3 d-block" style="opacity:0.2"></i>
-                        <p class="small mb-0">Nenhuma meta atribuída pelo mentor ainda.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($minhasTarefas as $t):
-                        if($t['status']==='concluida' && $t['validada_mentor']==1)     { $cls='is-valid'; $chip='chip-valid';    $ct='Validada'; $ic='check'; }
-                        elseif($t['status']==='concluida')                             { $cls='is-wait';  $chip='chip-wait';     $ct='Aguardando'; $ic='hourglass-half'; }
-                        elseif($t['status']==='em_progresso')                          { $cls='is-prog';  $chip='chip-progress'; $ct='Em Curso'; $ic=''; }
-                        else                                                           { $cls='';         $chip='chip-pending';  $ct='Pendente'; $ic=''; }
-                    ?>
-                    <div class="meta-item <?= $cls ?>">
-                        <div style="display:flex; gap:12px; flex:1; min-width:0;">
-                            <div class="meta-dot"><i class="fa fa-<?= $ic ?>"></i></div>
-                            <div style="min-width:0;">
-                                <div class="meta-title"><?= htmlspecialchars($t['titulo']) ?></div>
-                                <?php if($t['descricao']): ?><div class="meta-desc"><?= htmlspecialchars($t['descricao']) ?></div><?php endif; ?>
-                                <?php if($t['data_limite']): ?><div class="meta-limit"><i class="fa fa-calendar-alt me-1"></i>Limite: <?= date('d/m/Y', strtotime($t['data_limite'])) ?></div><?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="meta-actions">
-                            <span class="meta-chip <?= $chip ?>"><?= $ct ?></span>
-                            <?php if($cls==='' || $cls==='is-prog'): ?>
-                                <?php if($cls===''): ?>
-                                    <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
-                                        <input type="hidden" name="action" value="atualizar_estado_tarefa">
-                                        <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
-                                        <input type="hidden" name="status" value="em_progresso">
-                                        <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                                        <button type="submit" class="btn-ghost" style="padding:4px 10px; font-size:0.72rem;">Iniciar</button>
-                                    </form>
-                                <?php endif; ?>
-                                <button class="btn-primary-custom" style="padding:5px 10px; font-size:0.72rem;" data-bs-toggle="modal" data-bs-target="#modalEvid_<?= $t['id'] ?>">
-                                    <i class="fa fa-upload"></i> Evidência
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <!-- MODAL EVIDÊNCIA -->
-                    <div class="modal fade" id="modalEvid_<?= $t['id'] ?>" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content modal-content-custom">
-                                <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
-                                    <input type="hidden" name="action" value="atualizar_estado_tarefa">
-                                    <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
-                                    <input type="hidden" name="status" value="concluida">
-                                    <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                                    <div class="modal-header-custom">
-                                        <h5 class="modal-title fw-bold"><i class="fa fa-envelope-open-text me-2"></i> Evidência de Meta</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body-custom">
-                                        <div class="mb-3 p-3 rounded" style="background:#FEF3C7; border-left:4px solid #D97706;">
-                                            <strong>Meta:</strong> <?= htmlspecialchars($t['titulo']) ?>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label-custom">Notas de Conclusão *</label>
-                                            <textarea name="evidencia_nota" class="form-control-custom" rows="3" required placeholder="Descreva como cumpriu esta meta..."></textarea>
-                                        </div>
-                                        <div>
-                                            <label class="form-label-custom">Ficheiro Comprovativo (PDF/Imagem) *</label>
-                                            <input type="file" name="evidencia_ficheiro" class="form-control-custom" required>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer-custom">
-                                        <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                                        <button type="submit" class="btn-primary-custom"><i class="fa fa-upload"></i> Entregar</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
+    <a href="/incubadora_ispsn/app/views/admin/ranking.php" class="qa-card">
+        <div class="qa-icon"><i class="fa fa-trophy"></i></div>
+        <div>
+            <div class="qa-label">Ranking de Startups</div>
+            <div class="qa-desc">Ver posição entre os outros empreendedores</div>
         </div>
-    </div>
+        <i class="fa fa-chevron-right qa-arrow"></i>
+    </a>
 
-    <!-- DOCUMENTOS -->
-    <div class="col-lg-5 col-12">
-        <div class="g-card h-100">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-folder-open text-warning"></i> Documentos</div>
-                <button class="btn-ghost" style="padding:5px 10px; font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#modalUploadDocumentoDashboard">
-                    <i class="fa fa-plus"></i> Carregar
-                </button>
-            </div>
-            <div class="g-card-body" style="max-height: 460px; overflow-y: auto;">
-                <?php if(empty($meusDocumentos)): ?>
-                    <div class="text-center py-5 text-muted">
-                        <i class="fa fa-file-arrow-up fa-3x d-block mb-3" style="opacity:0.2"></i>
-                        <p class="small mb-0">Nenhum documento partilhado ainda.</p>
-                    </div>
-                <?php else: ?>
-                    <?php $recebidos = array_filter($meusDocumentos, fn($d)=>$d['perfil_submeteu']!=='utilizador'); ?>
-                    <?php $enviados  = array_filter($meusDocumentos, fn($d)=>$d['perfil_submeteu']==='utilizador'); ?>
-                    
-                    <div class="doc-section-label">Recebidos da Incubadora / Mentor</div>
-                    <?php if(empty($recebidos)): ?>
-                        <div class="text-muted small text-center py-2">Nenhum documento recebido.</div>
-                    <?php else: ?>
-                        <?php foreach($recebidos as $d): ?>
-                        <div class="doc-item">
-                            <div class="doc-icon"><i class="fa fa-file-arrow-down"></i></div>
-                            <div style="flex:1; min-width:0;">
-                                <div class="doc-name" title="<?= htmlspecialchars($d['titulo']) ?>"><?= htmlspecialchars($d['titulo']) ?></div>
-                                <div class="doc-meta">Por <?= htmlspecialchars($d['quem_submeteu']) ?> · <?= date('d/m/Y', strtotime($d['criado_em'])) ?></div>
-                            </div>
-                            <a href="/incubadora_ispsn/<?= $d['path'] ?>" target="_blank" class="btn-ghost p-2" style="padding:6px 10px !important;"><i class="fa fa-download"></i></a>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                    
-                    <div class="doc-section-label">Submetidos pela Equipa</div>
-                    <?php if(empty($enviados)): ?>
-                        <div class="text-muted small text-center py-2">Nenhum documento submetido.</div>
-                    <?php else: ?>
-                        <?php foreach($enviados as $d): ?>
-                        <div class="doc-item">
-                            <div class="doc-icon"><i class="fa fa-file-arrow-up"></i></div>
-                            <div style="flex:1; min-width:0;">
-                                <div class="doc-name" title="<?= htmlspecialchars($d['titulo']) ?>"><?= htmlspecialchars($d['titulo']) ?></div>
-                                <div class="doc-meta"><?= $d['tipo'] ?> · <?= date('d/m/Y', strtotime($d['criado_em'])) ?></div>
-                            </div>
-                            <a href="/incubadora_ispsn/<?= $d['path'] ?>" target="_blank" class="btn-ghost p-2" style="padding:6px 10px !important;"><i class="fa fa-download"></i></a>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ══ GRID: RESERVAS + SALAS ══ -->
-<div class="row g-3 mb-4">
-
-    <!-- RESERVAS ATIVAS -->
-    <div class="col-lg-8 col-12">
-        <div class="g-card">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-bookmark text-warning"></i> Minhas Reservas de Espaço</div>
-                <button class="btn-primary-custom" style="padding:6px 12px; font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalNovaReservaDashboard">
-                    <i class="fa fa-calendar-plus"></i> Nova
-                </button>
-            </div>
-            <div class="g-card-body">
-                <?php if(empty($minhasReservasPainel)): ?>
-                    <div class="text-center py-4 text-muted">
-                        <i class="fa fa-calendar-xmark fa-2x d-block mb-2" style="opacity:0.25"></i>
-                        <p class="small mb-0">Sem reservas activas. Use o botão acima para solicitar.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($minhasReservasPainel as $r):
-                        $ic = $r['status']==='confirmada' ? 'r-icon-confirm' : ($r['status']==='pendente' ? 'r-icon-pending' : 'r-icon-cancel');
-                        $statusEmoji = $r['status']==='confirmada' ? '✅' : ($r['status']==='pendente' ? '⏳' : '❌');
-                    ?>
-                    <div class="reserva-row">
-                        <div class="reserva-icon <?= $ic ?>"><i class="fa fa-building-user"></i></div>
-                        <div style="flex:1; min-width:0;">
-                            <div class="fw-bold" style="font-size:0.85rem;"><?= htmlspecialchars($r['espaco_nome']) ?></div>
-                            <div style="font-size:0.72rem; color:#9CA3AF;">
-                                <?= ucfirst($r['espaco_tipo']) ?> · <?= date('d/m/Y', strtotime($r['data_reserva'])) ?> · <?= substr($r['hora_inicio'],0,5) ?>–<?= substr($r['hora_fim'],0,5) ?>
-                            </div>
-                        </div>
-                        <span style="font-size:0.75rem; font-weight:700; color:#6B7280;"><?= $statusEmoji ?> <?= ucfirst($r['status']) ?></span>
-                        <?php if($r['status']==='pendente'): ?>
-                        <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" style="margin:0;">
-                            <input type="hidden" name="action" value="gestao_reserva">
-                            <input type="hidden" name="id_reserva" value="<?= $r['id'] ?>">
-                            <input type="hidden" name="novo_status" value="cancelada">
-                            <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                            <button type="submit" class="btn-ghost" style="padding:4px 8px; font-size:0.7rem; color:#EF4444;" onclick="return confirm('Cancelar reserva?')">
-                                <i class="fa fa-trash"></i>
-                            </button>
-                        </form>
-                        <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- SALAS DISPONÍVEIS -->
-    <div class="col-lg-4 col-12">
-        <div class="g-card">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-door-open text-warning"></i> Salas Livres</div>
-            </div>
-            <div class="g-card-body">
-                <?php if(empty($espacosDisponiveis)): ?>
-                    <div class="text-center py-4 text-muted">
-                        <i class="fa fa-building-circle-xmark d-block mb-2 fa-2x" style="opacity:0.2"></i>
-                        <p class="small mb-0">Nenhum espaço disponível de momento.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach(array_slice($espacosDisponiveis, 0, 4) as $e):
-                        $icon = $e['tipo']==='mesa' ? 'desktop' : ($e['tipo']==='sala_reuniao' ? 'users' : 'lightbulb');
-                    ?>
-                    <div class="sala-card">
-                        <div class="sala-icon"><i class="fa fa-<?= $icon ?>"></i></div>
-                        <div style="flex:1; min-width:0;">
-                            <div class="sala-name"><?= htmlspecialchars($e['nome']) ?></div>
-                            <div class="sala-cap"><?= ucfirst($e['tipo']) ?> · <?= $e['capacidade'] ?> pessoa<?= $e['capacidade']>1?'s':'' ?></div>
-                        </div>
-                        <span style="background:#D1FAE5; color:#065F46; font-size:0.62rem; font-weight:700; padding:3px 8px; border-radius:20px; text-transform:uppercase;">Livre</span>
-                    </div>
-                    <?php endforeach; ?>
-                    <div class="p-3 mt-2 rounded" style="background:#FEF3C7; border-left:3px solid #D97706; font-size:0.75rem; color:#92400E;">
-                        <i class="fa fa-circle-info me-1"></i>Reserve com antecedência. Máx. 4h por reserva.
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ══ GRID: FEEDBACK + SESSÕES ══ -->
-<div class="row g-3 mb-4">
-
-    <!-- FEEDBACK ORIENTADOR -->
-    <div class="col-lg-6 col-12">
-        <div class="g-card">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-comment-dots text-warning"></i> Feedback do Orientador</div>
-            </div>
-            <div class="g-card-body" style="max-height: 360px; overflow-y: auto;">
-                <?php if(empty($comentarios)): ?>
-                    <div class="text-center py-5 text-muted">
-                        <i class="fa fa-comments-slash fa-3x d-block mb-3" style="opacity:0.2"></i>
-                        <p class="small mb-0">Sem feedbacks do orientador ainda.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($comentarios as $c): ?>
-                    <div class="feedback-item">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong style="font-size:0.84rem;"><?= htmlspecialchars($c['nome']) ?></strong>
-                            <small class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y H:i', strtotime($c['criado_em'])) ?></small>
-                        </div>
-                        <span class="badge-estado badge-<?= str_replace(' ','_',$c['fase']) ?>" style="font-size:0.6rem; margin-bottom:6px; display:inline-block;"><?= strtoupper(str_replace('_',' ',$c['fase'])) ?></span>
-                        <p class="small mb-0" style="color:#374151;"><?= nl2br(htmlspecialchars($c['comentario'])) ?></p>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- SESSÕES MENTORIA -->
-    <div class="col-lg-6 col-12">
-        <div class="g-card">
-            <div class="g-card-header">
-                <div class="g-card-title"><i class="fa fa-handshake text-warning"></i> Sessões de Mentoria</div>
-            </div>
-            <div class="g-card-body" style="max-height: 360px; overflow-y: auto;">
-                <?php if(empty($sessoesMentoria)): ?>
-                    <div class="text-center py-5 text-muted">
-                        <i class="fa fa-calendar-xmark fa-3x d-block mb-3" style="opacity:0.2"></i>
-                        <p class="small mb-0">Nenhuma sessão de mentoria registada.</p>
-                    </div>
-                <?php else: ?>
-                    <?php foreach($sessoesMentoria as $s): ?>
-                    <div class="sessao-item">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <strong style="font-size:0.84rem;"><i class="fa fa-user-tie me-1 text-muted"></i><?= htmlspecialchars($s['mentor_nome']) ?></strong>
-                            <small class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y', strtotime($s['data_sessao'])) ?></small>
-                        </div>
-                        <div class="mb-1">
-                            <span class="badge bg-light text-dark" style="font-size:0.7rem;"><?= $s['duracao_min'] ?> min</span>
-                            <?php if($s['avaliacao_equipa']): ?>
-                            <span style="color:#F59E0B; font-size:0.75rem; margin-left:4px;">
-                                <?php for($i=0; $i<$s['avaliacao_equipa']; $i++) echo '★'; ?>
-                            </span>
-                            <?php endif; ?>
-                        </div>
-                        <p class="small mb-0 text-muted"><?= nl2br(htmlspecialchars($s['topicos'] ?? '')) ?></p>
-                        <?php if($s['proximos_passos']): ?>
-                        <div class="mt-2 pt-2" style="border-top:1px solid #F3F4F6; font-size:0.75rem; color:var(--amber);">
-                            <i class="fa fa-arrow-right me-1"></i><?= htmlspecialchars($s['proximos_passos']) ?>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
 </div>
 
 <?php else: ?>
-<!-- ══ SEM PROJETO AINDA ══ -->
-<div class="g-card p-5 text-center" style="max-width: 600px; margin: 40px auto;">
-    <div class="mb-4" style="font-size:4rem; color:var(--amber); opacity:0.8;"><i class="fa fa-diagram-project"></i></div>
-    <h3 class="fw-800 mb-2" style="color:#1C1917;">Ainda não tem ideias submetidas</h3>
-    <p class="text-muted small mb-4" style="max-width:400px; margin:0 auto;">O ecossistema da Incubadora do ISPSN apoia-o a validar e estruturar a sua ideia. Comece agora!</p>
-    <button class="hero-btn hero-btn-primary" style="margin:0 auto;" data-bs-toggle="modal" data-bs-target="#modalProjeto">
-        <i class="fa fa-plus"></i> Submeter Primeiro Projeto
+<!-- ══ SEM PROJETO ══ -->
+<div class="empty-hero">
+    <div style="font-size:3.5rem; color:#D97706; opacity:0.7; margin-bottom:20px;"><i class="fa fa-diagram-project"></i></div>
+    <h4 style="font-weight:800; color:#1C1917; margin-bottom:8px;">Ainda sem projeto submetido</h4>
+    <p style="color:#9CA3AF; font-size:0.88rem; max-width:380px; margin:0 auto 24px;">O ecossistema da Incubadora do ISPSN vai acompanhar a sua startup da ideia até ao financiamento. Comece agora.</p>
+    <button class="hbtn hbtn-primary" style="margin:0 auto;" data-bs-toggle="modal" data-bs-target="#modalProjeto">
+        <i class="fa fa-plus"></i> Submeter Primeira Ideia
     </button>
 </div>
 <?php endif; ?>
 
-<!-- ══ MODAL RESERVA ══ -->
-<div class="modal fade" id="modalNovaReservaDashboard" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-custom">
-            <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
-                <input type="hidden" name="action" value="solicitar_reserva">
-                <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-bookmark me-2"></i> Reservar Espaço</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body-custom">
-                    <div class="mb-3">
-                        <label class="form-label-custom">Espaço *</label>
-                        <select name="id_espaco" class="form-control-custom" required>
-                            <option value="">Selecione...</option>
-                            <?php foreach($espacosDisponiveis as $e): ?>
-                                <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nome']) ?> (<?= ucfirst($e['tipo']) ?>) — <?= $e['capacidade'] ?>p</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label-custom">Data *</label>
-                        <input type="date" name="data_reserva" class="form-control-custom" min="<?= date('Y-m-d') ?>" required>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label-custom">Hora Início *</label>
-                            <input type="time" name="hora_inicio" class="form-control-custom" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label-custom">Hora Fim *</label>
-                            <input type="time" name="hora_fim" class="form-control-custom" required>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="form-label-custom">Objetivo</label>
-                        <textarea name="objetivo" class="form-control-custom" rows="2" placeholder="Ex: Reunião de equipa"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-primary-custom">Solicitar Reserva</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- ══ MODAL UPLOAD DOCUMENTO ══ -->
-<div class="modal fade" id="modalUploadDocumentoDashboard" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content modal-content-custom">
-            <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="upload_documento">
-                <input type="hidden" name="id_projeto" value="<?= $ultimoProjeto['id'] ?? '' ?>">
-                <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-upload me-2"></i> Carregar Documento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body-custom">
-                    <div class="mb-3">
-                        <label class="form-label-custom">Título *</label>
-                        <input type="text" name="titulo" class="form-control-custom" required placeholder="Ex: Pitch Deck 2026">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label-custom">Tipo</label>
-                        <select name="tipo" class="form-control-custom">
-                            <option value="Pitch">Pitch / Apresentação</option>
-                            <option value="Plano de Negócio">Plano de Negócio</option>
-                            <option value="Contrato">Contrato / Legal</option>
-                            <option value="Outro">Outro</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label-custom">Ficheiro (PDF/PPTX/Imagem) *</label>
-                        <input type="file" name="ficheiro" class="form-control-custom" required>
-                    </div>
-                </div>
-    <div class="modal-footer-custom">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-primary-custom"><i class="fa fa-upload"></i> Enviar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- ══ MODAL SUBMETER IDEIA ══ -->
+<!-- ══ MODAL SUBMETER PROJETO ══ -->
 <div class="modal fade" id="modalProjeto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content modal-content-custom">
+        <div class="modal-content" style="border:none; border-radius:18px; overflow:hidden;">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
                 <input type="hidden" name="action" value="criar_projeto">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-rocket me-2" style="color:var(--amber)"></i> Submeter Ideia de Startup</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div style="padding:22px 24px; border-bottom:1px solid #F3F4F6; background:#FFFBF2;">
+                    <h5 style="font-weight:800; margin:0; color:#1C1917;"><i class="fa fa-rocket me-2" style="color:#D97706"></i>Submeter Ideia de Startup</h5>
                 </div>
-                <div class="modal-body-custom">
+                <div style="padding:24px;">
                     <div class="mb-3">
-                        <label class="form-label-custom">Nome da Startup *</label>
-                        <input type="text" name="titulo" class="form-control-custom" required placeholder="Ex: App de Transporte Local">
+                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Nome da Startup *</label>
+                        <input type="text" name="titulo" class="form-control" required placeholder="Ex: AppAngola — Transporte Local">
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label-custom">Tipo *</label>
-                            <select name="tipo" class="form-control-custom" required>
-                                <option value="startup_tecnologica">Startup Tecnológica (App, SaaS)</option>
+                            <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Tipo *</label>
+                            <select name="tipo" class="form-control" required>
+                                <option value="startup_tecnologica">Startup Tecnológica</option>
                                 <option value="negocio_tradicional">Negócio Tradicional</option>
-                                <option value="impacto_social">Impacto Social / ONG</option>
+                                <option value="impacto_social">Impacto Social</option>
                                 <option value="outro">Outro</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label-custom">Área Temática</label>
-                            <select name="area" class="form-control-custom">
+                            <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Área</label>
+                            <select name="area" class="form-control">
                                 <option value="tecnologia">Tecnologia</option>
                                 <option value="saude">Saúde</option>
                                 <option value="educacao">Educação</option>
@@ -1066,21 +603,21 @@ else $saudacao = 'Boa noite';
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label-custom">Descrição *</label>
-                        <textarea name="descricao" class="form-control-custom" rows="3" required placeholder="Descreva o projecto (mín. 20 caracteres)"></textarea>
+                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Descrição *</label>
+                        <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva o projecto..."></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label-custom">Problema Identificado</label>
-                        <textarea name="problema" class="form-control-custom" rows="2" placeholder="Qual problema resolve?"></textarea>
+                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Problema que resolve</label>
+                        <textarea name="problema" class="form-control" rows="2" placeholder="Qual o problema identificado?"></textarea>
                     </div>
                     <div>
-                        <label class="form-label-custom">Solução Proposta</label>
-                        <textarea name="solucao" class="form-control-custom" rows="2" placeholder="Como resolve o problema?"></textarea>
+                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Solução Proposta</label>
+                        <textarea name="solucao" class="form-control" rows="2" placeholder="Como a sua startup resolve o problema?"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer-custom">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn-primary-custom"><i class="fa fa-paper-plane"></i> Submeter</button>
+                <div style="padding:16px 24px; border-top:1px solid #F3F4F6; display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4"><i class="fa fa-paper-plane me-2"></i>Submeter</button>
                 </div>
             </form>
         </div>
@@ -1088,16 +625,5 @@ else $saudacao = 'Boa noite';
 </div>
 
 <?php
-$extraJs = '<script>
-const el=document.getElementById("graficoProgresso");
-if(el){
-  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim() || "#D97706";
-  new Chart(el,{
-    type:"doughnut",
-    data:{datasets:[{data:[<?= $progresso ?>,<?= 100-$progresso ?>],backgroundColor:[primaryColor,"#F3F4F6"],borderWidth:0}]},
-    options:{cutout:"75%",plugins:{legend:{display:false},tooltip:{enabled:false}}}
-  });
-}
-<\/script>';
 require_once __DIR__ . '/../partials/_layout_end.php';
 ?>

@@ -223,12 +223,21 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
         </div>
         <div class="topbar-right">
             <!-- Notificações -->
-            <button class="topbar-btn" id="btnNotif" title="Notificações">
-                <i class="fa fa-bell"></i>
-                <?php if ($naoLidas > 0): ?>
-                    <span class="notif-badge"><?= $naoLidas ?></span>
-                <?php endif; ?>
-            </button>
+            <div class="dropdown">
+                <button class="topbar-btn" type="button" id="btnNotif" data-bs-toggle="dropdown" aria-expanded="false" title="Notificações">
+                    <i class="fa fa-bell"></i>
+                    <span id="notif-badge-topbar" class="notif-badge <?= ($naoLidas > 0) ? '' : 'd-none' ?>"><?= $naoLidas ?></span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="btnNotif" style="width:300px; border:none; border-radius:var(--radius); padding:0; overflow:hidden; margin-top:10px;">
+                    <li class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background:var(--surface-2)">
+                        <span class="fw-bold" style="font-size:0.85rem">Notificações</span>
+                        <button class="btn-ghost btn-sm p-0" onclick="marcarLidas()" style="font-size:0.7rem; color:var(--primary); background:none; border:none;">Limpar todas</button>
+                    </li>
+                    <div id="notif-list-topbar" style="max-height:300px; overflow-y:auto;">
+                        <li class="p-4 text-center text-muted small">Carregando...</li>
+                    </div>
+                </ul>
+            </div>
 
             <!-- Avatar -->
             <div class="topbar-avatar" title="<?= htmlspecialchars($nomeUsuario) ?>">
