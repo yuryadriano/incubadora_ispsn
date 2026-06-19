@@ -40,32 +40,7 @@ $mentorias = [];
 $tarefasPendentes = [];
 $avaliacoesRecentes = [];
 $totalHoras = 0;
-
-function obterSaudeProjeto($mysqli, $idProjeto) {
-    // Verificar se há alguma tarefa em atraso
-    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida' AND data_limite < CURDATE()");
-    $stmt->bind_param('i', $idProjeto);
-    $stmt->execute();
-    $atrasadas = $stmt->get_result()->fetch_row()[0];
-    $stmt->close();
-    
-    if ($atrasadas > 0) {
-        return 'critical'; // Vermelho
-    }
-    
-    // Verificar se há tarefas pendentes
-    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida'");
-    $stmt->bind_param('i', $idProjeto);
-    $stmt->execute();
-    $pendentes = $stmt->get_result()->fetch_row()[0];
-    $stmt->close();
-    
-    if ($pendentes > 0) {
-        return 'warning'; // Amarelo
-    }
-    
-    return 'good'; // Verde
-}
+$saudeProjetos = [];
 
 if ($idMentor > 0) {
     // Mentorias
@@ -73,15 +48,45 @@ if ($idMentor > 0) {
         SELECT m.id as id_mentoria, m.estado, m.data_inicio, 
                p.id as id_projeto, p.titulo as projeto_nome, p.estado as projeto_estado, p.fase as projeto_fase,
                (SELECT COUNT(*) FROM sessoes_mentoria WHERE id_mentoria = m.id) as total_sessoes
-        FROM mentorias m
-        JOIN projetos p ON p.id = m.id_projeto
-        WHERE m.id_mentor = ?
-        ORDER BY m.estado ASC, m.criado_em DESC
+         FROM mentorias m
+         JOIN projetos p ON p.id = m.id_projeto
+         WHERE m.id_mentor = ?
+         ORDER BY m.estado ASC, m.criado_em DESC
     ");
     $stmt->bind_param('i', $idMentor);
     $stmt->execute();
     $mentorias = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
+
+    // Carregar saúde de todos os projetos em lote para evitar N+1 queries
+    if (!empty($mentorias)) {
+        $idsProjeto = array_column($mentorias, 'id_projeto');
+        $placeholders = implode(',', array_fill(0, count($idsProjeto), '?'));
+        $types = str_repeat('i', count($idsProjeto));
+        
+        $stmtSaude = $mysqli->prepare("
+            SELECT id_projeto,
+                   SUM(CASE WHEN status != 'concluida' AND data_limite < CURDATE() THEN 1 ELSE 0 END) as atrasadas,
+                   SUM(CASE WHEN status != 'concluida' THEN 1 ELSE 0 END) as pendentes
+            FROM tarefas
+            WHERE id_projeto IN ($placeholders)
+            GROUP BY id_projeto
+        ");
+        $stmtSaude->bind_param($types, ...$idsProjeto);
+        $stmtSaude->execute();
+        $resSaude = $stmtSaude->get_result();
+        while ($row = $resSaude->fetch_assoc()) {
+            $pid = (int)$row['id_projeto'];
+            if ($row['atrasadas'] > 0) {
+                $saudeProjetos[$pid] = 'critical';
+            } elseif ($row['pendentes'] > 0) {
+                $saudeProjetos[$pid] = 'warning';
+            } else {
+                $saudeProjetos[$pid] = 'good';
+            }
+        }
+        $stmtSaude->close();
+    }
 
     // Horas totais de consultoria
     $stmt = $mysqli->prepare("
@@ -431,7 +436,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($mentorias as $m):
-                                    $saude = obterSaudeProjeto($mysqli, $m['id_projeto']);
+                                    $saude = $saudeProjetos[$m['id_projeto']] ?? 'good';
                                     $fasesLabels = [
                                         'ideacao'   => ['emoji' => '💡', 'label' => 'Ideação'],
                                         'validacao' => ['emoji' => '🔬', 'label' => 'Validação'],

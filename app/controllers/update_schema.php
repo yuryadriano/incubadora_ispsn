@@ -1,13 +1,31 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
+if (!function_exists('adicionarColunaSeNaoExistir')) {
+    function adicionarColunaSeNaoExistir($mysqli, $tabela, $coluna, $definicao) {
+        $res = $mysqli->query("SHOW COLUMNS FROM `$tabela` LIKE '$coluna'");
+        if ($res && $res->num_rows === 0) {
+            $mysqli->query("ALTER TABLE `$tabela` ADD COLUMN `$coluna` $definicao");
+        }
+    }
+}
+
+if (!function_exists('adicionarIndiceSeNaoExistir')) {
+    function adicionarIndiceSeNaoExistir($mysqli, $tabela, $colunasIndice, $nomeIndice) {
+        $res = $mysqli->query("SHOW INDEX FROM `$tabela` WHERE Key_name = '$nomeIndice'");
+        if ($res && $res->num_rows === 0) {
+            $mysqli->query("ALTER TABLE `$tabela` ADD INDEX `$nomeIndice` ($colunasIndice)");
+        }
+    }
+}
+
 // Adicionar coluna galeria se não existir
-$mysqli->query("ALTER TABLE publicacoes_website ADD COLUMN IF NOT EXISTS galeria TEXT DEFAULT NULL AFTER conteudo");
+adicionarColunaSeNaoExistir($mysqli, 'publicacoes_website', 'galeria', 'TEXT DEFAULT NULL AFTER conteudo');
 
 // Adicionar colunas de evidência na tabela de tarefas
-$mysqli->query("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS evidencia_path VARCHAR(255) DEFAULT NULL");
-$mysqli->query("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS evidencia_nota TEXT DEFAULT NULL");
-$mysqli->query("ALTER TABLE tarefas ADD COLUMN IF NOT EXISTS validada_mentor TINYINT(1) DEFAULT 0");
+adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'evidencia_path', 'VARCHAR(255) DEFAULT NULL');
+adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'evidencia_nota', 'TEXT DEFAULT NULL');
+adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'validada_mentor', 'TINYINT(1) DEFAULT 0');
 
 // Criar tabelas adicionais de reservas, espaços, equipamentos, visitantes e empréstimos
 $mysqli->query("CREATE TABLE IF NOT EXISTS `espacos` (
@@ -71,10 +89,10 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `emprestimos_equipamento` (
 // ============================================================
 
 // Novos critérios de avaliação (8 dimensões)
-$mysqli->query("ALTER TABLE avaliacoes ADD COLUMN IF NOT EXISTS nota_sustentabilidade TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
-$mysqli->query("ALTER TABLE avaliacoes ADD COLUMN IF NOT EXISTS nota_escalabilidade TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
-$mysqli->query("ALTER TABLE avaliacoes ADD COLUMN IF NOT EXISTS nota_mercado TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
-$mysqli->query("ALTER TABLE avaliacoes ADD COLUMN IF NOT EXISTS nota_proposta TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'nota_sustentabilidade', "TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'nota_escalabilidade', "TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'nota_mercado', "TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'nota_proposta', "TINYINT NOT NULL DEFAULT 0 COMMENT '0-10'");
 
 // Metas padrão do sistema (template global)
 $mysqli->query("CREATE TABLE IF NOT EXISTS `metas_padrao` (
@@ -217,6 +235,13 @@ if ($count === 0) {
     $stmtMeta->close();
     echo "Metas padrão inseridas! ";
 }
+
+// Criação de índices para melhoria de performance
+adicionarIndiceSeNaoExistir($mysqli, 'tarefas', 'id_projeto, status, data_limite', 'idx_tarefas_projeto_status_prazo');
+adicionarIndiceSeNaoExistir($mysqli, 'tarefas', 'id_projeto', 'idx_tarefas_projeto');
+adicionarIndiceSeNaoExistir($mysqli, 'reunioes', 'id_mentor', 'idx_reunioes_mentor');
+adicionarIndiceSeNaoExistir($mysqli, 'reunioes', 'id_projeto', 'idx_reunioes_projeto');
+adicionarIndiceSeNaoExistir($mysqli, 'mensagens', 'id_projeto', 'idx_mensagens_projeto');
 
 echo "Schema updated v2.0!";
 

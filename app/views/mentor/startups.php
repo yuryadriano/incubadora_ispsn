@@ -14,6 +14,8 @@ $stmt->close();
 $idMentor = $mentorInfo['id'] ?? 0;
 
 $mentorias = [];
+$tarefaStats = [];
+
 if ($idMentor > 0) {
     $stmt = $mysqli->prepare("
         SELECT m.id as id_mentoria, m.estado, m.data_inicio, 
@@ -29,6 +31,37 @@ if ($idMentor > 0) {
     $stmt->execute();
     $mentorias = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
+
+    // Carregar todas as estatísticas de tarefas dos projetos de uma só vez para evitar N+1 queries
+    if (!empty($mentorias)) {
+        $idsProjeto = array_column($mentorias, 'id_projeto');
+        $placeholders = implode(',', array_fill(0, count($idsProjeto), '?'));
+        $types = str_repeat('i', count($idsProjeto));
+        
+        $stmtStats = $mysqli->prepare("
+            SELECT id_projeto,
+                   COUNT(*) as total,
+                   SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluida,
+                   SUM(CASE WHEN status != 'concluida' AND data_limite < CURDATE() THEN 1 ELSE 0 END) as atrasadas,
+                   SUM(CASE WHEN status != 'concluida' THEN 1 ELSE 0 END) as pendentes
+            FROM tarefas
+            WHERE id_projeto IN ($placeholders)
+            GROUP BY id_projeto
+        ");
+        $stmtStats->bind_param($types, ...$idsProjeto);
+        $stmtStats->execute();
+        $resStats = $stmtStats->get_result();
+        while ($row = $resStats->fetch_assoc()) {
+            $pid = (int)$row['id_projeto'];
+            $tarefaStats[$pid] = [
+                'total' => (int)$row['total'],
+                'concluida' => (int)$row['concluida'],
+                'atrasadas' => (int)$row['atrasadas'],
+                'pendentes' => (int)$row['pendentes']
+            ];
+        }
+        $stmtStats->close();
+    }
 }
 
 $mapaProgresso = [
@@ -40,32 +73,6 @@ $mapaProgresso = [
     'concluido'          => 100,
     'rejeitado'          => 0
 ];
-
-function obterSaudeProjeto($mysqli, $idProjeto) {
-    // Verificar se há alguma tarefa em atraso
-    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida' AND data_limite < CURDATE()");
-    $stmt->bind_param('i', $idProjeto);
-    $stmt->execute();
-    $atrasadas = $stmt->get_result()->fetch_row()[0];
-    $stmt->close();
-    
-    if ($atrasadas > 0) {
-        return 'critical'; // Vermelho
-    }
-    
-    // Verificar se há tarefas pendentes
-    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida'");
-    $stmt->bind_param('i', $idProjeto);
-    $stmt->execute();
-    $pendentes = $stmt->get_result()->fetch_row()[0];
-    $stmt->close();
-    
-    if ($pendentes > 0) {
-        return 'warning'; // Amarelo
-    }
-    
-    return 'good'; // Verde
-}
 
 $tituloPagina = 'Dashboard de Portfólio Analítico';
 $paginaActiva = 'projetos';
@@ -220,12 +227,23 @@ require_once __DIR__ . '/../partials/_layout.php';
     <?php else: ?>
         <?php foreach ($mentorias as $m): 
             $progresso = $mapaProgresso[$m['projeto_estado']] ?? 10;
-            // Cálculo Técnico: Taxa de Conclusão (Burn-down)
-            $totalTarefas = $mysqli->query("SELECT COUNT(*) FROM tarefas WHERE id_projeto = {$m['id_projeto']}")->fetch_row()[0];
-            $concluidas = $mysqli->query("SELECT COUNT(*) FROM tarefas WHERE id_projeto = {$m['id_projeto']} AND status = 'concluida'")->fetch_row()[0];
+            $pid = (int)$m['id_projeto'];
+            
+            // Usar estatísticas pré-carregadas para evitar N+1 queries
+            $stats = $tarefaStats[$pid] ?? ['total' => 0, 'concluida' => 0, 'atrasadas' => 0, 'pendentes' => 0];
+            
+            $totalTarefas = $stats['total'];
+            $concluidas = $stats['concluida'];
             $burnDown = $totalTarefas > 0 ? round(($concluidas / $totalTarefas) * 100) : 100;
             
-            $healthClass = obterSaudeProjeto($mysqli, $m['id_projeto']);
+            if ($stats['atrasadas'] > 0) {
+                $healthClass = 'critical';
+            } elseif ($stats['pendentes'] > 0) {
+                $healthClass = 'warning';
+            } else {
+                $healthClass = 'good';
+            }
+            
             $iniciais = strtoupper(substr($m['projeto_nome'], 0, 2));
         ?>
         <div class="startup-card" data-nome="<?= strtolower($m['projeto_nome']) ?>" data-fase="<?= $m['projeto_estado'] ?>" data-saude="<?= $healthClass ?>">
