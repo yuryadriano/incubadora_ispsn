@@ -96,6 +96,19 @@ $stmt->execute();
 $avaliacoesMentor = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// 7. Buscar Documentos/Ficheiros do projeto
+$stmt = $mysqli->prepare("
+    SELECT f.*, u.nome as enviado_por 
+    FROM ficheiros_projeto f
+    LEFT JOIN usuarios u ON u.id = f.id_usuario_up
+    WHERE f.id_projeto = ? 
+    ORDER BY f.criado_em DESC
+");
+$stmt->bind_param('i', $idProjeto);
+$stmt->execute();
+$ficheiros = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
 $tituloPagina = 'Detalhe: ' . htmlspecialchars($projeto['titulo']);
 $paginaActiva = 'projetos';
 require_once __DIR__ . '/../partials/_layout.php';
@@ -226,6 +239,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-tarefas')">Tarefas (<?= count($tarefas) ?>)</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-sessoes')">Sessões de Mentoria</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-avaliacoes')">Acompanhamento / Avaliações</div>
+    <div class="nav-link-custom" onclick="switchTab(event, 'tab-documentos')"><i class="fa fa-folder-open me-1" style="color:var(--primary)"></i> Doc Hub (<?= count($ficheiros) ?>)</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-chat')"><i class="fa fa-comments me-1" style="color:var(--primary)"></i> Chat / Consultoria</div>
 </div>
 
@@ -405,70 +419,137 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
             </div>
 
-            <!-- TAB 5: CHAT -->
-            <div id="tab-chat" class="tab-content-custom">
-                <div class="card-custom">
-                    <div class="card-header-custom d-flex justify-content-between align-items-center">
-                        <div class="card-title-custom"><i class="fa fa-comments"></i> Canal de Mentoria Direta</div>
-                        <small class="text-muted">Partilhe dúvidas e orientações aqui</small>
-                    </div>
-                    <div class="card-body-custom p-0">
-                        <div id="chat-container-ment" style="height: 450px; overflow-y: auto; padding: 20px; background: #f1f5f9;">
-                            <?php 
-                            $msgQuery = $mysqli->prepare("
-                                SELECT m.*, u.nome, u.perfil 
-                                FROM mensagens m 
-                                JOIN usuarios u ON u.id = m.id_usuario 
-                                WHERE m.id_projeto = ? 
-                                ORDER BY m.criado_at ASC
-                            ");
-                            $msgQuery->bind_param('i', $idProjeto);
-                            $msgQuery->execute();
-                            $mensagens = $msgQuery->get_result()->fetch_all(MYSQLI_ASSOC);
-                            
-                            if (empty($mensagens)): 
+        <!-- TAB: DOCUMENTOS (DOC HUB) -->
+        <div id="tab-documentos" class="tab-content-custom">
+            <div class="card-custom">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <div class="card-title-custom"><i class="fa fa-folder-open"></i> Doc Hub — Arquivo Documental</div>
+                    <small class="text-muted">Documentos, Canvas e Pitch Decks submetidos pela equipa</small>
+                </div>
+                <div class="card-body-custom">
+                    <?php if (empty($ficheiros)): ?>
+                        <div class="text-center p-5">
+                            <i class="fa fa-folder-open fa-3x text-muted mb-3" style="opacity:0.3"></i>
+                            <p class="text-muted">Ainda não foram submetidos documentos para este projeto.</p>
+                        </div>
+                    <?php else: ?>
+                        <div class="row g-3">
+                            <?php foreach ($ficheiros as $f): 
+                                $ext = pathinfo($f['path'], PATHINFO_EXTENSION);
+                                $icon = 'fa-file-lines';
+                                $iconColor = '#64748b';
+                                if (in_array(strtolower($ext), ['pdf'])) {
+                                    $icon = 'fa-file-pdf';
+                                    $iconColor = '#ef4444';
+                                } elseif (in_array(strtolower($ext), ['doc', 'docx'])) {
+                                    $icon = 'fa-file-word';
+                                    $iconColor = '#3b82f6';
+                                } elseif (in_array(strtolower($ext), ['xls', 'xlsx'])) {
+                                    $icon = 'fa-file-excel';
+                                    $iconColor = '#10b981';
+                                } elseif (in_array(strtolower($ext), ['png', 'jpg', 'jpeg', 'gif', 'webp'])) {
+                                    $icon = 'fa-file-image';
+                                    $iconColor = '#8b5cf6';
+                                }
                             ?>
-                                <div class="text-center p-5">
-                                    <div class="mb-3"><i class="fa fa-comments-blank fa-3x text-muted" style="opacity:0.3"></i></div>
-                                    <p class="text-muted">Ainda não existem mensagens neste canal.</p>
-                                </div>
-                            <?php else: ?>
-                                <?php foreach($mensagens as $m): 
-                                    $isMe = ($m['id_usuario'] == $idUsuario);
-                                    $color = ($m['perfil'] == 'mentor' ? '#8b5cf6' : ($m['perfil'] == 'admin' ? 'var(--primary)' : '#64748b'));
-                                ?>
-                                    <div class="d-flex <?= $isMe ? 'justify-content-end' : '' ?> mb-3">
-                                        <div style="max-width: 85%;">
-                                            <div class="mb-1" style="font-size: 0.65rem; color: #94a3b8; <?= $isMe ? 'text-align: right;' : '' ?>">
-                                                <strong><?= htmlspecialchars($m['nome']) ?></strong> 
-                                                <span class="badge" style="background:<?= $color ?>; font-size:0.5rem"><?= strtoupper($m['perfil']) ?></span>
+                                <div class="col-md-6">
+                                    <div class="p-3 border rounded d-flex align-items-start gap-3 bg-white card-custom-hover" style="transition:all 0.2s; border-color:var(--border);">
+                                        <div style="font-size: 2.2rem; color: <?= $iconColor ?>;">
+                                            <i class="fa <?= $icon ?>"></i>
+                                        </div>
+                                        <div style="flex:1; min-width:0;">
+                                            <h6 class="fw-bold text-truncate mb-1" style="font-size:0.9rem;" title="<?= htmlspecialchars($f['titulo']) ?>"><?= htmlspecialchars($f['titulo']) ?></h6>
+                                            <div class="text-muted" style="font-size:0.75rem;">
+                                                <span class="badge bg-light text-dark mb-1"><?= strtoupper($f['tipo']) ?></span>
+                                                <div class="mb-1"><i class="fa fa-user me-1"></i>Enviado por: <?= htmlspecialchars($f['enviado_por'] ?? 'Sistema') ?></div>
+                                                <div><i class="fa fa-calendar me-1"></i>Data: <?= date('d/m/Y H:i', strtotime($f['criado_em'])) ?></div>
                                             </div>
-                                            <div class="p-3 shadow-sm <?= $isMe ? 'bg-primary text-white' : 'bg-white' ?>" 
-                                                 style="border-radius: <?= $isMe ? '15px 15px 2px 15px' : '15px 15px 15px 2px' ?>; font-size: 0.9rem; line-height:1.5">
-                                                <?= nl2br(htmlspecialchars($m['mensagem'])) ?>
-                                                <div class="mt-2" style="font-size: 0.6rem; opacity: 0.8; text-align: right;">
-                                                    <?= date('H:i', strtotime($m['criado_at'])) ?>
-                                                </div>
+                                        </div>
+                                        <div>
+                                            <a href="/incubadora_ispsn/<?= htmlspecialchars($f['path']) ?>" target="_blank" class="btn btn-sm btn-ghost" title="Descarregar ficheiro" style="color:var(--primary);">
+                                                <i class="fa fa-download" style="font-size:1.1rem"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: CHAT -->
+        <div id="tab-chat" class="tab-content-custom">
+            <div class="card-custom border-0 shadow-sm" style="overflow: hidden; border-radius: 20px;">
+                <div class="card-header-custom d-flex justify-content-between align-items-center bg-white border-bottom p-3">
+                    <div class="card-title-custom mb-0"><i class="fa fa-comments text-primary me-2"></i> Canal de Mentoria Direta</div>
+                    <span class="badge bg-light text-secondary rounded-pill px-3 py-1" style="font-size:0.75rem; border:1px solid var(--border)">Espaço Colaborativo</span>
+                </div>
+                <div class="card-body-custom p-0 bg-light">
+                    <div id="chat-container-ment" style="height: 480px; overflow-y: auto; padding: 24px; display:flex; flex-direction:column; gap:16px;">
+                        <?php 
+                        $msgQuery = $mysqli->prepare("
+                            SELECT m.*, u.nome, u.perfil 
+                            FROM mensagens m 
+                            JOIN usuarios u ON u.id = m.id_usuario 
+                            WHERE m.id_projeto = ? 
+                            ORDER BY m.criado_at ASC
+                        ");
+                        $msgQuery->bind_param('i', $idProjeto);
+                        $msgQuery->execute();
+                        $mensagens = $msgQuery->get_result()->fetch_all(MYSQLI_ASSOC);
+                        
+                        if (empty($mensagens)): 
+                        ?>
+                            <div class="text-center p-5 my-auto">
+                                <div class="mb-3 text-muted"><i class="fa fa-comment-slash fa-4x" style="opacity:0.25"></i></div>
+                                <h6 class="fw-bold">Nenhuma mensagem por aqui</h6>
+                                <p class="text-muted small">Inicie a conversa enviando uma mensagem no campo abaixo.</p>
+                            </div>
+                        <?php else: ?>
+                            <?php foreach($mensagens as $m): 
+                                $isMe = ($m['id_usuario'] == $idUsuario);
+                                $roleColors = [
+                                    'mentor' => ['bg' => 'rgba(139, 92, 246, 0.1)', 'color' => '#8B5CF6'],
+                                    'admin' => ['bg' => 'rgba(217, 119, 6, 0.1)', 'color' => '#D97706'],
+                                    'superadmin' => ['bg' => 'rgba(239, 68, 68, 0.1)', 'color' => '#EF4444'],
+                                    'utilizador' => ['bg' => 'rgba(71, 85, 105, 0.1)', 'color' => '#475569']
+                                ];
+                                $roleStyle = $roleColors[$m['perfil']] ?? ['bg' => '#eee', 'color' => '#333'];
+                            ?>
+                                <div class="d-flex <?= $isMe ? 'justify-content-end' : 'justify-content-start' ?>">
+                                    <div style="max-width: 75%;">
+                                        <div class="mb-1 d-flex align-items-center gap-1.5" style="font-size: 0.72rem; color: var(--text-secondary); <?= $isMe ? 'justify-content: flex-end;' : '' ?>">
+                                            <span class="fw-bold"><?= htmlspecialchars($m['nome']) ?></span> 
+                                            <span class="badge rounded-pill px-2 py-0.5" style="background:<?= $roleStyle['bg'] ?>; color:<?= $roleStyle['color'] ?>; font-size:0.55rem; font-weight:800; border:1px solid <?= $roleStyle['color'] ?>22;"><?= strtoupper($m['perfil']) ?></span>
+                                        </div>
+                                        <div class="p-3 shadow-sm <?= $isMe ? 'bg-primary text-white' : 'bg-white text-dark' ?>" 
+                                             style="border-radius: <?= $isMe ? '18px 18px 2px 18px' : '18px 18px 18px 2px' ?>; font-size: 0.9rem; line-height:1.5; border: <?= $isMe ? 'none' : '1px solid var(--border)' ?>;">
+                                            <div style="white-space: pre-wrap;"><?= htmlspecialchars($m['mensagem']) ?></div>
+                                            <div class="mt-1" style="font-size: 0.65rem; opacity: 0.8; text-align: right;">
+                                                <i class="fa fa-clock me-1"></i><?= date('H:i', strtotime($m['criado_at'])) ?>
                                             </div>
                                         </div>
                                     </div>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-                        <div class="p-3 bg-white border-top">
-                            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
-                                <input type="hidden" name="action" value="enviar_mensagem">
-                                <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
-                                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-chat">
-                                <textarea name="mensagem" class="form-control-custom" rows="1" placeholder="Escreva aqui a sua mensagem..." required style="resize:none; padding:12px"></textarea>
-                                <button type="submit" class="btn-primary-custom" style="padding: 10px 20px;">
-                                    <i class="fa fa-paper-plane"></i>
-                                </button>
-                            </form>
-                        </div>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="p-3 bg-white border-top">
+                        <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
+                            <input type="hidden" name="action" value="enviar_mensagem">
+                            <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
+                            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-chat">
+                            <textarea name="mensagem" class="form-control" rows="2" placeholder="Escreva a sua mensagem de consultoria..." required style="resize:none; padding:12px; border-radius: 12px; border:1px solid var(--border); font-size:0.875rem;"></textarea>
+                            <button type="submit" class="btn btn-primary fw-bold text-white d-flex align-items-center justify-content-center px-4" style="border-radius: 12px; background:var(--primary); border:none;">
+                                <i class="fa fa-paper-plane" style="font-size:1.1rem"></i>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
+        </div>
             
             <script>
                 document.addEventListener('DOMContentLoaded', function() {

@@ -41,6 +41,32 @@ $mapaProgresso = [
     'rejeitado'          => 0
 ];
 
+function obterSaudeProjeto($mysqli, $idProjeto) {
+    // Verificar se há alguma tarefa em atraso
+    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida' AND data_limite < CURDATE()");
+    $stmt->bind_param('i', $idProjeto);
+    $stmt->execute();
+    $atrasadas = $stmt->get_result()->fetch_row()[0];
+    $stmt->close();
+    
+    if ($atrasadas > 0) {
+        return 'critical'; // Vermelho
+    }
+    
+    // Verificar se há tarefas pendentes
+    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida'");
+    $stmt->bind_param('i', $idProjeto);
+    $stmt->execute();
+    $pendentes = $stmt->get_result()->fetch_row()[0];
+    $stmt->close();
+    
+    if ($pendentes > 0) {
+        return 'warning'; // Amarelo
+    }
+    
+    return 'good'; // Verde
+}
+
 $tituloPagina = 'Dashboard de Portfólio Analítico';
 $paginaActiva = 'projetos';
 require_once __DIR__ . '/../partials/_layout.php';
@@ -199,7 +225,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             $concluidas = $mysqli->query("SELECT COUNT(*) FROM tarefas WHERE id_projeto = {$m['id_projeto']} AND status = 'concluida'")->fetch_row()[0];
             $burnDown = $totalTarefas > 0 ? round(($concluidas / $totalTarefas) * 100) : 100;
             
-            $healthClass = $m['tarefas_pendentes'] > 3 ? 'critical' : ($m['tarefas_pendentes'] > 0 ? 'warning' : 'good');
+            $healthClass = obterSaudeProjeto($mysqli, $m['id_projeto']);
             $iniciais = strtoupper(substr($m['projeto_nome'], 0, 2));
         ?>
         <div class="startup-card" data-nome="<?= strtolower($m['projeto_nome']) ?>" data-fase="<?= $m['projeto_estado'] ?>" data-saude="<?= $healthClass ?>">
@@ -211,7 +237,21 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="startup-icon"><?= $iniciais ?></div>
 
             <div>
-                <div class="startup-type"><?= ucfirst(str_replace('_',' ',$m['tipo'])) ?></div>
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <div class="startup-type" style="margin-bottom:0"><?= ucfirst(str_replace('_',' ',$m['tipo'])) ?></div>
+                    <?php
+                    $saudeLabels = [
+                        'good' => ['color' => '#10B981', 'label' => 'Em Dia'],
+                        'warning' => ['color' => '#F59E0B', 'label' => 'Atenção'],
+                        'critical' => ['color' => '#EF4444', 'label' => 'Crítico']
+                    ];
+                    $sInfo = $saudeLabels[$healthClass];
+                    ?>
+                    <span style="font-size:0.62rem; font-weight:800; color:<?= $sInfo['color'] ?>; background:<?= $sInfo['color'] ?>15; padding: 2px 8px; border-radius: 20px; border: 1px solid <?= $sInfo['color'] ?>33; display:inline-flex; align-items:center;">
+                        <span class="spinner-grow spinner-grow-sm me-1" style="width:6px; height:6px; color:<?= $sInfo['color'] ?>" role="status"></span>
+                        <?= $sInfo['label'] ?>
+                    </span>
+                </div>
                 <div class="startup-name"><?= htmlspecialchars($m['projeto_nome']) ?></div>
             </div>
 

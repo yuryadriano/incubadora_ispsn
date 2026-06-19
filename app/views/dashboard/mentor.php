@@ -35,16 +35,43 @@ $stmt->close();
 
 $idMentor = $mentorInfo['id'] ?? 0;
 
-// 2. Buscar mentorias activas
+// 2. Buscar mentorias activas e estatísticas
 $mentorias = [];
 $tarefasPendentes = [];
 $avaliacoesRecentes = [];
+$totalHoras = 0;
+
+function obterSaudeProjeto($mysqli, $idProjeto) {
+    // Verificar se há alguma tarefa em atraso
+    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida' AND data_limite < CURDATE()");
+    $stmt->bind_param('i', $idProjeto);
+    $stmt->execute();
+    $atrasadas = $stmt->get_result()->fetch_row()[0];
+    $stmt->close();
+    
+    if ($atrasadas > 0) {
+        return 'critical'; // Vermelho
+    }
+    
+    // Verificar se há tarefas pendentes
+    $stmt = $mysqli->prepare("SELECT COUNT(*) FROM tarefas WHERE id_projeto = ? AND status != 'concluida'");
+    $stmt->bind_param('i', $idProjeto);
+    $stmt->execute();
+    $pendentes = $stmt->get_result()->fetch_row()[0];
+    $stmt->close();
+    
+    if ($pendentes > 0) {
+        return 'warning'; // Amarelo
+    }
+    
+    return 'good'; // Verde
+}
 
 if ($idMentor > 0) {
     // Mentorias
     $stmt = $mysqli->prepare("
         SELECT m.id as id_mentoria, m.estado, m.data_inicio, 
-               p.id as id_projeto, p.titulo as projeto_nome, p.estado as projeto_estado,
+               p.id as id_projeto, p.titulo as projeto_nome, p.estado as projeto_estado, p.fase as projeto_fase,
                (SELECT COUNT(*) FROM sessoes_mentoria WHERE id_mentoria = m.id) as total_sessoes
         FROM mentorias m
         JOIN projetos p ON p.id = m.id_projeto
@@ -54,6 +81,19 @@ if ($idMentor > 0) {
     $stmt->bind_param('i', $idMentor);
     $stmt->execute();
     $mentorias = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    // Horas totais de consultoria
+    $stmt = $mysqli->prepare("
+        SELECT SUM(s.duracao_min) as total_min
+        FROM sessoes_mentoria s
+        JOIN mentorias m ON m.id = s.id_mentoria
+        WHERE m.id_mentor = ?
+    ");
+    $stmt->bind_param('i', $idMentor);
+    $stmt->execute();
+    $horasData = $stmt->get_result()->fetch_assoc();
+    $totalHoras = $horasData['total_min'] ? round($horasData['total_min'] / 60, 1) : 0;
     $stmt->close();
 
     // Tarefas Pendentes
@@ -206,9 +246,9 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="kpi-label">Mentorias Activas</div>
         </div>
         <div class="kpi-card" style="--kpi-color:#8B5CF6">
-            <div class="kpi-icon"><i class="fa fa-comments"></i></div>
-            <div class="kpi-value"><?= $totalSessoes ?></div>
-            <div class="kpi-label">Total de Sessões</div>
+            <div class="kpi-icon"><i class="fa fa-hourglass-half"></i></div>
+            <div class="kpi-value"><?= $totalHoras ?> <span style="font-size:1rem; font-weight:600">horas</span></div>
+            <div class="kpi-label">Horas de Consultoria</div>
         </div>
         <div class="kpi-card" style="--kpi-color:var(--warning)">
             <div class="kpi-icon"><i class="fa fa-list-check"></i></div>
@@ -222,6 +262,12 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="kpi-label">Reuniões Agendadas</div>
         </div>
     </div>
+
+    <style>
+        .bg-success-light { background-color: rgba(16, 185, 129, 0.1) !important; color: #10B981 !important; }
+        .bg-warning-light { background-color: rgba(245, 158, 11, 0.1) !important; color: #D97706 !important; }
+        .bg-danger-light { background-color: rgba(239, 68, 68, 0.1) !important; color: #EF4444 !important; }
+    </style>
 
     <div class="row g-4">
         <!-- LISTA DE STARTUPS -->
@@ -289,24 +335,49 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <thead>
                                 <tr>
                                     <th>Startup / Projecto</th>
-                                    <th>Estado</th>
-                                    <th>Sessões</th>
+                                    <th>Fase / Estado</th>
+                                    <th class="text-center">Saúde</th>
+                                    <th class="text-center">Sessões</th>
                                     <th class="text-end">Acções</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($mentorias as $m): ?>
+                                <?php foreach ($mentorias as $m): 
+                                    $saude = obterSaudeProjeto($mysqli, $m['id_projeto']);
+                                    $saudeBadges = [
+                                        'good' => ['color' => '#10B981', 'label' => 'Em Dia', 'class' => 'bg-success-light text-success'],
+                                        'warning' => ['color' => '#F59E0B', 'label' => 'Atenção', 'class' => 'bg-warning-light text-warning'],
+                                        'critical' => ['color' => '#EF4444', 'label' => 'Crítico', 'class' => 'bg-danger-light text-danger']
+                                    ];
+                                    $saudeInfo = $saudeBadges[$saude];
+                                    
+                                    $fasesLabels = [
+                                        'ideacao' => 'Ideação 💡',
+                                        'validacao' => 'Validação 🔬',
+                                        'mvp' => 'MVP 📦',
+                                        'tracao' => 'Tração 📈',
+                                        'mercado' => 'Mercado 🛒'
+                                    ];
+                                    $faseLabel = $fasesLabels[$m['projeto_fase'] ?? 'ideacao'] ?? 'Ideação';
+                                ?>
                                 <tr>
                                     <td>
-                                        <div style="font-weight:600; color:var(--primary)"><?= htmlspecialchars($m['projeto_nome']) ?></div>
-                                        <small class="text-muted">Início: <?= $m['data_inicio'] ? date('d/m/Y', strtotime($m['data_inicio'])) : '—' ?></small>
+                                        <div style="font-weight:700; color:var(--text-primary); font-size: 0.95rem;"><?= htmlspecialchars($m['projeto_nome']) ?></div>
+                                        <small class="text-muted d-block mt-1"><i class="fa fa-calendar me-1"></i>Início: <?= $m['data_inicio'] ? date('d/m/Y', strtotime($m['data_inicio'])) : '—' ?></small>
                                     </td>
                                     <td>
+                                        <div class="fw-bold text-secondary mb-1" style="font-size:0.82rem"><?= $faseLabel ?></div>
                                         <span class="badge-estado badge-<?= $m['estado'] ?>">
-                                            <?= ucfirst($m['estado']) ?>
+                                            <?= ucfirst(str_replace('_',' ',$m['estado'])) ?>
                                         </span>
                                     </td>
-                                    <td><span class="fw-bold"><?= $m['total_sessoes'] ?></span></td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill <?= $saudeInfo['class'] ?> px-3 py-1" style="font-weight:700; font-size:0.75rem; border: 1px solid <?= $saudeInfo['color'] ?>33">
+                                            <span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px; color: <?= $saudeInfo['color'] ?>" role="status"></span>
+                                            <?= $saudeInfo['label'] ?>
+                                        </span>
+                                    </td>
+                                    <td class="text-center"><span class="fw-bold" style="font-size:1.05rem"><?= $m['total_sessoes'] ?></span></td>
                                     <td class="text-end">
                                         <div class="d-flex gap-2 justify-content-end">
                                             <button class="btn-ghost" title="Nova Tarefa" data-bs-toggle="modal" data-bs-target="#modalTarefa" onclick="configModal(<?= $m['id_projeto'] ?>, '<?= addslashes($m['projeto_nome']) ?>')" style="color:var(--primary)">
