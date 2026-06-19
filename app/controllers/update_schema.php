@@ -152,6 +152,19 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `historico_estados` (
   KEY `fk_hist_projeto` (`id_projeto`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+// Mensagens de chat de mentoria direta
+$mysqli->query("CREATE TABLE IF NOT EXISTS `mensagens` (
+  `id`              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `id_projeto`      INT UNSIGNED    NOT NULL,
+  `id_usuario`      INT UNSIGNED    NOT NULL,
+  `mensagem`        TEXT            NOT NULL,
+  `lida`            TINYINT(1)      NOT NULL DEFAULT 0,
+  `criado_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_msg_projeto` (`id_projeto`),
+  KEY `fk_msg_usuario` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 // ============================================================
 // SEED: Metas Padrão (inserir apenas se a tabela está vazia)
 // ============================================================
