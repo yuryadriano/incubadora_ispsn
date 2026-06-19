@@ -264,64 +264,152 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 
     <style>
-        .bg-success-light { background-color: rgba(16, 185, 129, 0.1) !important; color: #10B981 !important; }
-        .bg-warning-light { background-color: rgba(245, 158, 11, 0.1) !important; color: #D97706 !important; }
-        .bg-danger-light { background-color: rgba(239, 68, 68, 0.1) !important; color: #EF4444 !important; }
+        /* ── Mentor Dashboard Local Styles ─────── */
+        .mentor-dash-grid { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+        @media (max-width: 1100px) { .mentor-dash-grid { grid-template-columns: 1fr; } }
+
+        /* Health pill */
+        .health-pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 11px; border-radius: 20px;
+            font-size: 0.73rem; font-weight: 700;
+        }
+        .health-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.45; transform: scale(0.7); }
+        }
+        .health-good    { background: rgba(16,185,129,.12); color: #059669; }
+        .health-good    .health-dot { background: #10B981; }
+        .health-warning { background: rgba(245,158,11,.12); color: #B45309; }
+        .health-warning .health-dot { background: #F59E0B; }
+        .health-critical{ background: rgba(239,68,68,.12);  color: #B91C1C; }
+        .health-critical .health-dot { background: #EF4444; }
+
+        /* Metas urgency banner */
+        .metas-banner {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+            border-bottom: 1px solid #FDE68A;
+        }
+        .metas-badge-count {
+            background: #D97706; color: #fff;
+            font-size: 0.72rem; font-weight: 800;
+            min-width: 24px; height: 24px;
+            border-radius: 12px; display: inline-flex;
+            align-items: center; justify-content: center;
+            padding: 0 7px;
+        }
+        .meta-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            transition: background var(--transition);
+        }
+        .meta-item:last-child { border-bottom: none; }
+        .meta-item:hover { background: var(--table-hover); }
+
+        /* Task item */
+        .task-item {
+            display: flex; gap: 12px; align-items: flex-start;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            margin-top: 6px; flex-shrink: 0;
+        }
+        .task-dot.alta   { background: #EF4444; }
+        .task-dot.media  { background: #F59E0B; }
+        .task-dot.baixa  { background: #10B981; }
+
+        /* Meeting item */
+        .meeting-item {
+            display: flex; gap: 14px; align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .meeting-item:last-child { border-bottom: none; }
+        .meeting-date-badge {
+            flex-shrink: 0;
+            width: 44px; min-height: 50px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: #fff;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+        .meeting-date-badge .day   { font-size: 1.25rem; }
+        .meeting-date-badge .month { font-size: 0.62rem; text-transform: uppercase; opacity: .85; }
     </style>
 
-    <div class="row g-4">
-        <!-- LISTA DE STARTUPS -->
-        <div class="col-lg-8">
+    <div class="mentor-dash-grid">
+        <!-- ── COL PRINCIPAL ───────────────── -->
+        <div style="min-width:0;">
+
             <!-- METAS PENDENTES DE VALIDAÇÃO -->
+            <?php if (!empty($metasAvaliar)): ?>
             <div class="card-custom mb-4">
-                <div class="card-header-custom" style="border-left: 4px solid var(--warning); background-color: #fffbeb;">
-                    <div class="card-title-custom">
-                        <i class="fa fa-circle-exclamation text-warning"></i> Metas a Validar (Evidências Submetidas)
-                        <span class="badge bg-warning text-dark ms-2"><?= count($metasAvaliar) ?></span>
+                <div class="metas-banner">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:9px;background:rgba(217,119,6,.15);color:#D97706;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="fa fa-circle-exclamation"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.88rem;font-weight:700;color:#92400E;">Evidências a Validar</div>
+                            <div style="font-size:0.75rem;color:#A16207;">Startups aguardam o seu feedback</div>
+                        </div>
+                    </div>
+                    <span class="metas-badge-count"><?= count($metasAvaliar) ?></span>
+                </div>
+                <?php foreach ($metasAvaliar as $mv): ?>
+                <div class="meta-item">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+                                <span style="font-size:0.78rem; font-weight:700; color:var(--primary);"><?= htmlspecialchars($mv['projeto_nome']) ?></span>
+                                <span style="font-size:0.7rem; color:var(--text-muted);">&middot; <?= date('d/m/Y', strtotime($mv['evidencia_em'])) ?></span>
+                            </div>
+                            <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); margin-bottom:3px;"><?= htmlspecialchars($mv['meta_titulo']) ?></div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary); line-height:1.45;"><?= htmlspecialchars(mb_strimwidth($mv['evidencia_texto'] ?? '', 0, 160, '...')) ?></div>
+                            <?php if ($mv['evidencia_link'] || $mv['evidencia_path']): ?>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <?php if ($mv['evidencia_link']): ?>
+                                    <a href="<?= htmlspecialchars($mv['evidencia_link']) ?>" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:0.72rem;"><i class="fa fa-link me-1"></i>Ver Link</a>
+                                <?php endif; ?>
+                                <?php if ($mv['evidencia_path']): ?>
+                                    <a href="/incubadora_ispsn/<?= htmlspecialchars($mv['evidencia_path']) ?>" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:0.72rem;"><i class="fa fa-file me-1"></i>Ficheiro</a>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
+                            <button onclick="validarMeta(<?= $mv['id'] ?>, 'aprovar')" class="btn-primary-custom" style="padding:6px 14px; font-size:0.75rem; background:#059669; white-space:nowrap;">
+                                <i class="fa fa-check"></i> Aprovar
+                            </button>
+                            <button onclick="validarMeta(<?= $mv['id'] ?>, 'reprovar')" class="btn-ghost" style="padding:6px 14px; font-size:0.75rem; color:#EF4444; border-color:#FECACA; white-space:nowrap;">
+                                <i class="fa fa-rotate-left"></i> Devolver
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="card-body-custom p-0">
-                    <?php if (empty($metasAvaliar)): ?>
-                        <div class="text-center text-muted p-4 small">
-                            <i class="fa fa-check-circle text-success me-1"></i>Nenhuma meta pendente de validação neste momento.
-                        </div>
-                    <?php else: ?>
-                        <div class="list-group list-group-flush">
-                            <?php foreach ($metasAvaliar as $mv): ?>
-                                <div class="list-group-item p-3 border-bottom d-flex justify-content-between align-items-start gap-3 bg-white" style="border-color:#F1F5F9!important;">
-                                    <div style="flex:1;">
-                                        <div class="d-flex justify-content-between">
-                                            <span class="fw-bold text-primary" style="font-size:0.9rem;"><?= htmlspecialchars($mv['projeto_nome']) ?></span>
-                                            <small class="text-muted"><?= date('d/m/Y H:i', strtotime($mv['evidencia_em'])) ?></small>
-                                        </div>
-                                        <h6 class="mb-1 fw-bold mt-1 text-gray-800" style="font-size:0.88rem;"><?= htmlspecialchars($mv['meta_titulo']) ?></h6>
-                                        <p class="mb-2 text-muted small" style="line-height:1.4;"><?= htmlspecialchars($mv['evidencia_texto']) ?></p>
-                                        
-                                        <div class="d-flex gap-2">
-                                            <?php if ($mv['evidencia_link']): ?>
-                                                <a href="<?= htmlspecialchars($mv['evidencia_link']) ?>" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 small" style="font-size:0.75rem;"><i class="fa fa-link me-1"></i>Ver Link</a>
-                                            <?php endif; ?>
-                                            <?php if ($mv['evidencia_path']): ?>
-                                                <a href="/incubadora_ispsn/<?= htmlspecialchars($mv['evidencia_path']) ?>" target="_blank" class="btn btn-sm btn-outline-dark py-0 px-2 small" style="font-size:0.75rem;"><i class="fa fa-download me-1"></i>Ficheiro</a>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex flex-column gap-2" style="min-width:110px;">
-                                        <button class="btn btn-success btn-sm fw-bold w-100 py-1" style="font-size:0.75rem; border-radius:6px;" onclick="validarMeta(<?= $mv['id'] ?>, 'aprovar')"><i class="fa fa-check me-1"></i>Aprovar</button>
-                                        <button class="btn btn-outline-danger btn-sm fw-bold w-100 py-1" style="font-size:0.75rem; border-radius:6px;" onclick="validarMeta(<?= $mv['id'] ?>, 'reprovar')"><i class="fa fa-rotate-left me-1"></i>Devolver</button>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
+                <?php endforeach; ?>
             </div>
+            <?php endif; ?>
 
+            <!-- STARTUPS MENTORADAS -->
             <div class="card-custom">
                 <div class="card-header-custom">
                     <div class="card-title-custom">
-                        <i class="fa fa-building-rocket"></i> Minhas Startups Mentoradas
+                        <i class="fa fa-rocket"></i> Startups Mentoradas
                     </div>
+                    <span style="font-size:0.78rem; color:var(--text-muted); font-weight:500;"><?= count($mentorias) ?> projecto<?= count($mentorias) != 1 ? 's' : '' ?></span>
                 </div>
                 <div class="table-wrapper">
                     <?php if (empty($mentorias)): ?>
@@ -335,65 +423,66 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <thead>
                                 <tr>
                                     <th>Startup / Projecto</th>
-                                    <th>Fase / Estado</th>
+                                    <th>Fase</th>
                                     <th class="text-center">Saúde</th>
                                     <th class="text-center">Sessões</th>
                                     <th class="text-end">Acções</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($mentorias as $m): 
+                                <?php foreach ($mentorias as $m):
                                     $saude = obterSaudeProjeto($mysqli, $m['id_projeto']);
-                                    $saudeBadges = [
-                                        'good' => ['color' => '#10B981', 'label' => 'Em Dia', 'class' => 'bg-success-light text-success'],
-                                        'warning' => ['color' => '#F59E0B', 'label' => 'Atenção', 'class' => 'bg-warning-light text-warning'],
-                                        'critical' => ['color' => '#EF4444', 'label' => 'Crítico', 'class' => 'bg-danger-light text-danger']
-                                    ];
-                                    $saudeInfo = $saudeBadges[$saude];
-                                    
                                     $fasesLabels = [
-                                        'ideacao' => 'Ideação 💡',
-                                        'validacao' => 'Validação 🔬',
-                                        'mvp' => 'MVP 📦',
-                                        'tracao' => 'Tração 📈',
-                                        'mercado' => 'Mercado 🛒'
+                                        'ideacao'   => ['emoji' => '💡', 'label' => 'Ideação'],
+                                        'validacao' => ['emoji' => '🔬', 'label' => 'Validação'],
+                                        'mvp'       => ['emoji' => '📦', 'label' => 'MVP'],
+                                        'tracao'    => ['emoji' => '📈', 'label' => 'Tração'],
+                                        'mercado'   => ['emoji' => '🛒', 'label' => 'Mercado'],
                                     ];
-                                    $faseLabel = $fasesLabels[$m['projeto_fase'] ?? 'ideacao'] ?? 'Ideação';
+                                    $fase = $fasesLabels[$m['projeto_fase'] ?? 'ideacao'] ?? ['emoji' => '💡', 'label' => 'Ideação'];
                                 ?>
                                 <tr>
                                     <td>
-                                        <div style="font-weight:700; color:var(--text-primary); font-size: 0.95rem;"><?= htmlspecialchars($m['projeto_nome']) ?></div>
-                                        <small class="text-muted d-block mt-1"><i class="fa fa-calendar me-1"></i>Início: <?= $m['data_inicio'] ? date('d/m/Y', strtotime($m['data_inicio'])) : '—' ?></small>
+                                        <div style="font-weight:700; color:var(--text-primary);"><?= htmlspecialchars($m['projeto_nome']) ?></div>
+                                        <?php if ($m['data_inicio']): ?>
+                                        <small class="text-muted"><i class="fa fa-calendar-alt me-1"></i><?= date('d/m/Y', strtotime($m['data_inicio'])) ?></small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="fw-bold text-secondary mb-1" style="font-size:0.82rem"><?= $faseLabel ?></div>
-                                        <span class="badge-estado badge-<?= $m['estado'] ?>">
-                                            <?= ucfirst(str_replace('_',' ',$m['estado'])) ?>
+                                        <span style="font-size:0.88rem;"><?= $fase['emoji'] ?></span>
+                                        <span style="font-size:0.82rem; font-weight:600; color:var(--text-secondary);"><?= $fase['label'] ?></span>
+                                        <br>
+                                        <span class="badge-estado badge-<?= $m['estado'] ?>"><?= ucfirst(str_replace('_', ' ', $m['estado'])) ?></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="health-pill health-<?= $saude ?>">
+                                            <span class="health-dot"></span>
+                                            <?= ['good' => 'Em Dia', 'warning' => 'Atenção', 'critical' => 'Crítico'][$saude] ?>
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge rounded-pill <?= $saudeInfo['class'] ?> px-3 py-1" style="font-weight:700; font-size:0.75rem; border: 1px solid <?= $saudeInfo['color'] ?>33">
-                                            <span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px; color: <?= $saudeInfo['color'] ?>" role="status"></span>
-                                            <?= $saudeInfo['label'] ?>
-                                        </span>
+                                        <span style="font-size:1.1rem; font-weight:800; color:var(--text-primary);"><?= $m['total_sessoes'] ?></span>
                                     </td>
-                                    <td class="text-center"><span class="fw-bold" style="font-size:1.05rem"><?= $m['total_sessoes'] ?></span></td>
                                     <td class="text-end">
-                                        <div class="d-flex gap-2 justify-content-end">
-                                            <button class="btn-ghost" title="Nova Tarefa" data-bs-toggle="modal" data-bs-target="#modalTarefa" onclick="configModal(<?= $m['id_projeto'] ?>, '<?= addslashes($m['projeto_nome']) ?>')" style="color:var(--primary)">
-                                                <i class="fa-solid fa-tasks"></i>
+                                        <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center;">
+                                            <button class="btn-ghost" title="Nova Tarefa" data-bs-toggle="modal" data-bs-target="#modalTarefa"
+                                                    onclick="configModal(<?= $m['id_projeto'] ?>, '<?= addslashes($m['projeto_nome']) ?>')"
+                                                    style="padding:5px 9px; color:var(--info);">
+                                                <i class="fa fa-tasks"></i>
                                             </button>
-                                            <button class="btn-ghost" title="Agendar Reunião" data-bs-toggle="modal" data-bs-target="#modalReuniao" onclick="configModal(<?= $m['id_projeto'] ?>, '<?= addslashes($m['projeto_nome']) ?>')" style="color:#d97706">
-                                                <i class="fa-solid fa-calendar-plus"></i>
+                                            <button class="btn-ghost" title="Agendar Reunião" data-bs-toggle="modal" data-bs-target="#modalReuniao"
+                                                    onclick="configModal(<?= $m['id_projeto'] ?>, '<?= addslashes($m['projeto_nome']) ?>')"
+                                                    style="padding:5px 9px; color:var(--warning);">
+                                                <i class="fa fa-calendar-plus"></i>
                                             </button>
-                                            <button class="btn-primary-custom" style="padding:6px 10px; font-size:0.75rem"
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#modalSessao"
+                                            <button class="btn-primary-custom" style="padding:5px 10px; font-size:0.75rem;"
+                                                    data-bs-toggle="modal" data-bs-target="#modalSessao"
                                                     onclick="configModal(<?= $m['id_mentoria'] ?>, '<?= addslashes($m['projeto_nome']) ?>')">
-                                                <i class="fa-solid fa-plus"></i> Sessão
+                                                <i class="fa fa-plus"></i> Sessão
                                             </button>
-                                            <a href="/incubadora_ispsn/app/views/mentor/projeto_detalhe.php?id=<?= $m['id_projeto'] ?>" class="btn-ghost" style="padding:6px 10px; font-size:0.75rem">
-                                                <i class="fa-solid fa-eye"></i>
+                                            <a href="/incubadora_ispsn/app/views/mentor/projeto_detalhe.php?id=<?= $m['id_projeto'] ?>"
+                                               class="btn-ghost" title="Ver Detalhes" style="padding:5px 9px;">
+                                                <i class="fa fa-eye"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -406,68 +495,114 @@ require_once __DIR__ . '/../partials/_layout.php';
             </div>
         </div>
 
-        <!-- TAREFAS PENDENTES -->
-        <div class="col-lg-4">
-            <div class="card-custom mb-4">
+        <!-- ── COL LATERAL ────────────────── -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+
+            <!-- PRÓXIMAS TAREFAS -->
+            <div class="card-custom">
                 <div class="card-header-custom">
                     <div class="card-title-custom"><i class="fa fa-clipboard-list"></i> Próximas Tarefas</div>
+                    <?php if (!empty($tarefasPendentes)): ?>
+                    <span class="metas-badge-count" style="background:var(--warning);"><?= count($tarefasPendentes) ?></span>
+                    <?php endif; ?>
                 </div>
-                <div class="card-body-custom">
+                <div class="card-body-custom" style="padding:16px 20px;">
                     <?php if (empty($tarefasPendentes)): ?>
-                        <p class="text-muted text-center py-4 small">Nenhuma tarefa pendente.</p>
+                        <div style="text-align:center; padding:24px 0;">
+                            <i class="fa fa-check-circle" style="font-size:1.8rem; color:var(--success); margin-bottom:8px; display:block;"></i>
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Nenhuma tarefa pendente!</p>
+                        </div>
                     <?php else: ?>
-                        <div class="d-flex flex-column gap-3">
-                            <?php foreach ($tarefasPendentes as $t): ?>
-                            <div class="p-2 border rounded bg-white">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <small class="fw-bold text-primary"><?= htmlspecialchars($t['projeto_nome']) ?></small>
-                                    <span class="badge bg-light text-dark" style="font-size:0.6rem"><?= $t['prioridade'] ?></span>
-                                </div>
-                                <div class="small fw-600 mt-1"><?= htmlspecialchars($t['titulo']) ?></div>
-                                <div class="d-flex justify-content-between align-items-center mt-2">
-                                    <small class="text-danger" style="font-size:0.7rem">
-                                        <i class="fa fa-clock me-1"></i> <?= $t['data_limite'] ? date('d/m/Y', strtotime($t['data_limite'])) : 'Sem prazo' ?>
+                        <?php foreach ($tarefasPendentes as $t):
+                            $prio = $t['prioridade'] ?? 'media';
+                            $diasRestantes = $t['data_limite'] ? (int)((strtotime($t['data_limite']) - time()) / 86400) : null;
+                            $prazoClass = ($diasRestantes !== null && $diasRestantes < 0) ? 'text-danger' : (($diasRestantes !== null && $diasRestantes <= 3) ? 'text-warning' : 'text-muted');
+                        ?>
+                        <div class="task-item">
+                            <span class="task-dot <?= $prio ?>"></span>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:0.82rem; font-weight:600; color:var(--text-primary); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?= htmlspecialchars($t['titulo']) ?></div>
+                                <div style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-bottom:3px;"><?= htmlspecialchars($t['projeto_nome']) ?></div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <small class="<?= $prazoClass ?>" style="font-size:0.7rem;">
+                                        <i class="fa fa-clock me-1"></i>
+                                        <?php if ($diasRestantes === null): ?>Sem prazo
+                                        <?php elseif ($diasRestantes < 0): ?>Atrasada <?= abs($diasRestantes) ?>d
+                                        <?php elseif ($diasRestantes === 0): ?>Hoje!
+                                        <?php else: ?>+<?= $diasRestantes ?>d<?php endif; ?>
                                     </small>
-                                    <a href="/incubadora_ispsn/app/views/mentor/projeto_detalhe.php?id=<?= $t['id_projeto'] ?>#tab-tarefas" class="btn btn-sm btn-link p-0 text-decoration-none" style="font-size:0.7rem">Ver</a>
+                                    <a href="/incubadora_ispsn/app/views/mentor/projeto_detalhe.php?id=<?= $t['id_projeto'] ?>" style="font-size:0.7rem; color:var(--primary); font-weight:600; text-decoration:none;">Ver &rarr;</a>
                                 </div>
                             </div>
-                            <?php endforeach; ?>
                         </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <!-- REUNIÕES AGENDADAS -->
+            <!-- AGENDA DE REUNIÕES -->
             <div class="card-custom">
                 <div class="card-header-custom">
-                    <div class="card-title-custom"><i class="fa fa-calendar-days"></i> Agenda de Reuniões</div>
+                    <div class="card-title-custom"><i class="fa fa-calendar-days"></i> Próximas Reuniões</div>
+                    <?php if (!empty($proximasReunioes)): ?>
+                    <span class="metas-badge-count" style="background:var(--info);"><?= count($proximasReunioes) ?></span>
+                    <?php endif; ?>
                 </div>
-                <div class="card-body-custom">
+                <div class="card-body-custom" style="padding:16px 20px;">
                     <?php if (empty($proximasReunioes)): ?>
-                        <p class="text-muted text-center py-4 small">Nenhuma reunião marcada.</p>
+                        <div style="text-align:center; padding:24px 0;">
+                            <i class="fa fa-calendar-xmark" style="font-size:1.8rem; color:var(--border); margin-bottom:8px; display:block;"></i>
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Nenhuma reunião marcada.</p>
+                        </div>
                     <?php else: ?>
-                        <div class="d-flex flex-column gap-3">
-                            <?php foreach ($proximasReunioes as $re): ?>
-                            <div class="p-2 border rounded border-primary bg-light">
-                                <div class="d-flex justify-content-between">
-                                    <small class="fw-bold text-primary"><?= htmlspecialchars($re['projeto_nome']) ?></small>
-                                    <small class="text-muted"><?= date('H:i', strtotime($re['data_reuniao'])) ?></small>
-                                </div>
-                                <div class="small fw-600"><?= htmlspecialchars($re['titulo']) ?></div>
-                                <div class="mt-2 small text-muted">
-                                    <i class="fa fa-calendar me-1"></i> <?= date('d/m/Y', strtotime($re['data_reuniao'])) ?>
-                                </div>
+                        <?php foreach ($proximasReunioes as $re): ?>
+                        <div class="meeting-item">
+                            <div class="meeting-date-badge">
+                                <span class="day"><?= date('d', strtotime($re['data_reuniao'])) ?></span>
+                                <span class="month"><?= date('M', strtotime($re['data_reuniao'])) ?></span>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?= htmlspecialchars($re['titulo']) ?></div>
+                                <div style="font-size:0.75rem; color:var(--primary); font-weight:600; margin-bottom:4px;"><?= htmlspecialchars($re['projeto_nome']) ?></div>
+                                <div style="font-size:0.72rem; color:var(--text-muted);"><i class="fa fa-clock me-1"></i><?= date('H:i', strtotime($re['data_reuniao'])) ?></div>
                                 <?php if ($re['link_reuniao']): ?>
-                                    <a href="<?= $re['link_reuniao'] ?>" target="_blank" class="btn-primary-custom w-100 mt-2 py-1" style="font-size:0.65rem">
-                                        <i class="fa fa-video me-1"></i> Entrar na Reunião
-                                    </a>
+                                <a href="<?= htmlspecialchars($re['link_reuniao']) ?>" target="_blank" class="btn-primary-custom mt-2" style="padding:5px 12px; font-size:0.7rem; width:100%; justify-content:center;">
+                                    <i class="fa fa-video"></i> Entrar
+                                </a>
                                 <?php endif; ?>
                             </div>
-                            <?php endforeach; ?>
                         </div>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- PERFIL DO MENTOR -->
+            <div class="card-custom">
+                <div class="card-body-custom" style="padding:20px; text-align:center;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:1.4rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                        <?= mb_strtoupper(mb_substr(explode(' ', $nome)[0], 0, 1)) ?><?= mb_strtoupper(mb_substr(explode(' ', $nome)[1] ?? '', 0, 1)) ?>
+                    </div>
+                    <div style="font-weight:800; font-size:0.95rem; color:var(--text-primary); margin-bottom:2px;"><?= htmlspecialchars($nome) ?></div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:12px;"><?= htmlspecialchars($mentorInfo['especialidade'] ?? 'Mentor') ?></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+                        <div style="background:var(--surface-2);border-radius:9px;padding:10px;">
+                            <div style="font-size:1.4rem;font-weight:800;color:var(--primary);"><?= $activasCount ?></div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:500;">Activas</div>
+                        </div>
+                        <div style="background:var(--surface-2);border-radius:9px;padding:10px;">
+                            <div style="font-size:1.4rem;font-weight:800;color:#8B5CF6;"><?= $totalHoras ?>h</div>
+                            <div style="font-size:0.7rem;color:var(--text-muted);font-weight:500;">Consultoria</div>
+                        </div>
+                    </div>
+                    <?php if ($mentorInfo['linkedin'] ?? ''): ?>
+                    <a href="<?= htmlspecialchars($mentorInfo['linkedin']) ?>" target="_blank" class="btn-ghost" style="width:100%; justify-content:center; font-size:0.78rem;">
+                        <i class="fa-brands fa-linkedin"></i> LinkedIn
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+
         </div>
     </div>
 
