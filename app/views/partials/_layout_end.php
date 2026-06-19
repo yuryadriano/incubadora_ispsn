@@ -11,6 +11,31 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+// ─── Dark Mode Toggle ─────────────────────
+function toggleDarkMode() {
+    const isDark = document.body.classList.toggle('dark-mode');
+    document.documentElement.classList.toggle('dark-mode', isDark);
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    updateDarkModeIcon(isDark);
+}
+
+function updateDarkModeIcon(isDark) {
+    const icon = document.getElementById('darkModeIcon');
+    if (icon) {
+        if (isDark) {
+            icon.className = 'fa fa-sun';
+        } else {
+            icon.className = 'fa fa-moon';
+        }
+    }
+}
+
+// Alinhar ícone ao carregar
+document.addEventListener('DOMContentLoaded', () => {
+    const isDark = document.body.classList.contains('dark-mode');
+    updateDarkModeIcon(isDark);
+});
+
 // ─── Sidebar Toggle ───────────────────────
 function toggleSidebar() {
     const sb   = document.getElementById('sidebar');

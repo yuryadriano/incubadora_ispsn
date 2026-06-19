@@ -119,6 +119,15 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Sistema de Gestão da Incubadora Académica do ISPSN">
 
+<script>
+(function() {
+    const theme = localStorage.getItem('theme') || 'light';
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark-mode');
+    }
+})();
+</script>
+
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -134,6 +143,11 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 <link rel="stylesheet" href="/incubadora_ispsn/assets/css/global.css">
 </head>
 <body>
+<script>
+if (document.documentElement.classList.contains('dark-mode')) {
+    document.body.classList.add('dark-mode');
+}
+</script>
 
 <!-- ═══════════════════════════════════════════
      SIDEBAR
@@ -223,6 +237,11 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
             </div>
         </div>
         <div class="topbar-right">
+            <!-- Alternador Dark Mode -->
+            <button class="topbar-btn" type="button" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar Tema" style="margin-right: 4px;">
+                <i class="fa fa-moon" id="darkModeIcon"></i>
+            </button>
+
             <!-- Notificações -->
             <div class="dropdown">
                 <button class="topbar-btn" type="button" id="btnNotif" data-bs-toggle="dropdown" aria-expanded="false" title="Notificações">
