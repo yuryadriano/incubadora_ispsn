@@ -36,6 +36,17 @@ if (!$connected || $mysqli->connect_errno) {
 
 $mysqli->set_charset('utf8mb4');
 
+// Auto-verificação de Schema: Se a tabela metas_projeto não existir, executa o update_schema.php automaticamente
+$checkTable = $mysqli->query("SHOW TABLES LIKE 'metas_projeto'");
+if ($checkTable && $checkTable->num_rows === 0) {
+    $schemaFile = __DIR__ . '/../app/controllers/update_schema.php';
+    if (file_exists($schemaFile)) {
+        ob_start();
+        include $schemaFile;
+        ob_end_clean();
+    }
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }

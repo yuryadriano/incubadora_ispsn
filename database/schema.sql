@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: projetos
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS `projetos` (
   KEY `criado_por` (`criado_por`),
   CONSTRAINT `projetos_ibfk_1` FOREIGN KEY (`id_responsavel`) REFERENCES `usuarios` (`id`),
   CONSTRAINT `projetos_ibfk_2` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: config_website
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `publicacoes_website` (
   `criado_em` datetime DEFAULT current_timestamp(),
   `visualizacoes` int(11) DEFAULT 0,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: galeria_website
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS `galeria_website` (
   `ativo` tinyint(1) DEFAULT 1,
   `criado_em` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: processos_candidatura
