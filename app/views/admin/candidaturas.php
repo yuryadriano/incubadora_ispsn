@@ -181,9 +181,21 @@ require_once __DIR__ . '/../partials/_layout.php';
         <div class="page-header-title" style="font-size: 1.4rem;"><i class="fa fa-inbox me-2" style="color:var(--primary)"></i>Gestão de Candidaturas</div>
         <div class="page-header-sub">Pipeline de triagem e admissão de startups</div>
     </div>
-    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProcesso">
-        <i class="fa fa-plus me-2"></i> Novo Processo
-    </button>
+    <div class="d-flex align-items-center gap-2">
+        <?php if ($id_processo_sel && ($contagens['pendente'] ?? 0) > 0): ?>
+        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin: 0;">
+            <input type="hidden" name="action" value="triagem_automatica">
+            <input type="hidden" name="id_processo" value="<?= $id_processo_sel ?>">
+            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+            <button type="submit" class="btn btn-warning fw-bold text-white px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#D97706; border:none; font-size:0.85rem;">
+                <i class="fa fa-bolt"></i> Triagem Automática
+            </button>
+        </form>
+        <?php endif; ?>
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProcesso">
+            <i class="fa fa-plus me-2"></i> Novo Processo
+        </button>
+    </div>
 </div>
 
 <?php if ($flash_ok): ?><div class="alert alert-success border-0 shadow-sm mb-4"><?= htmlspecialchars($flash_ok) ?></div><?php endif; ?>
@@ -262,6 +274,27 @@ require_once __DIR__ . '/../partials/_layout.php';
         <?php endforeach; ?>
     </div>
 
+    <?php if ($filtro_estado === 'selecionado' && !empty($candidaturas)): ?>
+    <div class="card border-0 shadow-sm mb-4 rounded-4" style="background: linear-gradient(to right, #FFFBEB, #fff); border-left: 5px solid var(--primary) !important; border-radius: 16px;">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="fa-brands fa-whatsapp text-success me-2"></i>Fila de Envio de Convites</h5>
+                    <p class="text-muted small mb-0">Envie convites via WhatsApp de forma dinâmica ou exporte links em massa para disparos.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-success fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" style="background:#25D366; border:none;" onclick="iniciarWizardEnvio()">
+                        <i class="fa fa-play-circle"></i> Iniciar Assistente
+                    </button>
+                    <button class="btn btn-outline-secondary fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" onclick="abrirModalMassa()">
+                        <i class="fa fa-copy"></i> Copiar Links em Massa
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="cand-list-v2">
         <?php if (empty($candidaturas)): ?>
             <div class="text-center p-5 bg-white rounded-4 border border-dashed">
@@ -307,15 +340,21 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?= ucfirst(str_replace('_',' ',$st)) ?>
                     </span>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex align-items-center gap-2">
                     <button class="btn-action-v2" title="Dossier" onclick='abrirModal(<?= json_encode($c) ?>)'><i class="fa fa-id-card"></i></button>
                     
                     <?php if (in_array($st, ['pendente','em_analise'])): ?>
-                    <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                        <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
-                        <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                        <button type="submit" class="btn-action-v2 btn-success" title="Aprovar"><i class="fa fa-check"></i></button>
-                    </form>
+                        <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
+                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
+                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar"><i class="fa fa-check"></i></button>
+                        </form>
+                        <?php else: ?>
+                            <?php if ($st === 'em_analise'): ?>
+                            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-2" style="font-size:0.65rem;" title="Apenas Super Admin (DG/PR) pode aprovar"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <?php if ($st === 'selecionado'): ?>
@@ -323,11 +362,21 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <?php endif; ?>
 
                     <?php if (!in_array($st, ['rejeitado','registado'])): ?>
-                    <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                        <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                        <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                        <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar" onclick="return confirm('Rejeitar?')"><i class="fa fa-ban"></i></button>
-                    </form>
+                        <?php if (in_array($st, ['pendente', 'em_analise'])): ?>
+                            <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                                <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
+                                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
+                                <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar" onclick="return confirm('Rejeitar?')"><i class="fa fa-ban"></i></button>
+                            </form>
+                            <?php endif; ?>
+                        <?php else: ?>
+                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
+                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
+                            <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar" onclick="return confirm('Rejeitar?')"><i class="fa fa-ban"></i></button>
+                        </form>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -375,6 +424,57 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- MODAL: Assistente de Envio Wizard -->
+<div class="modal-overlay" id="modalWizard">
+    <div class="modal-box-v2" style="max-width: 600px;">
+        <div class="modal-header-v2" style="background: #25D366;">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa-brands fa-whatsapp me-2"></i> Assistente de Envio de Convites</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalWizard')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <div id="wizardContent">
+                <!-- Conteúdo dinâmico preenchido por JS -->
+            </div>
+        </div>
+        <div class="modal-footer-v2">
+            <span class="text-muted small me-auto" id="wizardProgress">Progresso: 0 / 0</span>
+            <button class="btn btn-light fw-bold px-3 py-2 rounded-3" onclick="fecharModal('modalWizard')">Cancelar</button>
+            <button class="btn btn-success fw-bold text-white px-3 py-2 rounded-3" id="btnWizardNext" style="display:none;" onclick="wizardNext()">Avançar para o Próximo <i class="fa fa-arrow-right ms-1"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Exportação em Massa -->
+<div class="modal-overlay" id="modalMassa">
+    <div class="modal-box-v2" style="max-width: 650px;">
+        <div class="modal-header-v2" style="background: var(--slate-900);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-copy me-2"></i> Exportar Links em Massa</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalMassa')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <p class="text-muted small">Abaixo estão listados todos os candidatos aprovados. Clique no botão para gerar tokens de convites e criar uma lista de envio formatada para copiar para a área de transferência.</p>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="chkSelecionarTodosMassa" checked onchange="toggleSelectMassa(this)">
+                <label class="form-check-label fw-bold small text-uppercase" for="chkSelecionarTodosMassa">Selecionar Todos</label>
+            </div>
+            
+            <div id="massaList" style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--slate-200); border-radius: 12px; padding: 12px;">
+                <!-- Lista de checkboxes para cada candidato -->
+            </div>
+            
+            <div class="mb-3" style="display:none;" id="massaTextAreaWrapper">
+                <label class="label-mini">Lista Formatada de Convites</label>
+                <textarea class="form-control-custom w-100" id="massaTextArea" rows="6" readonly style="font-family: monospace; font-size: 0.8rem; background: var(--slate-50); outline: none; border: 1px solid var(--slate-200); padding: 10px; border-radius: 8px;"></textarea>
+            </div>
+            
+            <button class="btn btn-warning fw-bold w-100 py-3 rounded-3 text-white" id="btnMassaProcessar" style="background:#D97706; border:none;" onclick="processarMassa()">
+                <i class="fa fa-bolt me-1"></i> Gerar e Copiar Links Selecionados
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: Novo Processo -->
 <div class="modal fade" id="modalNovoProcesso" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -393,6 +493,9 @@ require_once __DIR__ . '/../partials/_layout.php';
 </div>
 
 <script>
+const usuarioPerfil = <?= json_encode($_SESSION['usuario_perfil']) ?>;
+const candidatosAprovados = <?= json_encode(array_values(array_filter($candidaturas, function($c) { return $c['estado'] === 'selecionado'; }))) ?>;
+
 function abrirModal(c) {
     document.getElementById('modalConteudo').innerHTML = `
         <div class="row g-4">
@@ -424,13 +527,17 @@ function abrirModal(c) {
 
     let footer = '';
     if (c.estado === 'pendente' || c.estado === 'em_analise') {
-        footer = `
-            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="${c.id}"><input type="hidden" name="estado" value="selecionado">
-                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar</button>
-            </form>
-        `;
+        if (usuarioPerfil === 'superadmin') {
+            footer = `
+                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                    <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="${c.id}"><input type="hidden" name="estado" value="selecionado">
+                    <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
+                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar</button>
+                </form>
+            `;
+        } else if (c.estado === 'em_analise') {
+            footer = `<span class="text-muted small me-3"><i class="fa fa-user-shield me-1"></i> Aguardando aprovação do Super Admin (DG/PR)</span>`;
+        }
     }
     document.getElementById('modalFooter').innerHTML = footer + `<button class="btn btn-light fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalDetalhe')">Fechar</button>`;
     document.getElementById('modalDetalhe').classList.add('open');
@@ -445,6 +552,199 @@ function gerarConvite(c) {
 }
 
 document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+
+// Lógica de Envio Dinâmico Wizard
+let wizardQueue = [];
+let wizardIndex = 0;
+
+function iniciarWizardEnvio() {
+    wizardQueue = candidatosAprovados.filter(c => c.estado === 'selecionado');
+    if (wizardQueue.length === 0) {
+        alert('Nenhum candidato aguardando envio de convite nesta lista.');
+        return;
+    }
+    wizardIndex = 0;
+    mostrarWizardStep();
+    document.getElementById('modalWizard').classList.add('open');
+}
+
+function mostrarWizardStep() {
+    if (wizardIndex >= wizardQueue.length) {
+        document.getElementById('wizardContent').innerHTML = `
+            <div class="text-center p-5">
+                <i class="fa fa-circle-check fa-4x text-success mb-3"></i>
+                <h5 class="fw-bold">Fila Concluída!</h5>
+                <p class="text-muted small">Todos os convites da fila atual foram abertos no WhatsApp.</p>
+                <button class="btn btn-primary fw-bold px-4 py-2 mt-2 rounded-3" style="background:var(--primary); border:none;" onclick="location.reload()">Concluir e Recarregar</button>
+            </div>
+        `;
+        document.getElementById('btnWizardNext').style.display = 'none';
+        document.getElementById('wizardProgress').textContent = `Fila Concluída!`;
+        return;
+    }
+
+    const c = wizardQueue[wizardIndex];
+    document.getElementById('wizardProgress').textContent = `Candidato ${wizardIndex + 1} de ${wizardQueue.length}`;
+    document.getElementById('btnWizardNext').style.display = 'none';
+
+    document.getElementById('wizardContent').innerHTML = `
+        <div class="p-3 bg-light rounded-4 border mb-4">
+            <div class="label-mini text-primary">Candidato Atual</div>
+            <h5 class="fw-bold mb-1">${c.nome}</h5>
+            <div class="text-muted small">${c.email} · Nº ${c.numero_estudante}</div>
+            <div class="mt-2"><span class="badge bg-success-subtle text-success small" style="font-size:0.8rem; color:#166534;"><i class="fa fa-phone me-1"></i>${c.telefone}</span></div>
+        </div>
+
+        <div class="mb-4">
+            <div class="label-mini">Visualização da Mensagem</div>
+            <div class="p-3 bg-white border rounded-3 small text-muted" style="white-space: pre-wrap; font-family: sans-serif; max-height: 150px; overflow-y: auto;">
+Olá ${c.nome.split(' ')[0]}! 🎉
+
+A sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀
+
+Para criar a sua conta no portal e iniciar o processo, aceda ao link abaixo:
+🔗 http://${window.location.host}/incubadora_ispsn/public/register.php?invite=[Token Seguro]
+
+⏰ *Atenção:* Este link é válido por apenas *48 horas* e pode ser usado *uma única vez*.
+            </div>
+        </div>
+
+        <div class="text-center animate__animated animate__fadeIn" id="wizardActionArea">
+            <button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" style="background:#25D366; border:none;" onclick="gerarEAbrirWhatsApp(${c.id})">
+                <i class="fa-brands fa-whatsapp me-2"></i> Gerar Link e Abrir WhatsApp
+            </button>
+        </div>
+    `;
+}
+
+function gerarEAbrirWhatsApp(idCand) {
+    const actionArea = document.getElementById('wizardActionArea');
+    actionArea.innerHTML = `<button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" disabled style="background:#25D366; border:none;"><i class="fa fa-spinner fa-spin me-2"></i> A gerar link seguro...</button>`;
+
+    const formData = new FormData();
+    formData.append('action', 'gerar_convite_ajax');
+    formData.append('id_cand', idCand);
+
+    fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.sucesso) {
+            window.open(data.wa_url, '_blank');
+            actionArea.innerHTML = `
+                <div class="alert alert-success border-0 small py-3 mb-0 rounded-4" style="background:#DCFCE7; color:#166534;">
+                    <i class="fa fa-circle-check me-2"></i> Convite seguro gerado e WhatsApp aberto em nova janela!
+                </div>
+            `;
+            document.getElementById('btnWizardNext').style.display = 'inline-block';
+        } else {
+            alert('Erro: ' + data.erro);
+            mostrarWizardStep();
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro ao processar convite via AJAX.');
+        mostrarWizardStep();
+    });
+}
+
+function wizardNext() {
+    wizardIndex++;
+    mostrarWizardStep();
+}
+
+// Lógica de Envio em Lote / Cópia em Massa
+function abrirModalMassa() {
+    const list = document.getElementById('massaList');
+    const aprovados = candidatosAprovados.filter(c => c.estado === 'selecionado');
+    
+    if (aprovados.length === 0) {
+        alert('Nenhum candidato aprovado para exportar.');
+        return;
+    }
+
+    list.innerHTML = aprovados.map(c => `
+        <div class="form-check py-1 border-bottom d-flex align-items-center">
+            <input class="form-check-input chk-massa-cand me-2" type="checkbox" value="${c.id}" id="chkMassa_${c.id}" checked>
+            <label class="form-check-label small mb-0" for="chkMassa_${c.id}">
+                <strong>${c.nome}</strong> (${c.telefone})
+            </label>
+        </div>
+    `).join('');
+
+    document.getElementById('massaTextAreaWrapper').style.display = 'none';
+    document.getElementById('btnMassaProcessar').style.display = 'block';
+    document.getElementById('modalMassa').classList.add('open');
+}
+
+function toggleSelectMassa(master) {
+    document.querySelectorAll('.chk-massa-cand').forEach(chk => chk.checked = master.checked);
+}
+
+function processarMassa() {
+    const checkboxes = document.querySelectorAll('.chk-massa-cand:checked');
+    if (checkboxes.length === 0) {
+        alert('Por favor, selecione pelo menos um candidato.');
+        return;
+    }
+
+    const ids = Array.from(checkboxes).map(chk => parseInt(chk.value));
+    const btn = document.getElementById('btnMassaProcessar');
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin me-2"></i> A processar convites em lote...`;
+    btn.disabled = true;
+
+    let resultadosText = "";
+    
+    // Processamento assíncrono sequencial
+    async function processarItens() {
+        for (let id of ids) {
+            const formData = new FormData();
+            formData.append('action', 'gerar_convite_ajax');
+            formData.append('id_cand', id);
+
+            try {
+                let response = await fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                let data = await response.json();
+                if (data.sucesso) {
+                    resultadosText += `Candidato: ${data.candidato.nome}\nTelefone: ${data.candidato.telefone}\nLink Único: ${data.link_registo}\n\n`;
+                }
+            } catch (e) {
+                console.error("Erro no id " + id, e);
+            }
+        }
+    }
+
+    processarItens().then(() => {
+        btn.innerHTML = `<i class="fa fa-check me-2"></i> Convites Gerados!`;
+        btn.style.background = '#10B981';
+        
+        const textArea = document.getElementById('massaTextArea');
+        textArea.value = resultadosText;
+        document.getElementById('massaTextAreaWrapper').style.display = 'block';
+
+        textArea.select();
+        textArea.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(resultadosText)
+        .then(() => {
+            alert('Todos os links foram gerados com sucesso e copiados para a área de transferência!');
+        })
+        .catch(() => {
+            alert('Links gerados! Por favor, copie manualmente da caixa de texto.');
+        });
+
+        setTimeout(() => {
+            btn.innerHTML = `<i class="fa fa-bolt me-1"></i> Gerar e Copiar Links Selecionados`;
+            btn.style.background = '#D97706';
+            btn.disabled = false;
+        }, 3000);
+    });
+}
 </script>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>

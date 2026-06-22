@@ -66,12 +66,106 @@ if ($action === 'mudar_estado_cand') {
     $estados = ['pendente','em_analise','selecionado','rejeitado','convite_enviado','registado'];
 
     if ($idCand && in_array($estado, $estados)) {
+        // Apenas Super Admin (DG/PR) pode aprovar ou rejeitar candidaturas
+        $perfilUsuario = $_SESSION['usuario_perfil'] ?? '';
+        if (in_array($estado, ['selecionado', 'rejeitado']) && $perfilUsuario !== 'superadmin') {
+            $_SESSION['flash_erro'] = '⚠️ Permissão negada: Apenas o Super ADMIN (DG/PR) pode aprovar ou rejeitar candidaturas na fase de decisão.';
+            header("Location: $redirect"); exit;
+        }
+
         $stmt = $mysqli->prepare("UPDATE candidaturas SET estado=?, avaliado_por=?, avaliado_em=NOW() WHERE id=?");
         $stmt->bind_param('sii', $estado, $idAdmin, $idCand);
         $stmt->execute();
         $label = ['selecionado'=>'Selecionado ✓','rejeitado'=>'Rejeitado ✗','em_analise'=>'Em Análise'];
         $_SESSION['flash_ok'] = 'Candidatura marcada como: ' . ($label[$estado] ?? $estado);
     }
+    header("Location: $redirect"); exit;
+}
+
+/* ── TRIAGEM AUTOMÁTICA (Fase 1) ────────── */
+if ($action === 'triagem_automatica') {
+    $idProcesso = (int)($_POST['id_processo'] ?? 0);
+    if (!$idProcesso) {
+        $_SESSION['flash_erro'] = 'Processo inválido.';
+        header("Location: $redirect"); exit;
+    }
+
+    // Buscar candidaturas pendentes deste processo
+    $res = $mysqli->query("SELECT * FROM candidaturas WHERE id_processo = $idProcesso AND estado = 'pendente'");
+    if (!$res) {
+        $_SESSION['flash_erro'] = 'Erro ao buscar candidaturas pendentes.';
+        header("Location: $redirect"); exit;
+    }
+
+    $aprovados = 0;
+    $rejeitados = 0;
+
+    while ($c = $res->fetch_assoc()) {
+        $motivoRejeicao = '';
+
+        // 1. Validação do e-mail
+        if (!filter_var($c['email'], FILTER_VALIDATE_EMAIL)) {
+            $motivoRejeicao = 'E-mail em formato inválido.';
+        } elseif (!str_ends_with($c['email'], '@ispsn.org')) {
+            $motivoRejeicao = 'O e-mail deve ser institucional (@ispsn.org).';
+        }
+
+        // 2. Validação do telefone
+        $telefoneClean = preg_replace('/\D/', '', $c['telefone']);
+        if (strlen($telefoneClean) < 9) {
+            $motivoRejeicao = 'Telefone inválido (mínimo de 9 dígitos).';
+        }
+
+        // 3. Validação do número de estudante
+        if (empty($c['numero_estudante']) || strlen(trim($c['numero_estudante'])) < 5) {
+            $motivoRejeicao = 'Número de estudante inválido ou curto demais.';
+        }
+
+        // 4. Validação da ideia
+        if (strlen($c['titulo_ideia']) < 5) {
+            $motivoRejeicao = 'Título da ideia muito curto (mínimo 5 caracteres).';
+        } elseif (strlen($c['descricao_ideia']) < 30) {
+            $motivoRejeicao = 'Descrição da ideia muito curta (mínimo 30 caracteres).';
+        }
+
+        // 5. Validação de duplicados
+        if (empty($motivoRejeicao)) {
+            $emailEscaped = $mysqli->real_escape_string($c['email']);
+            $numEstEscaped = $mysqli->real_escape_string($c['numero_estudante']);
+            $idCand = (int)$c['id'];
+            
+            // Procurar outras candidaturas registadas ou selecionadas neste mesmo processo
+            $chkDup = $mysqli->query("
+                SELECT id FROM candidaturas 
+                WHERE id_processo = $idProcesso 
+                  AND id != $idCand 
+                  AND (email = '$emailEscaped' OR numero_estudante = '$numEstEscaped')
+                  AND estado IN ('em_analise', 'selecionado', 'convite_enviado', 'registado')
+                LIMIT 1
+            ");
+            if ($chkDup && $chkDup->num_rows > 0) {
+                $motivoRejeicao = 'Duplicidade de candidatura identificada (já existe registo para este estudante/e-mail neste processo).';
+            }
+        }
+
+        // Atualizar estado conforme triagem
+        if (empty($motivoRejeicao)) {
+            $stmtUp = $mysqli->prepare("UPDATE candidaturas SET estado = 'em_analise', avaliado_por = ?, avaliado_em = NOW() WHERE id = ?");
+            $stmtUp->bind_param('ii', $idAdmin, $c['id']);
+            $stmtUp->execute();
+            $stmtUp->close();
+            $aprovados++;
+        } else {
+            $obsAdmin = 'Reprovado na Triagem Automática: ' . $motivoRejeicao;
+            $stmtUp = $mysqli->prepare("UPDATE candidaturas SET estado = 'rejeitado', observacoes_admin = ?, avaliado_por = ?, avaliado_em = NOW() WHERE id = ?");
+            $stmtUp->bind_param('sii', $obsAdmin, $idAdmin, $c['id']);
+            $stmtUp->execute();
+            $stmtUp->close();
+            $rejeitados++;
+        }
+    }
+
+    $_SESSION['flash_ok'] = "⚡ Triagem automática concluída! Processados: " . ($aprovados + $rejeitados) . " candidatura(s). Aprovados para Análise: $aprovados. Rejeitados: $rejeitados.";
     header("Location: $redirect"); exit;
 }
 
@@ -180,6 +274,124 @@ if ($action === 'gerar_convite_seguro') {
     $_SESSION['wa_redirect'] = $waUrl;
 
     header("Location: /incubadora_ispsn/app/views/admin/candidaturas.php?processo={$idProcesso}&wa=1&token=" . urlencode($token) . "&cand={$idCand}");
+    exit;
+}
+
+/* ── GERAR CONVITE VIA AJAX (Dinamizar Envio) ────── */
+if ($action === 'gerar_convite_ajax') {
+    header('Content-Type: application/json');
+    $idCand = (int)($_POST['id_cand'] ?? 0);
+
+    if (!$idCand) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Candidatura inválida.']);
+        exit;
+    }
+
+    // Buscar candidatura
+    $stmt = $mysqli->prepare("SELECT * FROM candidaturas WHERE id=? LIMIT 1");
+    $stmt->bind_param('i', $idCand);
+    $stmt->execute();
+    $cand = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$cand) {
+        echo json_encode(['sucesso' => false, 'erro' => 'Candidatura não encontrada.']);
+        exit;
+    }
+
+    if ($cand['estado'] !== 'selecionado' && $cand['estado'] !== 'convite_enviado') {
+        echo json_encode(['sucesso' => false, 'erro' => 'Candidatura não está no estado aprovado.']);
+        exit;
+    }
+
+    // Verificar se já tem convite ativo não expirado
+    $chk = $mysqli->prepare("SELECT token FROM convites WHERE id_candidatura=? AND aceite=0 AND (data_expiracao IS NULL OR data_expiracao > NOW()) LIMIT 1");
+    $chk->bind_param('i', $idCand);
+    $chk->execute();
+    $conviteExistente = $chk->get_result()->fetch_assoc();
+    $chk->close();
+
+    if ($conviteExistente) {
+        $token = $conviteExistente['token'];
+    } else {
+        $token      = bin2hex(random_bytes(24));
+        $expiracao  = date('Y-m-d H:i:s', strtotime('+48 hours'));
+        $email      = $cand['email'];
+        $numEst     = $cand['numero_estudante'];
+        $tel        = $cand['telefone'];
+        $perfil     = 'utilizador';
+
+        // Garantir que a tabela existe
+        $mysqli->query("CREATE TABLE IF NOT EXISTS convites (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(150) NOT NULL,
+            token VARCHAR(100) NOT NULL,
+            perfil VARCHAR(50) NOT NULL DEFAULT 'utilizador',
+            id_projeto INT UNSIGNED DEFAULT NULL,
+            criado_por INT UNSIGNED NOT NULL,
+            aceite TINYINT(1) DEFAULT 0,
+            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
+            data_expiracao DATETIME NULL,
+            id_candidatura INT UNSIGNED NULL,
+            telefone VARCHAR(30) NULL,
+            numero_estudante VARCHAR(50) NULL,
+            usos_maximos TINYINT DEFAULT 1
+        )");
+
+        $stmt = $mysqli->prepare("
+            INSERT INTO convites (email, token, perfil, criado_por, data_expiracao, id_candidatura, telefone, numero_estudante, usos_maximos)
+            VALUES (?,?,?,?,?,?,?,?,1)
+        ");
+        $stmt->bind_param('sssisiss', $email, $token, $perfil, $idAdmin, $expiracao, $idCand, $tel, $numEst);
+        
+        if (!$stmt->execute()) {
+            echo json_encode(['sucesso' => false, 'erro' => 'Erro ao registar convite: ' . $mysqli->error]);
+            exit;
+        }
+        $stmt->close();
+
+        // Atualizar candidatura
+        $stmt2 = $mysqli->prepare("UPDATE candidaturas SET estado='convite_enviado', token_convite=?, convite_enviado_em=NOW() WHERE id=?");
+        $stmt2->bind_param('si', $token, $idCand);
+        $stmt2->execute();
+        $stmt2->close();
+    }
+
+    // Links e mensagens
+    $baseUrl = 'http://' . $_SERVER['HTTP_HOST'];
+    $link    = $baseUrl . '/incubadora_ispsn/public/register.php?invite=' . $token;
+
+    $nome   = $cand['nome'];
+    $primeiroNome = explode(' ', $nome)[0];
+    $msg = "Olá {$primeiroNome}! 🎉\n\n";
+    $msg .= "A sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\n";
+    $msg .= "Para criar a sua conta no portal e iniciar o processo, aceda ao link abaixo:\n\n";
+    $msg .= "🔗 {$link}\n\n";
+    $msg .= "⏰ *Atenção:* Este link é válido por apenas *48 horas* e pode ser usado *uma única vez*.\n\n";
+    $msg .= "Ao registar-se, use:\n";
+    $msg .= "• *Email:* {$cand['email']}\n";
+    $msg .= "• *Nº Estudante:* {$cand['numero_estudante']}\n\n";
+    $msg .= "Este link é *pessoal e intransferível* — não o partilhe.\n\n";
+    $msg .= "Bem-vindo(a) à família ISPSN! 🌟\n";
+    $msg .= "_Incubadora Académica ISPSN_";
+
+    $telefone = preg_replace('/\D/', '', $cand['telefone']);
+    if (strlen($telefone) === 9 && str_starts_with($telefone, '9')) {
+        $telefone = '244' . $telefone;
+    }
+
+    $waUrl = 'https://wa.me/' . $telefone . '?text=' . rawurlencode($msg);
+
+    echo json_encode([
+        'sucesso' => true,
+        'token' => $token,
+        'link_registo' => $link,
+        'wa_url' => $waUrl,
+        'candidato' => [
+            'nome' => $cand['nome'],
+            'telefone' => $cand['telefone']
+        ]
+    ]);
     exit;
 }
 
