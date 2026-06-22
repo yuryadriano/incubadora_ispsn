@@ -47,6 +47,7 @@ $menus = [
         ['icon'=>'fa-inbox',           'label'=>'Candidaturas',     'href'=>'/incubadora_ispsn/app/views/admin/candidaturas.php','id'=>'candidaturas'],
         ['icon'=>'fa-rocket',          'label'=>'Startups',         'href'=>'/incubadora_ispsn/app/views/admin/projetos.php', 'id'=>'projetos'],
         ['icon'=>'fa-bookmark',        'label'=>'Gestão de Espaços','href'=>'/incubadora_ispsn/app/views/admin/gestao_espacos.php','id'=>'gestao_espacos'],
+        ['icon'=>'fa-id-card',          'label'=>'Controlo Visitantes','href'=>'/incubadora_ispsn/app/views/funcionario/visitantes.php','id'=>'visitantes'],
         ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php',    'id'=>'ranking'],
         ['icon'=>'fa-star',            'label'=>'Avaliações',       'href'=>'/incubadora_ispsn/app/views/admin/avaliacoes.php','id'=>'avaliacoes'],
         ['icon'=>'fa-users',           'label'=>'Utilizadores',     'href'=>'/incubadora_ispsn/app/views/admin/usuarios.php', 'id'=>'usuarios'],
@@ -59,6 +60,7 @@ $menus = [
     'funcionario' => [
         ['icon'=>'fa-house',           'label'=>'Comando Central',  'href'=>'/incubadora_ispsn/public/index.php',                 'id'=>'dashboard'],
         ['icon'=>'fa-bookmark',        'label'=>'Gestão de Espaços','href'=>'/incubadora_ispsn/app/views/admin/gestao_espacos.php','id'=>'gestao_espacos'],
+        ['icon'=>'fa-id-card',          'label'=>'Controlo Visitantes','href'=>'/incubadora_ispsn/app/views/funcionario/visitantes.php','id'=>'visitantes'],
         ['icon'=>'fa-handshake',       'label'=>'Mentorias',        'href'=>'/incubadora_ispsn/app/views/funcionario/mentorias.php','id'=>'mentorias'],
         ['icon'=>'fa-money-bill-wave', 'label'=>'Financiamentos',   'href'=>'/incubadora_ispsn/app/views/funcionario/financiamentos.php','id'=>'financiamentos'],
         ['icon'=>'fa-rocket',          'label'=>'Startups',         'href'=>'/incubadora_ispsn/app/views/admin/projetos.php',    'id'=>'projetos'],
@@ -73,6 +75,7 @@ $menus = [
         // ── Funil Startups ─────────────────
         ['icon'=>'fa-rocket',          'label'=>'Todas Startups',   'href'=>'/incubadora_ispsn/app/views/admin/projetos.php',        'id'=>'projetos'],
         ['icon'=>'fa-bookmark',        'label'=>'Gestão de Espaços','href'=>'/incubadora_ispsn/app/views/admin/gestao_espacos.php','id'=>'gestao_espacos'],
+        ['icon'=>'fa-id-card',          'label'=>'Controlo Visitantes','href'=>'/incubadora_ispsn/app/views/funcionario/visitantes.php','id'=>'visitantes'],
         ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php',    'id'=>'ranking'],
         ['icon'=>'fa-star',            'label'=>'Avaliações',       'href'=>'/incubadora_ispsn/app/views/admin/avaliacoes.php',      'id'=>'avaliacoes'],
         ['icon'=>'fa-bullseye',        'label'=>'Gestão de Metas',  'href'=>'/incubadora_ispsn/app/views/admin/gestao_metas.php',   'id'=>'gestao_metas'],

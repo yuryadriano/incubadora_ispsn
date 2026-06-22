@@ -323,23 +323,46 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?php foreach($tarefas as $t): ?>
                         <div class="task-item task-priority-<?= $t['prioridade'] ?>">
                             <div>
-                                <div class="fw-bold"><?= htmlspecialchars($t['titulo']) ?></div>
+                                <div class="fw-bold text-slate-800"><?= htmlspecialchars($t['titulo']) ?></div>
                                 <div class="text-muted small"><?= htmlspecialchars($t['descricao']) ?></div>
-                                <div class="mt-2" style="font-size:0.75rem">
+                                <div class="mt-2" style="font-size:0.75rem; display:flex; gap:6px; flex-wrap:wrap;">
                                     <span class="badge bg-light text-dark"><i class="fa fa-calendar me-1"></i> <?= $t['data_limite'] ? date('d/m/Y', strtotime($t['data_limite'])) : 'Sem prazo' ?></span>
-                                    <span class="badge bg-light text-dark ms-1"><i class="fa fa-flag me-1"></i> <?= ucfirst($t['prioridade']) ?></span>
+                                    <span class="badge bg-light text-dark"><i class="fa fa-flag me-1"></i> <?= ucfirst($t['prioridade']) ?></span>
+                                    <?php if ($t['validada_mentor'] == 1): ?>
+                                        <span class="badge bg-success-subtle text-success fw-bold"><i class="fa fa-circle-check me-1"></i> Concluída e Validada ✓</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-3">
-                                <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST">
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if (!empty($t['evidencia_path'])): ?>
+                                    <button class="btn btn-outline-info btn-sm fw-bold px-3 rounded-3" 
+                                            onclick="openEvidenciaModal('<?= htmlspecialchars('/incubadora_ispsn/' . $t['evidencia_path']) ?>')"
+                                            style="font-size:0.75rem;">
+                                        <i class="fa fa-eye me-1"></i> Ver Evidência
+                                    </button>
+                                    <?php if ($t['validada_mentor'] == 0): ?>
+                                        <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="m-0">
+                                            <input type="hidden" name="action" value="validar_tarefa_mentor">
+                                            <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
+                                            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-tarefas">
+                                            <button type="submit" class="btn btn-success btn-sm fw-bold px-3 rounded-3" style="font-size:0.75rem;">
+                                                <i class="fa fa-circle-check me-1"></i> Validar Meta
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                                
+                                <?php if ($t['validada_mentor'] == 0): ?>
+                                <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST" class="m-0">
                                     <input type="hidden" name="action" value="atualizar_estado_tarefa">
                                     <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
-                                    <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
-                                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:140px">
+                                    <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-tarefas">
+                                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:120px; font-size:0.75rem;">
                                         <option value="pendente" <?= $t['status']=='pendente'?'selected':'' ?>>Pendente</option>
                                         <option value="concluida" <?= $t['status']=='concluida'?'selected':'' ?>>Concluída</option>
                                     </select>
                                 </form>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -742,6 +765,33 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- MODAL VISUALIZADOR DE EVIDÊNCIA -->
+<div class="modal fade" id="modalEvidencia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modal-content-custom">
+            <div class="modal-header-custom">
+                <h5 class="modal-title fw-bold"><i class="fa fa-eye me-2"></i> Visualizador de Evidência</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body-custom p-0" style="background:#f1f5f9; min-height: 500px; display:flex; align-items:center; justify-content:center;">
+                <!-- Iframe para PDFs -->
+                <iframe id="evidenciaIframe" style="width:100%; height:600px; border:none; display:none;"></iframe>
+                <!-- Imagem para fotos/capturas -->
+                <img id="evidenciaImg" style="max-width:100%; max-height:600px; object-fit:contain; display:none;" alt="Evidência da tarefa" />
+                <!-- Mensagem de erro caso formato não seja suportado -->
+                <div id="evidenciaFallback" class="text-center p-5" style="display:none; width: 100%;">
+                    <i class="fa-solid fa-file-circle-question fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Visualização não disponível diretamente. Descarregue o ficheiro para visualizar:</p>
+                    <a id="evidenciaDownloadBtn" href="#" target="_blank" class="btn-primary-custom" style="text-decoration:none;"><i class="fa fa-download me-1"></i> Descarregar</a>
+                </div>
+            </div>
+            <div class="modal-footer-custom">
+                <button type="button" class="btn-ghost" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function switchTab(evt, tabId) {
     var i, tabcontent, tablinks;
@@ -756,6 +806,48 @@ function switchTab(evt, tabId) {
     document.getElementById(tabId).classList.add("active");
     evt.currentTarget.classList.add("active");
 }
+
+function openEvidenciaModal(url) {
+    const iframe = document.getElementById('evidenciaIframe');
+    const img = document.getElementById('evidenciaImg');
+    const fallback = document.getElementById('evidenciaFallback');
+    const downloadBtn = document.getElementById('evidenciaDownloadBtn');
+
+    // Reset visibility
+    iframe.style.display = 'none';
+    img.style.display = 'none';
+    fallback.style.display = 'none';
+    
+    iframe.src = '';
+    img.src = '';
+    
+    const ext = url.split('.').pop().toLowerCase();
+    
+    if (ext === 'pdf') {
+        iframe.src = url;
+        iframe.style.display = 'block';
+    } else if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+        img.src = url;
+        img.style.display = 'block';
+    } else {
+        downloadBtn.href = url;
+        fallback.style.display = 'block';
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalEvidencia'));
+    modal.show();
+}
+
+// Auto-switch to active hash tab if present in URL
+document.addEventListener("DOMContentLoaded", function() {
+    const hash = window.location.hash;
+    if (hash) {
+        const tabEl = document.querySelector(`.nav-link-custom[onclick*="${hash.replace('#', '')}"]`);
+        if (tabEl) {
+            tabEl.click();
+        }
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>

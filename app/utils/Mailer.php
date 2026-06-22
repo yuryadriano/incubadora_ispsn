@@ -8,7 +8,7 @@ use PHPMailer\PHPMailer\Exception;
 require_once __DIR__ . '/../../config/config.php';
 
 class Mailer {
-    public static function send($to, $subject, $body, &$error = "") {
+    public static function send($to, $subject, $body, &$error = "", $attachmentPath = null) {
         $mail = new PHPMailer(true);
 
         try {
@@ -41,6 +41,11 @@ class Mailer {
             // Destinatários
             $mail->setFrom(MAIL_FROM, MAIL_NAME);
             $mail->addAddress($to);
+
+            // Anexo
+            if ($attachmentPath !== null && file_exists($attachmentPath)) {
+                $mail->addAttachment($attachmentPath);
+            }
 
             // Conteúdo
             $mail->isHTML(true);

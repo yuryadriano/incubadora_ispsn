@@ -159,4 +159,24 @@ class GeradorPDF {
         
         $dompdf->stream("Termo_Incubacao_" . $termo['codigo_termo'] . ".pdf", ["Attachment" => false]);
     }
+
+    public static function salvarTermoPDF($termo, $filePath) {
+        $html = self::gerarTermoHTML($termo);
+        
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        
+        $dir = dirname($filePath);
+        if (!file_exists($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        
+        return file_put_contents($filePath, $dompdf->output()) !== false;
+    }
 }

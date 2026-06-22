@@ -216,6 +216,92 @@ if ($action === 'assinar_termo' && $perfil === 'superadmin') {
             $stmtInsert->execute();
         }
         $stmtInsert->close();
+
+        // Gerar o PDF assinado e enviar por e-mail para o estudante
+        $stmtT = $mysqli->prepare("SELECT * FROM termos_incubacao WHERE id = ?");
+        $stmtT->bind_param('i', $idTermo);
+        $stmtT->execute();
+        $termoAtualizado = $stmtT->get_result()->fetch_assoc();
+        $stmtT->close();
+        
+        $pdfPath = null;
+        if ($termoAtualizado) {
+            require_once __DIR__ . '/../utils/GeradorPDF.php';
+            $fileName = "termo_signed_" . $idTermo . "_" . time() . ".pdf";
+            $pdfDir = __DIR__ . '/../../uploads/termos';
+            $pdfPath = $pdfDir . '/' . $fileName;
+            
+            if (\App\Utils\GeradorPDF::salvarTermoPDF($termoAtualizado, $pdfPath)) {
+                $dbPath = "uploads/termos/" . $fileName;
+                $stmtUpPath = $mysqli->prepare("UPDATE termos_incubacao SET path_pdf = ? WHERE id = ?");
+                $stmtUpPath->bind_param('si', $dbPath, $idTermo);
+                $stmtUpPath->execute();
+                $stmtUpPath->close();
+                
+                // Buscar dados do estudante
+                $stmtEmail = $mysqli->prepare("SELECT nome, email FROM usuarios WHERE id = ?");
+                $stmtEmail->bind_param('i', $termo['criado_por']);
+                $stmtEmail->execute();
+                $stmtEmail->bind_result($estNome, $estEmail);
+                if ($stmtEmail->fetch()) {
+                    $stmtEmail->close();
+                    if (!empty($estEmail) && filter_var($estEmail, FILTER_VALIDATE_EMAIL)) {
+                        require_once __DIR__ . '/../utils/Mailer.php';
+                        $assuntoEst = "Termo de Incubação Assinado — " . $termo['codigo_termo'];
+                        
+                        $bodyEst = "
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta charset='utf-8'>
+                            <style>
+                                body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #334155; margin: 0; padding: 0; }
+                                .email-container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }
+                                .header { background: #0f172a; padding: 32px; text-align: center; border-bottom: 3px solid #10b981; }
+                                .logo { font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px; }
+                                .logo span { color: #f59e0b; }
+                                .content { padding: 40px; line-height: 1.6; }
+                                .greeting { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 12px; }
+                                .congrats-card { background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 24px; margin: 24px 0; }
+                                .congrats-title { font-size: 16px; font-weight: 700; color: #065f46; margin-bottom: 8px; }
+                                .congrats-text { font-size: 14px; color: #065f46; }
+                                .footer { background: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class='email-container'>
+                                <div class='header'>
+                                    <div class='logo'>INCUBADORA<span>ISPSN</span></div>
+                                </div>
+                                <div class='content'>
+                                    <div class='greeting'>Parabéns, " . htmlspecialchars(explode(' ', $estNome)[0]) . "!</div>
+                                    
+                                    <div class='congrats-card'>
+                                        <div class='congrats-title'>🎉 Startup Oficialmente Incubada!</div>
+                                        <div class='congrats-text'>
+                                            O Termo de Incubação <strong>" . htmlspecialchars($termo['codigo_termo']) . "</strong> do seu projecto <strong>\"" . htmlspecialchars($termo['proj_titulo']) . "\"</strong> foi assinado digitalmente pelo Presidente do ISPSN e encontra-se em anexo a este e-mail.
+                                        </div>
+                                    </div>
+                                    
+                                    <p>A partir de agora, o seu projeto tem acesso pleno ao ecossistema da Incubadora. Pode começar a executar as metas iniciais da fase de ideação acedendo ao seu painel no sistema.</p>
+                                </div>
+                                <div class='footer'>
+                                    Este é um e-mail automático enviado pelo Sistema da Incubadora Académica ISPSN.<br>
+                                    &copy; " . date('Y') . " ISPSN. Todos os direitos reservados.
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                        ";
+                        
+                        $mailError = "";
+                        \App\Utils\Mailer::send($estEmail, $assuntoEst, $bodyEst, $mailError, $pdfPath);
+                    }
+                } else {
+                    $stmtEmail->close();
+                }
+            }
+        }
         
         // Notificar estudante
         enviarNotificacao($termo['criado_por'], "🎉 Projecto Oficialmente Incubado!", 

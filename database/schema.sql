@@ -209,23 +209,6 @@ CREATE TABLE IF NOT EXISTS `acompanhamentos` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
--- TABELA: artigos
--- ------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `artigos` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `resumo` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `ficheiro_pdf` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `area_cientifica` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `id_autor` int(11) NOT NULL,
-  `status` enum('rascunho','submetido','aprovado','rejeitado') COLLATE utf8mb4_unicode_ci DEFAULT 'submetido',
-  `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`),
-  KEY `id_autor` (`id_autor`),
-  CONSTRAINT `artigos_ibfk_1` FOREIGN KEY (`id_autor`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ------------------------------------------------------------
 -- TABELA: avaliacoes
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `avaliacoes` (

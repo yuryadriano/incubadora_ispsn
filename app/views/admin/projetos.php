@@ -146,7 +146,6 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <option value="">Todos os tipos</option>
                     <option value="incubado" <?= $filtroTipo==='incubado' ? 'selected':'' ?>>Incubado</option>
                     <option value="pfc"      <?= $filtroTipo==='pfc'      ? 'selected':'' ?>>PFC</option>
-                    <option value="artigo"   <?= $filtroTipo==='artigo'   ? 'selected':'' ?>>Artigo</option>
                 </select>
             </div>
             <div class="d-flex gap-2">
