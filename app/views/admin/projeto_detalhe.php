@@ -131,6 +131,7 @@ $stmtDoc->execute();
 $documentos = $stmtDoc->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmtDoc->close();
 
+
 // ── Metas / Tarefas ────────────────────────
 $tarefasProjeto = [];
 $stmtT = $mysqli->prepare("SELECT * FROM tarefas WHERE id_projeto = ? ORDER BY data_limite ASC");
@@ -139,6 +140,26 @@ if ($stmtT) {
     $stmtT->execute();
     $tarefasProjeto = $stmtT->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmtT->close();
+}
+
+$metasProjeto = [];
+$stmtM = $mysqli->prepare("
+    SELECT mp.*, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
+           mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual, mpd.prazo_dias,
+           mpd.fase, mpd.numero,
+           ua.nome as activador_nome, uv.nome as validador_nome
+    FROM metas_projeto mp
+    JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+    LEFT JOIN usuarios ua ON ua.id = mp.activada_por
+    LEFT JOIN usuarios uv ON uv.id = mp.validada_por
+    WHERE mp.id_projeto = ?
+    ORDER BY mpd.fase, mpd.numero
+");
+if ($stmtM) {
+    $stmtM->bind_param('i', $idProjeto);
+    $stmtM->execute();
+    $metasProjeto = $stmtM->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtM->close();
 }
 
 $isDono = ($idUsuario === (int)$projeto['criado_por']);
@@ -294,7 +315,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         </div>
     </div>
 <?php elseif ($perfil === 'utilizador'): ?>
-    <!-- METAS E EVIDÊNCIAS (Para o Estudante) -->
+    <!-- METAS E EVIDÊNCIAS -->
     <div class="card-custom mb-4" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); border-left: 5px solid #d97706;">
         <div class="card-body-custom">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -302,45 +323,113 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <span class="badge bg-warning text-dark small fw-bold">Próximos Passos</span>
             </div>
             
-            <?php if (empty($tarefasProjeto)): ?>
-                <p class="text-muted small mb-0">Nenhuma meta atribuída a esta startup de momento. O seu orientador irá definir as metas para a fase atual em breve.</p>
-            <?php else: 
-                $concluidas = count(array_filter($tarefasProjeto, fn($t) => $t['validada_mentor'] == 1));
-                $totalT = count($tarefasProjeto);
-                $pctT = $totalT > 0 ? round(($concluidas / $totalT) * 100) : 0;
+            <?php 
+            $faseActual = $projeto['fase'] ?? 'ideacao';
+            $metasFase = array_filter($metasProjeto, fn($m) => $m['fase'] === $faseActual);
+            
+            $metasConcluidas = count(array_filter($metasFase, fn($m) => $m['estado'] === 'concluida'));
+            $totalMetas = count($metasFase);
+            
+            $tarefasConcluidas = count(array_filter($tarefasProjeto, fn($t) => $t['validada_mentor'] == 1));
+            $totalTarefas = count($tarefasProjeto);
+            
+            $concluidasTotal = $metasConcluidas + $tarefasConcluidas;
+            $totalItens = $totalMetas + $totalTarefas;
+            $pctTotal = $totalItens > 0 ? round(($concluidasTotal / $totalItens) * 100) : 0;
             ?>
-                <div class="row align-items-center g-3">
+
+            <?php if (empty($metasFase) && empty($tarefasProjeto)): ?>
+                <p class="text-muted small mb-0">Nenhuma meta ou tarefa atribuída a esta startup de momento. O seu orientador irá definir as metas para a fase atual em breve.</p>
+            <?php else: ?>
+                <div class="row g-3">
                     <div class="col-md-8">
-                        <p class="small text-muted mb-2">Completou <strong><?= $concluidas ?> de <?= $totalT ?> metas</strong> obrigatórias para avançar de nível e qualificar-se para o financiamento.</p>
+                        <p class="small text-muted mb-2">Completou <strong><?= $concluidasTotal ?> de <?= $totalItens ?> metas e tarefas</strong> obrigatórias para a fase de <strong><?= strtoupper(str_replace('_', ' ', $faseActual)) ?></strong>.</p>
                         <div class="progress-custom mb-3" style="height: 8px;">
-                            <div class="progress-bar-custom" style="width: <?= $pctT ?>%; background: #d97706;"></div>
+                            <div class="progress-bar-custom" style="width: <?= $pctTotal ?>%; background: #d97706;"></div>
                         </div>
                         
-                        <div style="display:flex; flex-direction:column; gap:8px; max-height: 200px; overflow-y: auto; padding-right: 5px;">
-                            <?php foreach(array_slice($tarefasProjeto, 0, 3) as $t): 
-                                $statusIcon = $t['validada_mentor'] 
-                                    ? '<i class="fa fa-circle-check text-success"></i>' 
-                                    : ($t['status'] === 'concluida' 
-                                        ? '<i class="fa fa-clock text-warning" title="Aguardando validação"></i>' 
-                                        : ($t['status'] === 'em_progresso' 
-                                            ? '<i class="fa fa-spinner fa-spin text-primary"></i>' 
-                                            : '<i class="fa fa-circle text-muted"></i>'));
-                            ?>
-                                <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background: rgba(255,255,255,0.6); border: 1px solid rgba(0,0,0,0.03);">
-                                    <div class="d-flex align-items-center gap-2">
-                                        <?= $statusIcon ?>
-                                        <span class="small fw-semibold <?= $t['validada_mentor'] ? 'text-decoration-line-through text-muted' : '' ?>"><?= htmlspecialchars($t['titulo']) ?></span>
-                                    </div>
-                                    <span class="badge" style="font-size: 0.65rem; background: <?= $t['validada_mentor'] ? '#d1fae5; color:#065f46' : ($t['status'] === 'concluida' ? '#fef3c7; color:#92400e' : '#f3f4f6; color:#4b5563') ?>">
-                                        <?= $t['validada_mentor'] ? 'Validada (+10 SP)' : ($t['status'] === 'concluida' ? 'Aguardando Aprovação' : 'Pendente') ?>
-                                    </span>
+                        <div class="row">
+                            <!-- METAS DO PROGRAMA -->
+                            <?php if (!empty($metasFase)): ?>
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <div class="fw-bold mb-2 text-dark" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#555;"><i class="fa fa-bullseye me-1 text-warning"></i> Metas do Programa</div>
+                                <div style="display:flex; flex-direction:column; gap:8px; max-height: 220px; overflow-y: auto; padding-right: 5px;">
+                                    <?php foreach($metasFase as $m): 
+                                        $est = $m['estado'];
+                                        $badgeBg = '#f3f4f6; color:#4b5563';
+                                        $badgeLbl = 'Bloqueada';
+                                        $icon = '<i class="fa fa-lock text-muted"></i>';
+                                        
+                                        if ($est === 'concluida') {
+                                            $badgeBg = '#d1fae5; color:#065f46';
+                                            $badgeLbl = 'Concluída';
+                                            $icon = '<i class="fa fa-circle-check text-success"></i>';
+                                        } elseif ($est === 'activa') {
+                                            $badgeBg = '#fef3c7; color:#92400e';
+                                            $badgeLbl = 'Ativa';
+                                            $icon = '<i class="fa fa-bolt text-warning"></i>';
+                                        } elseif ($est === 'em_avaliacao') {
+                                            $badgeBg = '#e0f2fe; color:#0369a1';
+                                            $badgeLbl = 'A avaliar';
+                                            $icon = '<i class="fa fa-clock text-info"></i>';
+                                        } elseif ($est === 'reprovada') {
+                                            $badgeBg = '#fee2e2; color:#b91c1c';
+                                            $badgeLbl = 'Devolvida';
+                                            $icon = '<i class="fa fa-triangle-exclamation text-danger"></i>';
+                                        }
+                                    ?>
+                                        <div class="p-2 rounded shadow-sm d-flex align-items-center justify-content-between" style="background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.04);">
+                                            <div class="d-flex align-items-center gap-2 text-truncate" style="max-width:70%;">
+                                                <?= $icon ?>
+                                                <span class="small fw-semibold text-truncate <?= $est === 'concluida' ? 'text-decoration-line-through text-muted' : '' ?>" title="<?= htmlspecialchars($m['meta_titulo']) ?>">
+                                                    <?= $m['numero'] ?>. <?= htmlspecialchars($m['meta_titulo']) ?>
+                                                </span>
+                                            </div>
+                                            <span class="badge" style="font-size: 0.62rem; padding: 4px 8px; background: <?= $badgeBg ?>;">
+                                                <?= $badgeLbl ?>
+                                            </span>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                            <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- TAREFAS AD-HOC -->
+                            <div class="col-sm-6">
+                                <div class="fw-bold mb-2 text-dark" style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.5px; color:#555;"><i class="fa fa-list-check me-1 text-primary"></i> Tarefas Ad-hoc</div>
+                                <div style="display:flex; flex-direction:column; gap:8px; max-height: 220px; overflow-y: auto; padding-right: 5px;">
+                                    <?php if (empty($tarefasProjeto)): ?>
+                                        <small class="text-muted p-2">Sem tarefas adicionais criadas pelo mentor.</small>
+                                    <?php else: ?>
+                                        <?php foreach($tarefasProjeto as $t): 
+                                            $statusIcon = $t['validada_mentor'] 
+                                                ? '<i class="fa fa-circle-check text-success"></i>' 
+                                                : ($t['status'] === 'concluida' 
+                                                    ? '<i class="fa fa-clock text-warning" title="Aguardando validação"></i>' 
+                                                    : ($t['status'] === 'em_progresso' 
+                                                        ? '<i class="fa fa-spinner fa-spin text-primary"></i>' 
+                                                        : '<i class="fa fa-circle text-muted"></i>'));
+                                        ?>
+                                            <div class="p-2 rounded shadow-sm d-flex align-items-center justify-content-between" style="background: rgba(255,255,255,0.7); border: 1px solid rgba(0,0,0,0.04);">
+                                                <div class="d-flex align-items-center gap-2 text-truncate" style="max-width:70%;">
+                                                    <?= $statusIcon ?>
+                                                    <span class="small fw-semibold text-truncate <?= $t['validada_mentor'] ? 'text-decoration-line-through text-muted' : '' ?>" title="<?= htmlspecialchars($t['titulo']) ?>">
+                                                        <?= htmlspecialchars($t['titulo']) ?>
+                                                    </span>
+                                                </div>
+                                                <span class="badge" style="font-size: 0.62rem; padding: 4px 8px; background: <?= $t['validada_mentor'] ? '#d1fae5; color:#065f46' : ($t['status'] === 'concluida' ? '#fef3c7; color:#92400e' : '#f3f4f6; color:#4b5563') ?>;">
+                                                    <?= $t['validada_mentor'] ? 'Validada' : ($t['status'] === 'concluida' ? 'A avaliar' : 'Pendente') ?>
+                                                </span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4 text-md-end">
-                        <a href="/incubadora_ispsn/public/index.php" class="btn-primary-custom d-inline-block text-center" style="background:#d97706; border-color:#d97706; padding: 10px 20px; font-size:0.82rem; text-decoration:none; color:#fff;">
-                            <i class="fa fa-arrow-right me-1"></i> Ir para o Painel Geral
+                    <div class="col-md-4 text-md-end d-flex flex-column justify-content-center align-items-md-end gap-2">
+                        <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-primary-custom text-center" style="background:#d97706; border-color:#d97706; padding: 10px 20px; font-size:0.82rem; text-decoration:none; color:#fff; border-radius: 8px;">
+                            <i class="fa fa-paper-plane me-1"></i> Submeter Evidências
                         </a>
                     </div>
                 </div>
@@ -661,8 +750,71 @@ require_once __DIR__ . '/../partials/_layout.php';
     <!-- COLUNA DIREITA: Descrição + Comentários -->
     <div class="col-lg-8">
 
+        <!-- Metas de Incubação (Apenas para Admin/SuperAdmin) -->
+        <?php if ($perfil !== 'utilizador'): 
+            $faseActual = $projeto['fase'] ?? 'ideacao';
+            $metasFase = array_filter($metasProjeto, fn($m) => $m['fase'] === $faseActual);
+        ?>
+        <div class="card-custom mb-4">
+            <div class="card-header-custom d-flex justify-content-between align-items-center">
+                <div class="card-title-custom"><i class="fa fa-bullseye" style="color:var(--primary)"></i> Metas de Incubação (Fase: <?= strtoupper(str_replace('_', ' ', $faseActual)) ?>)</div>
+                <a href="/incubadora_ispsn/app/views/admin/gestao_metas.php?projeto=<?= $idProjeto ?>&fase=<?= $faseActual ?>" class="btn btn-sm btn-outline-warning fw-bold px-3 py-1.5 rounded-3" style="font-size:0.75rem;"><i class="fa fa-sliders me-1"></i> Gerir Metas</a>
+            </div>
+            <div class="card-body-custom" style="padding: 20px;">
+                <?php if (empty($metasFase)): ?>
+                    <p class="text-muted small mb-0">Nenhuma meta configurada para esta fase no dicionário de metas.</p>
+                <?php else: ?>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <?php foreach ($metasFase as $m): 
+                            $est = $m['estado'] ?? 'inactiva';
+                            $badgeBg = '#cbd5e1; color:#475569';
+                            $badgeLbl = 'Inativa';
+                            if ($est === 'concluida') {
+                                $badgeBg = '#d1fae5; color:#065f46';
+                                $badgeLbl = 'Concluída';
+                            } elseif ($est === 'activa') {
+                                $badgeBg = '#fef3c7; color:#92400e';
+                                $badgeLbl = 'Ativa';
+                            } elseif ($est === 'em_avaliacao') {
+                                $badgeBg = '#e0f2fe; color:#0369a1';
+                                $badgeLbl = 'A avaliar';
+                            } elseif ($est === 'reprovada') {
+                                $badgeBg = '#fee2e2; color:#b91c1c';
+                                $badgeLbl = 'Devolvida';
+                            }
+                        ?>
+                            <div class="p-3 rounded border" style="background:var(--surface-2); border-color:var(--border-color);">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="fw-bold text-gray-800" style="font-size:0.88rem;"><?= $m['numero'] ?>. <?= htmlspecialchars($m['meta_titulo']) ?></div>
+                                    <span class="badge" style="font-size:0.65rem; background:<?= $badgeBg ?>;"><?= $badgeLbl ?></span>
+                                </div>
+                                <p class="text-muted small mb-2" style="margin:0;"><?= htmlspecialchars($m['meta_descricao']) ?></p>
+                                
+                                <?php if (!empty($m['evidencia_em'])): ?>
+                                    <div class="bg-white p-3 rounded border small mt-2 shadow-2xs">
+                                        <div class="fw-bold text-secondary mb-1" style="font-size: 0.72rem;">Evidência Submetida em <?= date('d/m/Y H:i', strtotime($m['evidencia_em'])) ?>:</div>
+                                        <div class="mb-2 text-slate-700" style="font-style: italic;">"<?= htmlspecialchars($m['evidencia_texto']) ?>"</div>
+                                        <div class="d-flex gap-2">
+                                            <?php if ($m['evidencia_link']): ?>
+                                                <a href="<?= htmlspecialchars($m['evidencia_link']) ?>" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.7rem; padding: 3px 8px;"><i class="fa fa-link me-1"></i>Ver Link</a>
+                                            <?php endif; ?>
+                                            <?php if ($m['evidencia_path']): ?>
+                                                <a href="/incubadora_ispsn/<?= htmlspecialchars($m['evidencia_path']) ?>" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.7rem; padding: 3px 8px;"><i class="fa fa-file me-1"></i>Ver Ficheiro</a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Descrição -->
         <div class="card-custom mb-4">
+
             <div class="card-header-custom">
                 <div class="card-title-custom"><i class="fa fa-file-lines"></i> Descrição do Projecto</div>
             </div>

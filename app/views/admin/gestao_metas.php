@@ -14,6 +14,7 @@ $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
 // Filtro: projecto seleccionado
 $idProjetoSel = (int)($_GET['projeto'] ?? 0);
 $faseSel      = $_GET['fase'] ?? '';
+$modo         = $_GET['modo'] ?? 'projetos';
 
 // Buscar projectos incubados
 $projectosIncubados = [];
@@ -85,6 +86,16 @@ foreach ($metasProjeto as $m) {
     $contEstados[$est] = ($contEstados[$est] ?? 0) + 1;
 }
 
+$todasMetasPadrao = [];
+if ($_SESSION['usuario_perfil'] === 'superadmin') {
+    $resMP = $mysqli->query("SELECT * FROM metas_padrao WHERE activo = 1 ORDER BY fase, numero");
+    if ($resMP) {
+        while ($r = $resMP->fetch_assoc()) {
+            $todasMetasPadrao[] = $r;
+        }
+    }
+}
+
 require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
@@ -119,12 +130,108 @@ require_once __DIR__ . '/../partials/_layout.php';
 </style>
 
 <!-- HEADER -->
-<div class="page-header mt-0" style="padding-top:0; margin-bottom:20px;">
+<div class="page-header mt-0" style="padding-top:0; margin-bottom:15px;">
     <div>
         <div class="page-header-title" style="font-size:1.4rem;"><i class="fa fa-bullseye me-2" style="color:#D97706"></i>Gestão de Metas</div>
-        <div class="page-header-sub">Activação progressiva de metas para startups incubadas</div>
+        <div class="page-header-sub">Definição e activação progressiva de metas para startups</div>
     </div>
 </div>
+
+<!-- MODO TOGGLE -->
+<div class="d-flex gap-2 mb-4">
+    <a href="?modo=projetos" class="btn btn-sm <?= $modo === 'projetos' ? 'btn-warning text-white' : 'btn-outline-secondary' ?> fw-bold px-3 py-2 rounded-3" style="font-size:0.8rem;">
+        <i class="fa fa-rocket me-1"></i> Acompanhamento de Startups
+    </a>
+    <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+    <a href="?modo=dicionario" class="btn btn-sm <?= $modo === 'dicionario' ? 'btn-warning text-white' : 'btn-outline-secondary' ?> fw-bold px-3 py-2 rounded-3" style="font-size:0.8rem;">
+        <i class="fa fa-book me-1"></i> Dicionário de Metas Padrão
+    </a>
+    <?php endif; ?>
+</div>
+
+<?php if ($modo === 'dicionario' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+<div class="card-custom mb-4">
+    <div class="card-header-custom d-flex justify-content-between align-items-center">
+        <div class="card-title-custom"><i class="fa fa-book text-warning"></i> Dicionário de Metas Padrão do Sistema</div>
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalCriarMetaPadrao" style="background:#D97706; border:none;">
+            <i class="fa fa-plus me-1"></i> Nova Meta Padrão
+        </button>
+    </div>
+    <div class="card-body-custom">
+        <?php if (empty($todasMetasPadrao)): ?>
+            <p class="text-muted text-center p-4">Nenhuma meta padrão definida no sistema.</p>
+        <?php else: 
+            $metasPorFase = [];
+            foreach ($todasMetasPadrao as $mp) {
+                $metasPorFase[$mp['fase']][] = $mp;
+            }
+            
+            $fasesLabels = [
+                'ideacao' => 'Ideação 💡',
+                'validacao' => 'Validação 🔬',
+                'mvp' => 'MVP 📦',
+                'tracao' => 'Tracção 📈',
+                'mercado' => 'Mercado 📊'
+            ];
+            
+            foreach ($fasesLabels as $fKey => $fLabel):
+                $metasF = $metasPorFase[$fKey] ?? [];
+        ?>
+            <h5 class="fw-bold mt-4 mb-3" style="color: #1E293B; border-bottom: 2px solid #F1F5F9; padding-bottom: 8px;">
+                <?= $fLabel ?> <span class="badge bg-light text-secondary rounded-pill small ms-2" style="font-size:0.75rem;"><?= count($metasF) ?> metas</span>
+            </h5>
+            
+            <?php if (empty($metasF)): ?>
+                <p class="text-muted small ps-3">Nenhuma meta padrão definida para esta fase.</p>
+            <?php else: ?>
+                <div class="table-wrapper">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">Nº</th>
+                                <th style="width: 25%;">Meta</th>
+                                <th style="width: 35%;">Descrição / Evidência</th>
+                                <th style="width: 10%;">Prazo (Dias)</th>
+                                <th style="width: 10%;">Peso</th>
+                                <th style="width: 12%;">Acções</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($metasF as $mp): ?>
+                            <tr>
+                                <td><span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill px-2.5 py-1">#<?= $mp['numero'] ?></span></td>
+                                <td>
+                                    <div class="fw-bold text-slate-800"><?= htmlspecialchars($mp['titulo']) ?></div>
+                                </td>
+                                <td>
+                                    <div class="text-muted small" style="line-height:1.4;"><?= htmlspecialchars($mp['descricao']) ?></div>
+                                    <div class="mt-1 small" style="font-size: 0.72rem; color: #D97706;">
+                                        <i class="fa fa-paperclip me-1"></i><strong><?= strtoupper($mp['evidencia_tipo']) ?></strong>: <?= htmlspecialchars($mp['evidencia_desc']) ?>
+                                    </div>
+                                </td>
+                                <td><strong><?= $mp['prazo_dias'] ?></strong> dias</td>
+                                <td><span class="badge bg-warning-subtle text-warning fw-bold"><?= $mp['peso_percentual'] ?>%</span></td>
+                                <td>
+                                    <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Deseja eliminar esta meta padrão? Ela deixará de aparecer em futuras inicializações.')" class="m-0">
+                                        <input type="hidden" name="action" value="eliminar_meta_padrao">
+                                        <input type="hidden" name="id_meta_padrao" value="<?= $mp['id'] ?>">
+                                        <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-3">
+                                            <i class="fa fa-trash me-1"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+</div>
+<?php else: ?>
 
 <?php if (empty($projectosIncubados)): ?>
 <div class="text-center p-5 bg-white rounded-4 border">
@@ -193,7 +300,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         </button>
     </form>
     <?php endif; ?>
-    <?php if ($contEstados['inactiva'] > 0 && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+    <?php if ($contEstados['inactiva'] > 0 && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
     <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Activar TODAS as metas inactivas desta fase?')">
         <input type="hidden" name="action" value="activar_todas_fase">
         <input type="hidden" name="id_projeto" value="<?= $idProjetoSel ?>">
@@ -263,17 +370,14 @@ require_once __DIR__ . '/../partials/_layout.php';
         
         <!-- ACÇÕES -->
         <div class="d-flex flex-column gap-2" style="min-width:140px;">
-            <?php if ($estado === 'inactiva' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
-            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
-                <input type="hidden" name="action" value="activar_meta">
-                <input type="hidden" name="id_meta_projeto" value="<?= $m['id'] ?>">
-                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
-                <button type="submit" class="btn btn-warning btn-sm fw-bold w-100" style="border-radius:8px;"><i class="fa fa-bolt me-1"></i>Activar</button>
-            </form>
+            <?php if ($estado === 'inactiva' && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
+            <button type="button" class="btn btn-warning btn-sm fw-bold w-100" style="border-radius:8px;" onclick="abrirModalActivar(<?= $m['id'] ?>, '<?= htmlspecialchars($m['meta_titulo']) ?>', <?= $m['prazo_dias'] ?>)">
+                <i class="fa fa-bolt me-1"></i>Activar
+            </button>
             <?php elseif ($estado === 'em_avaliacao' && in_array($_SESSION['usuario_perfil'], ['mentor','admin','superadmin'])): ?>
             <button class="btn btn-success btn-sm fw-bold w-100" style="border-radius:8px;" onclick="validarMeta(<?= $m['id'] ?>, 'aprovar')"><i class="fa fa-check me-1"></i>Validar</button>
             <button class="btn btn-outline-danger btn-sm fw-bold w-100" style="border-radius:8px;" onclick="validarMeta(<?= $m['id'] ?>, 'reprovar')"><i class="fa fa-rotate-left me-1"></i>Devolver</button>
-            <?php elseif ($estado === 'activa' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+            <?php elseif ($estado === 'activa' && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Desactivar esta meta?')">
                 <input type="hidden" name="action" value="desactivar_meta">
                 <input type="hidden" name="id_meta_projeto" value="<?= $m['id'] ?>">
@@ -290,6 +394,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 
 <?php endif; // projetoInfo ?>
 <?php endif; // projectosIncubados ?>
+<?php endif; // modo dicionario ?>
 
 <!-- Modal de Validação -->
 <div class="modal fade" id="modalValidar" tabindex="-1">
@@ -326,6 +431,125 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- Modal de Activação de Meta -->
+<div class="modal fade" id="modalActivarMeta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <input type="hidden" name="action" value="activar_meta">
+                <input type="hidden" name="id_meta_projeto" id="activarMetaId">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="activarTituloMeta">🎯 Activar Meta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <p class="text-muted small" id="activarDescricaoMeta"></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.75rem;">Definir Prazo de Conclusão</label>
+                        <select name="opcao_prazo" id="opcaoPrazoSelect" class="form-select form-control" onchange="togglePersonalizadoInput()" required style="border-radius:10px;">
+                            <option value="padrao" id="opcaoPadraoLabel">Prazo Padrão ([X] dias)</option>
+                            <option value="semana">1 Semana (7 dias)</option>
+                            <option value="mes">1 Mês (30 dias)</option>
+                            <option value="personalizado">Data Personalizada</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-0" id="prazoPersonalizadoContainer" style="display:none;">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.75rem;">Data Limite</label>
+                        <input type="date" name="prazo_manual" id="prazoManualInput" class="form-control" min="<?= date('Y-m-d') ?>" style="border-radius:10px;">
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold rounded-3 px-4" style="background:#D97706; border:none; color:white;">Activar Meta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Criação de Meta Padrão -->
+<div class="modal fade" id="modalCriarMetaPadrao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <input type="hidden" name="action" value="criar_meta_padrao">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">⚙️ Criar Nova Meta Padrão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Fase</label>
+                            <select name="fase" class="form-select form-control" required style="border-radius:10px;">
+                                <option value="ideacao">Ideação 💡</option>
+                                <option value="validacao">Validação 🔬</option>
+                                <option value="mvp">MVP 📦</option>
+                                <option value="tracao">Tracção 📈</option>
+                                <option value="mercado">Mercado 📊</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Número Sequencial</label>
+                            <input type="number" name="numero" class="form-control" required min="1" value="1" style="border-radius:10px;">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Título da Meta *</label>
+                        <input type="text" name="titulo" class="form-control" required placeholder="Ex: Modelo de Negócios (Canvas)" style="border-radius:10px;">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Descrição detalhada *</label>
+                        <textarea name="descricao" class="form-control" rows="3" required placeholder="Explique em detalhe o que deve ser alcançado..." style="border-radius:10px;"></textarea>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Tipo de Evidência</label>
+                            <select name="evidencia_tipo" class="form-select form-control" required style="border-radius:10px;">
+                                <option value="ficheiro">Upload de Ficheiro PDF/Imagem</option>
+                                <option value="texto">Texto Descritivo</option>
+                                <option value="link">Link URL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Descrição do entregável *</label>
+                            <input type="text" name="evidencia_desc" class="form-control" required placeholder="Ex: PDF do canvas preenchido" style="border-radius:10px;">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-0">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Prazo Padrão (Dias)</label>
+                            <input type="number" name="prazo_dias" class="form-control" required min="1" value="15" style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Peso Percentual (%)</label>
+                            <input type="number" name="peso_percentual" class="form-control" required min="1" max="100" value="20" style="border-radius:10px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold rounded-3 px-4" style="background:#D97706; border:none; color:white;">Definir Meta</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function validarMeta(id, decisao) {
     document.getElementById('validarMetaId').value = id;
@@ -334,6 +558,32 @@ function validarMeta(id, decisao) {
     document.getElementById('validarBtn').textContent = decisao === 'aprovar' ? 'Aprovar' : 'Devolver com Feedback';
     document.getElementById('validarBtn').className = decisao === 'aprovar' ? 'btn btn-success fw-bold rounded-3 px-4' : 'btn btn-danger fw-bold rounded-3 px-4';
     new bootstrap.Modal(document.getElementById('modalValidar')).show();
+}
+
+function abrirModalActivar(id, titulo, prazoDias) {
+    document.getElementById('activarMetaId').value = id;
+    document.getElementById('activarTituloMeta').textContent = `🎯 Activar Meta`;
+    document.getElementById('activarDescricaoMeta').innerHTML = `Está prestes a activar a meta <strong>"${titulo}"</strong>.`;
+    document.getElementById('opcaoPadraoLabel').textContent = `Prazo Padrão (${prazoDias} dias)`;
+    document.getElementById('opcaoPrazoSelect').value = 'padrao';
+    document.getElementById('prazoPersonalizadoContainer').style.display = 'none';
+    document.getElementById('prazoManualInput').required = false;
+    
+    new bootstrap.Modal(document.getElementById('modalActivarMeta')).show();
+}
+
+function togglePersonalizadoInput() {
+    const sel = document.getElementById('opcaoPrazoSelect').value;
+    const container = document.getElementById('prazoPersonalizadoContainer');
+    const input = document.getElementById('prazoManualInput');
+    
+    if (sel === 'personalizado') {
+        container.style.display = 'block';
+        input.required = true;
+    } else {
+        container.style.display = 'none';
+        input.required = false;
+    }
 }
 </script>
 

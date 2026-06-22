@@ -82,6 +82,28 @@ $stmt->execute();
 $tarefas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
+// 5b. Buscar Metas de Projeto
+$metasProjeto = [];
+$stmtM = $mysqli->prepare("
+    SELECT mp.*, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
+           mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual, mpd.prazo_dias,
+           mpd.fase, mpd.numero,
+           ua.nome as activador_nome, uv.nome as validador_nome
+    FROM metas_projeto mp
+    JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+    LEFT JOIN usuarios ua ON ua.id = mp.activada_por
+    LEFT JOIN usuarios uv ON uv.id = mp.validada_por
+    WHERE mp.id_projeto = ?
+    ORDER BY mpd.fase, mpd.numero
+");
+if ($stmtM) {
+    $stmtM->bind_param('i', $idProjeto);
+    $stmtM->execute();
+    $metasProjeto = $stmtM->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtM->close();
+}
+
+
 // 6. Buscar Avaliações de Mentor (Acompanhamentos)
 $stmt = $mysqli->prepare("
     SELECT av.*, u.nome as mentor_nome
@@ -236,12 +258,13 @@ require_once __DIR__ . '/../partials/_layout.php';
 <!-- NAVEGAÇÃO POR TABS -->
 <div class="nav-tabs-custom">
     <div class="nav-link-custom active" onclick="switchTab(event, 'tab-resumo')">Resumo Geral</div>
-    <div class="nav-link-custom" onclick="switchTab(event, 'tab-tarefas')">Tarefas (<?= count($tarefas) ?>)</div>
+    <div class="nav-link-custom" onclick="switchTab(event, 'tab-tarefas')">Metas &amp; Tarefas (<?= count($tarefas) + count(array_filter($metasProjeto, fn($m) => $m['estado'] !== 'inactiva')) ?>)</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-sessoes')">Sessões de Mentoria</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-avaliacoes')">Acompanhamento / Avaliações</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-documentos')"><i class="fa fa-folder-open me-1" style="color:var(--primary)"></i> Doc Hub (<?= count($ficheiros) ?>)</div>
     <div class="nav-link-custom" onclick="switchTab(event, 'tab-chat')"><i class="fa fa-comments me-1" style="color:var(--primary)"></i> Chat / Consultoria</div>
 </div>
+
 
 <div class="row g-4">
     <!-- CONTEÚDO PRINCIPAL (TABS) -->
@@ -309,9 +332,129 @@ require_once __DIR__ . '/../partials/_layout.php';
 
         <!-- TAB 2: TAREFAS -->
         <div id="tab-tarefas" class="tab-content-custom">
+            
+            <!-- METAS DO PROGRAMA DE INCUBAÇÃO -->
+            <div class="card-custom mb-4">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <div class="card-title-custom"><i class="fa fa-bullseye" style="color:var(--primary)"></i> Metas de Incubação por Fase</div>
+                    <?php 
+                    $faseActualProj = $projeto['fase'] ?? 'ideacao';
+                    $fasesDisponiveis = [
+                        'ideacao'   => ['emoji' => '💡', 'label' => 'Ideação'],
+                        'validacao' => ['emoji' => '🔬', 'label' => 'Validação'],
+                        'mvp'       => ['emoji' => '📦', 'label' => 'MVP'],
+                        'tracao'    => ['emoji' => '📈', 'label' => 'Tração'],
+                        'mercado'   => ['emoji' => '🛒', 'label' => 'Mercado'],
+                    ];
+                    ?>
+                    <span class="badge bg-warning text-dark font-weight-bold" style="font-size:0.75rem;">Fase Atual: <?= strtoupper(str_replace('_', ' ', $faseActualProj)) ?></span>
+                </div>
+                <div class="card-body-custom" style="padding: 20px;">
+                    <?php if (empty($metasProjeto)): ?>
+                        <div class="text-center p-4">
+                            <i class="fa fa-bullseye fa-2x text-muted mb-2"></i>
+                            <p class="text-muted small">Nenhuma meta padrão foi inicializada para este projeto ainda.</p>
+                        </div>
+                    <?php else: ?>
+                        <div style="display:flex; flex-direction:column; gap:16px;">
+                            <?php foreach ($fasesDisponiveis as $fKey => $fInfo): 
+                                $metasF = array_filter($metasProjeto, fn($m) => $m['fase'] === $fKey);
+                                if (empty($metasF)) continue;
+                                $isFaseActual = ($fKey === $faseActualProj);
+                            ?>
+                                <div class="p-3 rounded border <?= $isFaseActual ? 'border-warning' : '' ?>" style="background: <?= $isFaseActual ? '#fffdf6' : 'var(--surface-2)' ?>;">
+                                    <div class="fw-bold mb-3 d-flex align-items-center justify-content-between text-slate-800" style="font-size:0.88rem; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                                        <span><?= $fInfo['emoji'] ?> Fase de <?= $fInfo['label'] ?></span>
+                                        <?php if ($isFaseActual): ?>
+                                            <span class="badge bg-warning text-dark font-weight-bold" style="font-size:0.62rem;">Em Curso</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div style="display:flex; flex-direction:column; gap:12px;">
+                                        <?php foreach ($metasF as $m): 
+                                            $est = $m['estado'];
+                                            $badgeBg = '#cbd5e1; color:#475569';
+                                            $badgeLbl = 'Inativa';
+                                            $rowOpacity = 'opacity: 0.7;';
+                                            
+                                            if ($est === 'concluida') {
+                                                $badgeBg = '#d1fae5; color:#065f46';
+                                                $badgeLbl = 'Concluída';
+                                                $rowOpacity = '';
+                                            } elseif ($est === 'activa') {
+                                                $badgeBg = '#fef3c7; color:#92400e';
+                                                $badgeLbl = 'Ativa';
+                                                $rowOpacity = '';
+                                            } elseif ($est === 'em_avaliacao') {
+                                                $badgeBg = '#e0f2fe; color:#0369a1';
+                                                $badgeLbl = 'A avaliar';
+                                                $rowOpacity = '';
+                                            } elseif ($est === 'reprovada') {
+                                                $badgeBg = '#fee2e2; color:#b91c1c';
+                                                $badgeLbl = 'Devolvida';
+                                                $rowOpacity = '';
+                                            }
+                                        ?>
+                                            <div style="padding:12px; border-radius:8px; background:#fff; border:1px solid var(--border-color); <?= $rowOpacity ?>">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <div class="fw-bold text-slate-900" style="font-size:0.83rem;"><?= $m['numero'] ?>. <?= htmlspecialchars($m['meta_titulo']) ?></div>
+                                                        <small class="text-muted d-block"><?= htmlspecialchars($m['meta_descricao']) ?></small>
+                                                    </div>
+                                                    <span class="badge" style="font-size:0.62rem; padding: 4px 8px; background:<?= $badgeBg ?>;"><?= $badgeLbl ?></span>
+                                                </div>
+                                                
+                                                <div class="mt-2" style="font-size:0.75rem; display:flex; gap:8px; flex-wrap:wrap; color:var(--text-muted);">
+                                                    <span><i class="fa fa-calendar me-1"></i> Limite: <?= $m['data_limite'] ? date('d/m/Y', strtotime($m['data_limite'])) : 'Não definida' ?></span>
+                                                    <span><i class="fa fa-weight me-1"></i> Peso: <?= $m['peso_percentual'] ?> SP</span>
+                                                    <?php if ($m['validador_nome']): ?>
+                                                        <span><i class="fa fa-user-check me-1"></i> Validada por: <?= htmlspecialchars($m['validador_nome']) ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                
+                                                <!-- EVIDÊNCIA E SUBMISSÃO -->
+                                                <?php if ($est === 'em_avaliacao' || !empty($m['evidencia_em'])): ?>
+                                                    <div class="bg-light p-3 rounded border small mt-2">
+                                                        <div class="fw-bold text-secondary mb-1"><i class="fa fa-paperclip"></i> Evidência Submetida:</div>
+                                                        <div class="mb-2 p-2 rounded bg-white text-slate-700 shadow-2xs" style="font-style: italic; border-left: 3px solid var(--primary);"><?= nl2br(htmlspecialchars($m['evidencia_texto'])) ?></div>
+                                                        
+                                                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                                                            <?php if ($m['evidencia_link']): ?>
+                                                                <a href="<?= htmlspecialchars($m['evidencia_link']) ?>" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.7rem; padding: 3px 8px;"><i class="fa fa-link me-1"></i>Ver Link</a>
+                                                            <?php endif; ?>
+                                                            <?php if ($m['evidencia_path']): ?>
+                                                                <button class="btn btn-xs btn-outline-info" onclick="openEvidenciaModal('<?= htmlspecialchars('/incubadora_ispsn/' . $m['evidencia_path']) ?>')" style="font-size:0.7rem; padding: 3px 8px;"><i class="fa fa-eye me-1"></i>Visualizar Ficheiro</button>
+                                                            <?php endif; ?>
+                                                            
+                                                            <?php if ($est === 'em_avaliacao'): ?>
+                                                                <div class="ms-auto d-flex gap-2">
+                                                                    <button onclick="validarMeta(<?= $m['id'] ?>, 'aprovar')" class="btn btn-success btn-xs fw-bold" style="font-size:0.7rem; padding: 3px 10px;"><i class="fa fa-check me-1"></i>Validar</button>
+                                                                    <button onclick="validarMeta(<?= $m['id'] ?>, 'reprovar')" class="btn btn-danger btn-xs fw-bold" style="font-size:0.7rem; padding: 3px 10px;"><i class="fa fa-rotate-left me-1"></i>Devolver</button>
+                                                                </div>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                        
+                                                        <?php if ($m['feedback_mentor']): ?>
+                                                            <div class="mt-2 text-danger" style="font-size: 0.72rem;">
+                                                                <strong>Feedback anterior do mentor:</strong> <?= htmlspecialchars($m['feedback_mentor']) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- TAREFAS DE APOIO AD-HOC -->
             <div class="card-custom">
                 <div class="card-header-custom">
-                    <div class="card-title-custom"><i class="fa fa-list-check"></i> Plano de Acção / Tarefas</div>
+                    <div class="card-title-custom"><i class="fa fa-list-check"></i> Plano de Acção / Tarefas Ad-hoc</div>
                 </div>
                 <div class="card-body-custom">
                     <?php if (empty($tarefas)): ?>
@@ -370,6 +513,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
             </div>
         </div>
+
 
         <!-- TAB 3: SESSÕES -->
         <div id="tab-sessoes" class="tab-content-custom">
@@ -792,7 +936,55 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- Modal de Validação de Metas (Mentor) -->
+<div class="modal fade" id="modalValidarMeta" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 14px; border:none; background:#fff;">
+            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <input type="hidden" name="action" value="validar_evidencia">
+                <input type="hidden" name="id_meta_projeto" id="validarMetaId">
+                <input type="hidden" name="decisao" id="validarDecisao">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-tarefas">
+                
+                <div class="modal-header border-0 pb-0" style="padding:22px 24px 10px;">
+                    <h5 class="modal-title fw-bold" id="validarTitulo" style="font-weight:800; color:#1C1917;">Validar Evidência</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="padding:10px 24px 24px;">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.75rem; color:#6b7280; letter-spacing:0.4px;">Nota (1-5)</label>
+                        <select name="nota_mentor" class="form-control rounded-3" style="border-radius: 8px; font-size:0.9rem; padding: 8px 12px; border: 1px solid #cbd5e1;">
+                            <option value="1">1 — Insuficiente</option>
+                            <option value="2">2 — Fraco</option>
+                            <option value="3" selected>3 — Suficiente</option>
+                            <option value="4">4 — Bom</option>
+                            <option value="5">5 — Excelente</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.75rem; color:#6b7280; letter-spacing:0.4px;">Feedback / Comentários</label>
+                        <textarea name="feedback_mentor" class="form-control rounded-3" rows="3" required placeholder="Escreva o seu feedback sobre a evidência..." style="border-radius: 8px; font-size:0.9rem; padding: 8px 12px; border: 1px solid #cbd5e1;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0" style="padding: 10px 24px 22px;">
+                    <button type="button" class="btn btn-light rounded-3 fw-bold" data-bs-dismiss="modal" style="border-radius: 8px; font-size:0.85rem; padding: 8px 16px;">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold text-white rounded-3 px-4" id="validarBtn" style="border-radius: 8px; font-size:0.85rem; padding: 8px 20px;">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+function validarMeta(id, decisao) {
+    document.getElementById('validarMetaId').value = id;
+    document.getElementById('validarDecisao').value = decisao;
+    document.getElementById('validarTitulo').textContent = decisao === 'aprovar' ? '✅ Validar Evidência' : '🔄 Devolver Evidência';
+    document.getElementById('validarBtn').textContent = decisao === 'aprovar' ? 'Aprovar e Validar' : 'Devolver com Feedback';
+    document.getElementById('validarBtn').className = decisao === 'aprovar' ? 'btn btn-success fw-bold text-white rounded-3 px-4' : 'btn btn-danger fw-bold text-white rounded-3 px-4';
+    new bootstrap.Modal(document.getElementById('modalValidarMeta')).show();
+}
+
 function switchTab(evt, tabId) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tab-content-custom");

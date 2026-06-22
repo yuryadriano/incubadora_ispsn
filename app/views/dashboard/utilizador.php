@@ -615,6 +615,19 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                                 <span class="text-secondary"><?= htmlspecialchars($metaActiva['evidencia_desc']) ?> (Tipo: <?= ucfirst($metaActiva['evidencia_tipo']) ?>)</span>
                             </div>
 
+                            <?php if (!empty($metaActiva['data_limite'])): 
+                                $atrasado = (strtotime($metaActiva['data_limite']) < strtotime(date('Y-m-d')) && $metaActiva['estado'] !== 'concluida');
+                            ?>
+                                <div class="mb-3 small">
+                                    <strong><i class="fa fa-calendar-xmark me-1 text-danger"></i>Data Limite de Entrega:</strong><br>
+                                    <span class="badge <?= $atrasado ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' ?> fw-bold py-1.5 px-3 rounded-pill mt-1" style="font-size:0.75rem;">
+                                        <i class="fa <?= $atrasado ? 'fa-triangle-exclamation' : 'fa-check' ?> me-1"></i>
+                                        <?= date('d/m/Y', strtotime($metaActiva['data_limite'])) ?>
+                                        <?= $atrasado ? ' (ATRASADO)' : ' (Dentro do Prazo)' ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
+
                             <?php if ($metaActiva['feedback_mentor']): ?>
                                 <div class="alert alert-danger py-2 px-3 small mb-3">
                                     <strong><i class="fa fa-circle-exclamation me-1"></i>Feedback de Correção:</strong><br>

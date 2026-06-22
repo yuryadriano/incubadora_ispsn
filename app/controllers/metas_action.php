@@ -45,10 +45,11 @@ if ($action === 'inicializar_metas' && in_array($perfil, ['superadmin','admin'])
 
 /* ════════════════════════════════════════════════
    ACÇÃO: activar_meta
-   SuperAdmin activa uma meta para um projecto
+   Admin/SuperAdmin activa uma meta para um projecto
 ════════════════════════════════════════════════ */
-if ($action === 'activar_meta' && in_array($perfil, ['superadmin'])) {
+if ($action === 'activar_meta' && in_array($perfil, ['superadmin', 'admin'])) {
     $idMetaProjeto = (int)($_POST['id_meta_projeto'] ?? 0);
+    $opcaoPrazo    = $_POST['opcao_prazo'] ?? 'padrao';
     $prazoManual   = $_POST['prazo_manual'] ?? '';
     
     if ($idMetaProjeto > 0) {
@@ -67,7 +68,11 @@ if ($action === 'activar_meta' && in_array($perfil, ['superadmin'])) {
         
         if ($meta) {
             // Calcular data limite
-            if (!empty($prazoManual)) {
+            if ($opcaoPrazo === 'semana') {
+                $dataLimite = date('Y-m-d', strtotime('+7 days'));
+            } elseif ($opcaoPrazo === 'mes') {
+                $dataLimite = date('Y-m-d', strtotime('+30 days'));
+            } elseif ($opcaoPrazo === 'personalizado' && !empty($prazoManual)) {
                 $dataLimite = $prazoManual;
             } else {
                 $dataLimite = date('Y-m-d', strtotime('+' . $meta['prazo_dias'] . ' days'));
@@ -111,9 +116,9 @@ if ($action === 'activar_meta' && in_array($perfil, ['superadmin'])) {
 
 /* ════════════════════════════════════════════════
    ACÇÃO: activar_todas_fase
-   SuperAdmin activa todas as metas de uma fase de uma vez
+   Admin/SuperAdmin activa todas as metas de uma fase de uma vez
 ════════════════════════════════════════════════ */
-if ($action === 'activar_todas_fase' && in_array($perfil, ['superadmin'])) {
+if ($action === 'activar_todas_fase' && in_array($perfil, ['superadmin', 'admin'])) {
     $idProjeto = (int)($_POST['id_projeto'] ?? 0);
     $fase = $_POST['fase'] ?? '';
     
@@ -202,8 +207,12 @@ if ($action === 'submeter_evidencia') {
             $stmtMentor->close();
             
             if ($mentor) {
-                enviarNotificacao($mentor['id_usuario'], "📎 Evidência Submetida", 
-                    "O estudante submeteu evidência para a meta \"" . htmlspecialchars($meta['meta_titulo']) . "\" do projecto \"" . htmlspecialchars($meta['proj_titulo']) . "\". Revise e valide.", 'info');
+                $statusPrazo = "";
+                if (!empty($meta['data_limite']) && strtotime($meta['data_limite']) < strtotime(date('Y-m-d'))) {
+                    $statusPrazo = " (SUBMETIDA COM ATRASO)";
+                }
+                enviarNotificacao($mentor['id_usuario'], "📎 Evidência Submetida" . $statusPrazo, 
+                    "O estudante submeteu evidência para a meta \"" . htmlspecialchars($meta['meta_titulo']) . "\" do projecto \"" . htmlspecialchars($meta['proj_titulo']) . "\"." . ($statusPrazo ? " Nota: Foi submetida após o prazo limite!" : "") . " Revise e valide.", 'info');
             }
             
             $_SESSION['flash_ok'] = "Evidência submetida com sucesso! A aguardar validação do mentor.";
@@ -316,16 +325,92 @@ if ($action === 'validar_evidencia' && in_array($perfil, ['mentor','admin','supe
 
 /* ════════════════════════════════════════════════
    ACÇÃO: desactivar_meta
-   SuperAdmin desactiva uma meta (volta a inactiva)
+   Admin/SuperAdmin desactiva uma meta (volta a inactiva)
 ════════════════════════════════════════════════ */
-if ($action === 'desactivar_meta' && $perfil === 'superadmin') {
+if ($action === 'desactivar_meta' && in_array($perfil, ['superadmin', 'admin'])) {
     $idMetaProjeto = (int)($_POST['id_meta_projeto'] ?? 0);
     if ($idMetaProjeto > 0) {
         $stmt = $mysqli->prepare("UPDATE metas_projeto SET estado='inactiva', activada_por=NULL, activada_em=NULL, data_limite=NULL WHERE id=? AND estado='activa'");
         $stmt->bind_param('i', $idMetaProjeto);
         $stmt->execute();
         $stmt->close();
-        $_SESSION['flash_ok'] = "Meta desactivada.";
+        $_SESSION['flash_ok'] = "Meta desactivada com sucesso.";
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+/* ════════════════════════════════════════════════
+   ACÇÃO: criar_meta_padrao
+   SuperAdmin cria/define uma nova meta padrão no dicionário
+════════════════════════════════════════════════ */
+if ($action === 'criar_meta_padrao' && $perfil === 'superadmin') {
+    $fase = $_POST['fase'] ?? '';
+    $numero = (int)($_POST['numero'] ?? 1);
+    $titulo = trim($_POST['titulo'] ?? '');
+    $descricao = trim($_POST['descricao'] ?? '');
+    $evidencia_tipo = $_POST['evidencia_tipo'] ?? 'ficheiro';
+    $evidencia_desc = trim($_POST['evidencia_desc'] ?? '');
+    $peso_percentual = (int)($_POST['peso_percentual'] ?? 20);
+    $prazo_dias = (int)($_POST['prazo_dias'] ?? 15);
+    
+    if (!empty($fase) && !empty($titulo) && !empty($descricao)) {
+        // Inserir na base de dados
+        $stmt = $mysqli->prepare("
+            INSERT INTO metas_padrao (fase, numero, titulo, descricao, evidencia_tipo, evidencia_desc, peso_percentual, prazo_dias, activo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+        $stmt->bind_param('sissssii', $fase, $numero, $titulo, $descricao, $evidencia_tipo, $evidencia_desc, $peso_percentual, $prazo_dias);
+        
+        if ($stmt->execute()) {
+            $newMetaId = $stmt->insert_id;
+            $stmt->close();
+            
+            // Associar automaticamente a meta criada (como inactiva) a todos os projetos que estão na respetiva fase
+            $resProjs = $mysqli->prepare("SELECT id FROM projetos WHERE fase = ?");
+            $resProjs->bind_param('s', $fase);
+            $resProjs->execute();
+            $projIds = $resProjs->get_result()->fetch_all(MYSQLI_ASSOC);
+            $resProjs->close();
+            
+            $stmtInsertProj = $mysqli->prepare("INSERT IGNORE INTO metas_projeto (id_projeto, id_meta_padrao, estado) VALUES (?, ?, 'inactiva')");
+            foreach ($projIds as $p) {
+                $stmtInsertProj->bind_param('ii', $p['id'], $newMetaId);
+                $stmtInsertProj->execute();
+            }
+            $stmtInsertProj->close();
+            
+            $_SESSION['flash_ok'] = "Meta padrão criada e associada aos projectos na fase " . strtoupper($fase) . "!";
+        } else {
+            $_SESSION['flash_erro'] = "Erro ao criar meta padrão: " . $mysqli->error;
+        }
+    } else {
+        $_SESSION['flash_erro'] = "Preencha todos os campos obrigatórios.";
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+/* ════════════════════════════════════════════════
+   ACÇÃO: eliminar_meta_padrao
+   SuperAdmin elimina uma meta padrão do dicionário
+════════════════════════════════════════════════ */
+if ($action === 'eliminar_meta_padrao' && $perfil === 'superadmin') {
+    $idMetaPadrao = (int)($_POST['id_meta_padrao'] ?? 0);
+    if ($idMetaPadrao > 0) {
+        // Desativar meta padrão
+        $stmt = $mysqli->prepare("UPDATE metas_padrao SET activo = 0 WHERE id = ?");
+        $stmt->bind_param('i', $idMetaPadrao);
+        if ($stmt->execute()) {
+            $stmt->close();
+            
+            // Remover da tabela metas_projeto as que ainda estiverem inactivas (não começadas)
+            $mysqli->query("DELETE FROM metas_projeto WHERE id_meta_padrao = $idMetaPadrao AND estado = 'inactiva'");
+            
+            $_SESSION['flash_ok'] = "Meta padrão eliminada com sucesso!";
+        } else {
+            $_SESSION['flash_erro'] = "Erro ao eliminar meta padrão.";
+        }
     }
     header("Location: $redirect");
     exit;
