@@ -122,11 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
 <style>
 :root{--primary:#D97706;--dark:#0F172A;}
 *{margin:0;padding:0;box-sizing:border-box;}
+html,body{overflow-x:hidden;width:100%;position:relative;}
 body{font-family:'Inter',sans-serif;background:radial-gradient(circle at top left,#FFEDD5,#FDFAF5 50%,#FDE68A);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
 .card{width:100%;max-width:460px;background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);border-radius:20px;border:1px solid rgba(255,255,255,0.5);box-shadow:0 24px 48px rgba(0,0,0,0.08);padding:40px;}
 @media (max-width:576px){
   body{padding:16px;}
-  .card{padding:24px 20px;border-radius:16px;}
+  .card{padding:24px 20px;border-radius:16px;width:calc(100% - 32px);margin:16px auto;}
   h1{font-size:1.25rem;}
   .logo-wrap img{height:56px;}
 }

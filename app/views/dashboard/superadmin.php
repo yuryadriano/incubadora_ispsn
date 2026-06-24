@@ -233,6 +233,26 @@ require_once __DIR__ . '/../partials/_layout.php';
     font-size: 0.65rem;
     color: var(--text-muted);
 }
+
+@media (max-width: 992px) {
+    .saas-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .pipeline-container {
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+        padding: 30px 20px;
+    }
+    .pipeline-line {
+        display: none;
+    }
+    .pipeline-node {
+        width: 100%;
+        max-width: 320px;
+    }
+}
 </style>
 
 <!-- TAB NAVIGATION (SaaS Look) -->

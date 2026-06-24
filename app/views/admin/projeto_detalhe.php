@@ -545,6 +545,40 @@ require_once __DIR__ . '/../partials/_layout.php';
 .pipeline-step.completed .step-icon { background: #10b981; color: white; box-shadow: 0 0 0 2px #10b981; }
 .pipeline-step.completed .step-label { color: #10b981; }
 .pipeline-line.completed { background: #10b981; }
+
+@media (max-width: 576px) {
+    .pipeline-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 24px;
+        padding-left: 15px;
+    }
+    .pipeline-container::before {
+        content: '';
+        position: absolute;
+        left: 36px;
+        top: 20px;
+        bottom: 20px;
+        width: 3px;
+        background: #f3f4f6;
+        z-index: 1;
+    }
+    .pipeline-step {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        text-align: left;
+        width: 100%;
+        flex: none;
+    }
+    .step-label {
+        margin-top: 0;
+        font-size: 0.85rem;
+    }
+    .pipeline-line {
+        display: none;
+    }
+}
 </style>
 
 <!-- PROGRESSO -->

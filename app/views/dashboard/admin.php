@@ -190,7 +190,6 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 
 </div>
-</div>
 
 <!-- Ranking de Excelência -->
 <div class="card-custom mb-4">

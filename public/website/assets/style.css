@@ -69,8 +69,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .navbar.scrolled .nav-hamburger span { background: var(--dark); }
 
 @media (max-width: 1024px) {
-    .nav-links { display: none; }
-    .nav-hamburger { display: flex; }
+    .nav-links { display: none !important; }
+    .nav-hamburger { display: flex !important; }
     .nav-container { padding: 0 20px; }
     .navbar { padding: 15px 0; }
 }

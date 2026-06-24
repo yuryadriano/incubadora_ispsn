@@ -83,6 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --radius: 16px;
         }
 
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            position: relative;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background: radial-gradient(circle at top left, #FFEDD5 0%, #FDFAF5 50%, #FDE68A 100%);
@@ -91,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
             justify-content: center;
             margin: 0;
-            overflow-x: hidden;
         }
 
         /* Pattern overlay */
@@ -119,6 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         @media (max-width: 576px) {
             .login-card {
+                width: calc(100% - 32px);
+                margin: 16px;
                 padding: 24px 20px;
                 border-radius: 12px;
             }
@@ -285,8 +292,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-    <div class="circle c1"></div>
-    <div class="circle c2"></div>
+    <!-- Background decorative elements wrapped to prevent viewport overflow -->
+    <div class="background-decor" style="position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;">
+        <div class="circle c1"></div>
+        <div class="circle c2"></div>
+    </div>
 
     <div class="login-card">
         <div class="logo-wrapper d-flex justify-content-center">

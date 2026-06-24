@@ -139,6 +139,25 @@ require_once __DIR__ . '/../partials/_layout.php';
 }
 .cand-item-v2:hover { border-color: var(--primary); transform: translateX(5px); box-shadow: var(--shadow-xl); }
 
+@media (max-width: 992px) {
+    .cand-item-v2 {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+        padding: 16px 20px;
+    }
+    .cand-item-v2 > div {
+        width: 100% !important;
+    }
+    .cand-item-v2 > div:last-child {
+        justify-content: flex-start;
+        border-top: 1px solid var(--slate-200);
+        padding-top: 12px;
+        margin-top: 4px;
+    }
+}
+
 .cand-avatar-v2 { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; font-size: 1rem; }
 .cand-info-v2 .name { font-weight: 700; color: var(--slate-800); font-size: 0.9rem; display: block; }
 .cand-info-v2 .idea { font-size: 0.75rem; color: var(--slate-500); display: block; margin-top: 2px; }
