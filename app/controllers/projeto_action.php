@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // app/controllers/projeto_action.php
 // Controlador central de acções sobre projectos
 // Chamado via POST de qualquer ecrã de projecto
