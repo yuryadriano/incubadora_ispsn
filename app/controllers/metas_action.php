@@ -4,6 +4,9 @@
 require_once __DIR__ . '/../../config/auth.php';
 obrigarLogin();
 
+// ── Verificação CSRF ──
+csrf_verificar();
+
 $perfil    = $_SESSION['usuario_perfil'] ?? 'utilizador';
 $idUsuario = (int)$_SESSION['usuario_id'];
 $action    = $_POST['action'] ?? '';
@@ -263,8 +266,12 @@ if ($action === 'validar_evidencia' && in_array($perfil, ['mentor','admin','supe
                 $stmt->execute();
                 $stmt->close();
                 
-                // Atribuir pontos ao projecto
-                $mysqli->query("UPDATE projetos SET pontos = pontos + $pontosGanhos WHERE id = " . (int)$meta['proj_id']);
+                // Atribuir pontos ao projecto — prepared statement (sem interpolação)
+                $projIdInt = (int)$meta['proj_id'];
+                $stmtPts = $mysqli->prepare("UPDATE projetos SET pontos = pontos + ? WHERE id = ?");
+                $stmtPts->bind_param('ii', $pontosGanhos, $projIdInt);
+                $stmtPts->execute();
+                $stmtPts->close();
                 
                 // Notificar estudante
                 enviarNotificacao($meta['criado_por'], "🏆 Meta Concluída!", 
@@ -404,8 +411,11 @@ if ($action === 'eliminar_meta_padrao' && $perfil === 'superadmin') {
         if ($stmt->execute()) {
             $stmt->close();
             
-            // Remover da tabela metas_projeto as que ainda estiverem inactivas (não começadas)
-            $mysqli->query("DELETE FROM metas_projeto WHERE id_meta_padrao = $idMetaPadrao AND estado = 'inactiva'");
+            // Remover da tabela metas_projeto as que ainda estiverem inactivas (não começadas) — prepared statement
+            $stmtDel = $mysqli->prepare("DELETE FROM metas_projeto WHERE id_meta_padrao = ? AND estado = 'inactiva'");
+            $stmtDel->bind_param('i', $idMetaPadrao);
+            $stmtDel->execute();
+            $stmtDel->close();
             
             $_SESSION['flash_ok'] = "Meta padrão eliminada com sucesso!";
         } else {

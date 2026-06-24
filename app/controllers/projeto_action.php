@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // app/controllers/projeto_action.php
 // Controlador central de acções sobre projectos
 // Chamado via POST de qualquer ecrã de projecto
@@ -6,6 +6,13 @@
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../utils/GeminiAI.php';
 obrigarLogin();
+
+// ── Verificação CSRF (todos os POST excepto AJAX JSON) ──
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) || 
+          str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+if (!$isAjax) {
+    csrf_verificar();
+}
 
 $perfil    = $_SESSION['usuario_perfil'] ?? 'utilizador';
 $idUsuario = (int)$_SESSION['usuario_id'];
@@ -384,22 +391,56 @@ if ($action === 'upload_documento') {
     $tipo      = $_POST['tipo'] ?? 'Outro';
 
     if ($idProjeto && isset($_FILES['ficheiro']) && $_FILES['ficheiro']['error'] === UPLOAD_ERR_OK) {
-        $ext = pathinfo($_FILES['ficheiro']['name'], PATHINFO_EXTENSION);
-        $novoNome = "doc_" . $idProjeto . "_" . time() . "_" . uniqid() . "." . $ext;
-        $folder = __DIR__ . "/../../uploads/projetos/";
-        if (!is_dir($folder)) mkdir($folder, 0777, true);
+        // ── Validações de segurança ─────────────────────────
+        $maxBytes    = 10 * 1024 * 1024; // 10 MB
+        $extsBranch  = ['pdf','docx','doc','xlsx','xls','pptx','ppt','zip','png','jpg','jpeg','gif','webp','txt','csv'];
+        $mimesBranch = [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/zip', 'application/x-zip-compressed',
+            'image/png', 'image/jpeg', 'image/gif', 'image/webp',
+            'text/plain', 'text/csv',
+        ];
 
-        if (move_uploaded_file($_FILES['ficheiro']['tmp_name'], $folder . $novoNome)) {
-            $path = "uploads/projetos/" . $novoNome;
-            $stmt = $mysqli->prepare("INSERT INTO ficheiros_projeto (id_projeto, titulo, tipo, path, id_usuario_up) VALUES (?,?,?,?,?)");
-            $stmt->bind_param('isssi', $idProjeto, $titulo, $tipo, $path, $idUsuario);
-            $stmt->execute();
-            $_SESSION['flash_ok'] = "Documento carregado com sucesso!";
+        $fileSize = $_FILES['ficheiro']['size'];
+        $tmpPath  = $_FILES['ficheiro']['tmp_name'];
+        $ext      = strtolower(pathinfo($_FILES['ficheiro']['name'], PATHINFO_EXTENSION));
+
+        if ($fileSize > $maxBytes) {
+            $_SESSION['flash_erro'] = 'Ficheiro demasiado grande. Limite máximo: 10 MB.';
+        } elseif (!in_array($ext, $extsBranch)) {
+            $_SESSION['flash_erro'] = 'Tipo de ficheiro não permitido. Extensões aceites: PDF, Word, Excel, PowerPoint, ZIP, imagem ou texto.';
         } else {
-            $_SESSION['flash_erro'] = "Falha ao mover o ficheiro para o servidor.";
+            // Verificar MIME real (não confia só no nome do ficheiro)
+            $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeReal = finfo_file($finfo, $tmpPath);
+            finfo_close($finfo);
+
+            if (!in_array($mimeReal, $mimesBranch)) {
+                $_SESSION['flash_erro'] = 'O conteúdo do ficheiro não corresponde ao tipo declarado. Upload rejeitado por segurança.';
+            } else {
+                $novoNome = "doc_{$idProjeto}_" . time() . '_' . bin2hex(random_bytes(4)) . ".{$ext}";
+                $folder   = __DIR__ . '/../../uploads/projetos/';
+                if (!is_dir($folder)) mkdir($folder, 0755, true);
+
+                if (move_uploaded_file($tmpPath, $folder . $novoNome)) {
+                    $path = 'uploads/projetos/' . $novoNome;
+                    $stmt = $mysqli->prepare("INSERT INTO ficheiros_projeto (id_projeto, titulo, tipo, path, id_usuario_up) VALUES (?,?,?,?,?)");
+                    $stmt->bind_param('isssi', $idProjeto, $titulo, $tipo, $path, $idUsuario);
+                    $stmt->execute();
+                    $_SESSION['flash_ok'] = "Documento carregado! ({$ext}, " . round($fileSize/1024) . " KB)";
+                } else {
+                    $_SESSION['flash_erro'] = 'Falha ao mover o ficheiro para o servidor.';
+                }
+            }
         }
     } else {
-         $_SESSION['flash_erro'] = "Seleccione um ficheiro válido.";
+        $_SESSION['flash_erro'] = 'Seleccione um ficheiro válido.';
     }
     header("Location: $redirect");
     exit;
@@ -412,8 +453,11 @@ if ($action === 'mudar_fase') {
         $stmt = $mysqli->prepare("UPDATE projetos SET fase = ? WHERE id = ?");
         $stmt->bind_param('si', $fase, $idProjeto);
         if ($stmt->execute()) {
-            // Atribuir 50 pontos por avanço de fase
-            $mysqli->query("UPDATE projetos SET pontos = pontos + 50 WHERE id = $idProjeto");
+            // Atribuir 50 pontos por avanço de fase — prepared statement (sem interpolação)
+            $stmtPts = $mysqli->prepare("UPDATE projetos SET pontos = pontos + 50 WHERE id = ?");
+            $stmtPts->bind_param('i', $idProjeto);
+            $stmtPts->execute();
+            $stmtPts->close();
             
             $_SESSION['flash_ok'] = "Maturidade da startup atualizada para " . strtoupper($fase) . " e +50 SP atribuídos!";
             
@@ -478,7 +522,8 @@ if ($action === 'toggle_destaque') {
         $stmt->close();
         $_SESSION['flash_ok'] = "Visibilidade na Vitrine atualizada!";
     }
-    header("Location: /incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=$idProjeto");
+    // Usar $idProjeto já validado como int — safe redirect
+    header("Location: /incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=" . $idProjeto);
     exit;
 }
 
@@ -566,9 +611,12 @@ if ($action === 'validar_tarefa_mentor') {
                 $stmt = $mysqli->prepare("UPDATE tarefas SET status = 'concluida', validada_mentor = 1 WHERE id = ?");
                 $stmt->bind_param('i', $idTarefa);
                 if ($stmt->execute()) {
-                    // Atribuir 10 pontos de inovação
-                    $idProj = $tarefa['id_projeto'];
-                    $mysqli->query("UPDATE projetos SET pontos = pontos + 10 WHERE id = $idProj");
+                    // Atribuir 10 pontos de inovação — prepared statement (sem interpolação)
+                    $idProj = (int)$tarefa['id_projeto'];
+                    $stmtPts = $mysqli->prepare("UPDATE projetos SET pontos = pontos + 10 WHERE id = ?");
+                    $stmtPts->bind_param('i', $idProj);
+                    $stmtPts->execute();
+                    $stmtPts->close();
 
                     // Notificar o dono do projeto
                     $sqlDono = "SELECT criado_por, titulo FROM projetos WHERE id = ?";
@@ -616,3 +664,4 @@ if ($action === 'enviar_mensagem') {
 // Se chegou aqui sem action válida
 header("Location: $redirect");
 exit;
+

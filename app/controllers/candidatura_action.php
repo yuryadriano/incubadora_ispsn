@@ -3,6 +3,13 @@
 require_once __DIR__ . '/../../config/auth.php';
 obrigarPerfil(['admin', 'superadmin']);
 
+// ── Verificação CSRF (excepto AJAX/JSON) ──
+$isAjaxCand = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) ||
+              str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+if (!$isAjaxCand) {
+    csrf_verificar();
+}
+
 $action   = $_POST['action'] ?? '';
 $redirect = $_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/candidaturas.php';
 $idAdmin  = (int)$_SESSION['usuario_id'];

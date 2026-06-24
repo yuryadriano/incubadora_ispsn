@@ -11,6 +11,27 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+// ─── CSRF: Injetar token em todos os formulários POST (automático) ────
+(function() {
+    const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
+    function injectCsrf(form) {
+        if (!form.querySelector('input[name="_csrf_token"]')) {
+            const inp = document.createElement('input');
+            inp.type  = 'hidden';
+            inp.name  = '_csrf_token';
+            inp.value = CSRF_TOKEN;
+            form.prepend(inp);
+        }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(injectCsrf);
+    });
+    // Capturar forms criados dinamicamente via JS (modais, wizards)
+    document.addEventListener('submit', (e) => {
+        if (e.target.tagName === 'FORM') injectCsrf(e.target);
+    }, true);
+})();
+
 // ─── Dark Mode Toggle ─────────────────────
 function toggleDarkMode() {
     const isDark = document.body.classList.toggle('dark-mode');
@@ -40,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
 function toggleSidebar() {
     const sb   = document.getElementById('sidebar');
     const ov   = document.getElementById('sidebarOverlay');
-    const main = document.getElementById('mainContent');
     sb.classList.toggle('open');
     ov.classList.toggle('show');
 }
@@ -58,18 +78,12 @@ async function checkNotifications() {
     try {
         const res = await fetch('/incubadora_ispsn/app/controllers/notificacoes_controller.php?action=check');
         const data = await res.json();
-        
-        // Sidebar badge
+
         const badgeSidebar = document.getElementById('notif-badge');
         if (badgeSidebar) {
-            if (data.unread > 0) {
-                badgeSidebar.classList.remove('d-none');
-            } else {
-                badgeSidebar.classList.add('d-none');
-            }
+            data.unread > 0 ? badgeSidebar.classList.remove('d-none') : badgeSidebar.classList.add('d-none');
         }
-        
-        // Topbar badge
+
         const badgeTopbar = document.getElementById('notif-badge-topbar');
         if (badgeTopbar) {
             if (data.unread > 0) {
@@ -84,15 +98,15 @@ async function checkNotifications() {
 
 async function loadNotifications() {
     const listSidebar = document.getElementById('notif-list');
-    const listTopbar = document.getElementById('notif-list-topbar');
+    const listTopbar  = document.getElementById('notif-list-topbar');
     try {
-        const res = await fetch('/incubadora_ispsn/app/controllers/notificacoes_controller.php?action=list');
+        const res  = await fetch('/incubadora_ispsn/app/controllers/notificacoes_controller.php?action=list');
         const data = await res.json();
-        
-        const html = (!data.notificacoes || data.notificacoes.length === 0) 
+
+        const html = (!data.notificacoes || data.notificacoes.length === 0)
             ? '<li class="p-4 text-center text-muted small">Sem notificações recentes</li>'
             : data.notificacoes.map(n => `
-                <li class="p-3 border-bottom hover-surface" style="cursor:default">
+                <li class="p-3 border-bottom" style="cursor:default">
                     <div class="d-flex gap-2">
                         <div class="mt-1"><i class="fa fa-circle text-${n.tipo === 'info' ? 'primary' : (n.tipo === 'sucesso' ? 'success' : (n.tipo === 'aviso' ? 'warning' : 'danger'))}" style="font-size:0.6rem"></i></div>
                         <div>
@@ -103,13 +117,13 @@ async function loadNotifications() {
                     </div>
                 </li>
             `).join('');
-            
+
         if (listSidebar) listSidebar.innerHTML = html;
-        if (listTopbar) listTopbar.innerHTML = html;
-    } catch (e) { 
+        if (listTopbar)  listTopbar.innerHTML  = html;
+    } catch (e) {
         const errHtml = '<li class="p-4 text-center text-danger small">Erro ao carregar</li>';
         if (listSidebar) listSidebar.innerHTML = errHtml;
-        if (listTopbar) listTopbar.innerHTML = errHtml;
+        if (listTopbar)  listTopbar.innerHTML  = errHtml;
     }
 }
 
@@ -119,10 +133,10 @@ async function marcarLidas() {
     loadNotifications();
 }
 
-// Executar verificação uma única vez no carregamento da página para não sobrecarregar o servidor
+// Verificar badges ao carregar
 checkNotifications();
 
-// Carregar ao abrir o dropdown
+// Carregar lista ao abrir os dropdowns
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notifDropdown')?.addEventListener('show.bs.dropdown', loadNotifications);
     document.getElementById('btnNotif')?.addEventListener('show.bs.dropdown', loadNotifications);

@@ -1,10 +1,14 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['admin', 'superadmin']);
 
 $tituloPagina = 'Candidaturas';
 $paginaActiva = 'candidaturas';
 
+// Pré-carregar contagens de candidaturas por processo (elimina N+1)
+$contProc = [];
+$resProc = $mysqli->query("SELECT id_processo, COUNT(*) n FROM candidaturas GROUP BY id_processo");
+if ($resProc) while ($rp = $resProc->fetch_assoc()) $contProc[$rp['id_processo']] = $rp['n'];
 // Processos existentes
 $processos = [];
 $res = $mysqli->query("SELECT * FROM processos_candidatura ORDER BY criado_em DESC");
@@ -235,7 +239,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="fw-bold mb-1" style="font-size: 0.95rem;"><?= htmlspecialchars($proc['nome']) ?></div>
             <div class="text-muted" style="font-size: 0.75rem;">
                 <?php
-                $cnt = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo=".(int)$proc['id'])->fetch_assoc()['n'];
+                $cnt = $contProc[(int)$proc['id']] ?? 0;
                 echo "<strong>$cnt</strong> submissões · <strong>{$proc['vagas']}</strong> vagas";
                 ?>
             </div>
@@ -262,7 +266,21 @@ require_once __DIR__ . '/../partials/_layout.php';
         </div>
     </div>
 
-    <div class="filter-tabs-v2">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#94A3B8;">Filtrar por Estado</div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fa fa-file-csv me-1"></i> Exportar CSV
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>"><i class="fa fa-list me-2 text-primary"></i>Todas as candidaturas</a></li>
+                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=selecionado"><i class="fa fa-check-circle me-2 text-success"></i>Só aprovados</a></li>
+                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=rejeitado"><i class="fa fa-times-circle me-2 text-danger"></i>Só recusados</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=projetos"><i class="fa fa-rocket me-2 text-warning"></i>Exportar Startups</a></li>
+            </ul>
+        </div>
+    </div>    <div class="filter-tabs-v2">
         <?php
         $estados = [''=> 'Todas','pendente'=>'Pendentes','em_analise'=>'Análise','selecionado'=>'Aprovados','rejeitado'=>'Recusados','convite_enviado'=>'Convidados','registado'=>'Incubados'];
         foreach ($estados as $k=>$v):
@@ -748,3 +766,4 @@ function processarMassa() {
 </script>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>
+

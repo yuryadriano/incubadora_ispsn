@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../config/auth.php';
 
 // Processa login
@@ -51,14 +51,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($usuario) {
         registarLogAcesso($usuario['id'], 0);
     }
-    $erro = 'Credenciais inválidas. Verifique o email e a palavra-passe.';
+    $erro = 'Credenciais invÃ¡lidas. Verifique o email e a palavra-passe.';
 }
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">
 <head>
     <meta charset="UTF-8">
-    <title>Login — Incubadora Académica ISPSN</title>
+    <title>Login â€” Incubadora AcadÃ©mica ISPSN</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <!-- Google Fonts -->
@@ -296,8 +296,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <div class="login-header">
-            <h1>Bem-vindo à Incubadora</h1>
-            <p>Faça login para gerir as suas inovações</p>
+            <h1>Bem-vindo Ã  Incubadora</h1>
+            <p>FaÃ§a login para gerir as suas inovaÃ§Ãµes</p>
         </div>
 
         <?php if (!empty($erro)): ?>
@@ -322,7 +322,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="input-group-custom">
                     <i class="fa fa-lock"></i>
                     <input type="password" name="senha" id="senha" class="form-control-custom" 
-                           placeholder="••••••••" value="<?= htmlspecialchars($lembrar_senha) ?>" required>
+                           placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" value="<?= htmlspecialchars($lembrar_senha) ?>" required>
                 </div>
             </div>
 
@@ -331,6 +331,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="lembrar" class="ms-2 mb-0" style="font-size: 0.85rem; color: var(--text-muted); cursor:pointer;">
                     Guardar senha e email
                 </label>
+                </div>
+                <a href="/incubadora_ispsn/public/forgot_password.php" style="font-size:0.82rem; color:var(--primary); text-decoration:none; font-weight:600;">Esqueceu a password?</a>
             </div>
 
             <button type="submit" class="btn-login">
@@ -339,15 +341,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </button>
 
             <div class="register-link">
-                Ainda não tem conta? <a href="register.php">Registe a sua ideia</a>
+                Ainda nÃ£o tem conta? <a href="register.php">Registe a sua ideia</a>
             </div>
         </form>
     </div>
 
     <div class="footer-text">
-        &copy; <?= date('Y'); ?> Incubadora Académica — Instituto Superior Politécnico Sol Nascente
+        &copy; <?= date('Y'); ?> Incubadora AcadÃ©mica â€” Instituto Superior PolitÃ©cnico Sol Nascente
     </div>
 
 </body>
 </html>
+
 
