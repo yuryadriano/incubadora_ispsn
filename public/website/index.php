@@ -26,22 +26,9 @@ $res = $mysqli->query("
 ");
 if ($res) while ($row = $res->fetch_assoc()) $projetos[] = $row;
 
-// Estatísticas reais — UMA ÚNICA query combinada em vez de 4 separadas
+// Estatísticas públicas — fixas em 0 até ao lançamento oficial
+// (Os dados actuais são de testes internos e não devem ser exibidos publicamente)
 $stats = ['startups' => 0, 'mentores' => 0, 'incubados' => 0, 'membros' => 0];
-$r = $mysqli->query("
-    SELECT 
-        (SELECT COUNT(*) FROM projetos WHERE estado NOT IN ('rejeitado')) AS startups,
-        (SELECT COUNT(*) FROM usuarios WHERE perfil='mentor' AND activo=1) AS mentores,
-        (SELECT COUNT(*) FROM projetos WHERE estado='incubado') AS incubados,
-        (SELECT COUNT(*) FROM usuarios WHERE activo=1) AS membros
-");
-if ($r) {
-    $row = $r->fetch_assoc();
-    $stats['startups']  = (int)$row['startups'];
-    $stats['mentores']  = (int)$row['mentores'];
-    $stats['incubados'] = (int)$row['incubados'];
-    $stats['membros']   = (int)$row['membros'];
-}
 
 // Buscar publicações recentes (4 para o layout ISPTEC)
 $noticias = [];
@@ -80,13 +67,7 @@ if (empty($galeria)) {
     ];
 }
 
-// Dummy Stats if empty
-if ($stats['startups'] == 0) {
-    $stats['startups'] = 12;
-    $stats['mentores'] = 8;
-    $stats['incubados'] = 5;
-    $stats['membros'] = 45;
-}
+// Stats mantidos em 0 até ao lançamento oficial da incubadora
 ?>
 <!DOCTYPE html>
 <html lang="pt-pt">

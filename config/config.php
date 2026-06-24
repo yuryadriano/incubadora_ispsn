@@ -8,7 +8,7 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
-define('ASSET_VERSION', '2026062402');
+define('ASSET_VERSION', '2026062403');
 
 $mysqli = mysqli_init();
 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
