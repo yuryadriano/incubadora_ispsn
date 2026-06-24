@@ -79,25 +79,28 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .nav-hamburger.active span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
 .nav-mobile { 
-    position: fixed; top: 75px; left: 0; right: 0; 
-    background: #fff; z-index: 999; overflow: hidden; 
+    position: fixed; top: 90px; right: 20px; left: auto;
+    width: 280px; background: #fff; z-index: 999; overflow: hidden; 
     max-height: 0; display: flex; flex-direction: column; 
-    transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); 
-    box-shadow: 0 15px 30px rgba(0,0,0,0.1); 
-    padding: 0 40px;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease; 
+    box-shadow: var(--shadow-lg); 
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 0 24px;
 }
-.nav-mobile.open { max-height: 600px; padding: 40px; }
+.nav-mobile.open { max-height: 500px; padding: 24px; }
 .nav-mobile a { 
-    text-decoration: none; color: var(--dark); font-size: 1.1rem; font-weight: 700; 
-    padding: 15px 10px; transition: 0.3s; border-bottom: 1px solid var(--border); 
+    text-decoration: none; color: var(--dark); font-size: 0.95rem; font-weight: 600; 
+    padding: 12px 8px; transition: 0.3s; border-bottom: 1px solid var(--border); 
     display: block; 
 }
-.nav-mobile a:hover { color: var(--primary); padding-left: 20px; }
+.nav-mobile a:hover { color: var(--primary); padding-left: 15px; }
 .nav-portal-mobile {
     background: var(--dark) !important; color: #fff !important; text-align: center;
-    padding: 15px !important; border-radius: 12px; margin-top: 15px;
-    font-size: 1rem !important; font-weight: 800 !important;
+    padding: 12px !important; border-radius: 10px; margin-top: 12px;
+    font-size: 0.9rem !important; font-weight: 800 !important;
     display: flex !important; align-items: center; justify-content: center;
+    border-bottom: none !important;
 }
 
 /* HERO SECTION */
