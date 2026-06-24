@@ -14,9 +14,10 @@ $mysqli = mysqli_init();
 $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
 
 // Timeout de leitura — evita queries suspensas indefinidamente
-if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
-    $mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
-}
+// Definido tanto no driver mysqlnd global quanto na opção da conexão (11 = MYSQLI_OPT_READ_TIMEOUT)
+ini_set('mysqlnd.net_read_timeout', '5');
+$mysqli->options(11, 5);
+
 
 $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
@@ -109,9 +110,12 @@ define('MAIL_PORT', getenv('MAIL_PORT') ? (int)getenv('MAIL_PORT') : 587);
 define('MAIL_FROM', getenv('MAIL_FROM') ?: 'evaristo.adriano@ispsn.org');
 define('MAIL_NAME', getenv('MAIL_NAME') ?: 'Incubadora Académica ISPSN');
 
-// Defina IS_DEV = true apenas em ambiente local (XAMPP)
-// Em produção, remova esta linha ou defina como false
-if (!defined('IS_DEV')) define('IS_DEV', true); // ⚠️ Alterar para false em produção!
+// Detecção automática de Ambiente (IS_DEV)
+// Super seguro: define true para Windows/XAMPP local e false para o container Docker (Linux)
+if (!defined('IS_DEV')) {
+    $isLocal = (str_starts_with(strtoupper(PHP_OS), 'WIN') || getenv('DB_HOST') === false || getenv('DB_HOST') === '127.0.0.1');
+    define('IS_DEV', $isLocal);
+}
 
 // Autoload do Composer
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
