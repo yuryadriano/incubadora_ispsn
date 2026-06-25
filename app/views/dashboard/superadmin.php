@@ -58,18 +58,6 @@ if ($mysqli->query("SHOW TABLES LIKE 'metas_projeto'")->num_rows) {
     if ($res) $metasEmAvaliacao = (int)$res->fetch_assoc()['n'];
 }
 
-// Lógica de Simulação de Perfil para Super Admin
-if (isset($_GET['simular_perfil']) && $_SESSION['usuario_perfil'] === 'superadmin') {
-    $_SESSION['contexto_simulado'] = $_GET['simular_perfil'];
-    header("Location: /incubadora_ispsn/public/index.php");
-    exit;
-}
-if (isset($_GET['parar_simulacao'])) {
-    unset($_SESSION['contexto_simulado']);
-    header("Location: /incubadora_ispsn/app/views/dashboard/superadmin.php");
-    exit;
-}
-
 require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
@@ -464,10 +452,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="quick-label">Módulo Estudante</div>
             <div class="quick-stats"><?= $porPerfil['utilizador'] ?? 0 ?> Activos</div>
             <div class="quick-sub mb-3">Gerir Projectos e KPIs</div>
-            <div class="d-flex gap-2">
-                <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-saas px-2 py-1" style="font-size:0.65rem">Abrir</a>
-                <a href="?simular_perfil=utilizador" class="btn-ghost p-1 text-primary" style="font-size:0.65rem" title="Simular como Utilizador"><i class="fa fa-mask"></i> Simular</a>
-            </div>
+            <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-saas w-100" style="font-size:0.75rem; text-align:center;">Abrir Painel</a>
         </div>
 
         <!-- Módulo Recepcionista -->
@@ -476,10 +461,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="quick-label">Recepcionista</div>
             <div class="quick-stats">Reservas & Acesso</div>
             <div class="quick-sub mb-3">Controlo de Espaços</div>
-            <div class="d-flex gap-2">
-                <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-saas px-2 py-1" style="font-size:0.65rem; background:#EF4444">Abrir</a>
-                <a href="?simular_perfil=funcionario" class="btn-ghost p-1 text-danger" style="font-size:0.65rem" title="Simular como Funcionário"><i class="fa fa-mask"></i> Simular</a>
-            </div>
+            <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-saas w-100" style="font-size:0.75rem; background:#EF4444; text-align:center;">Abrir Painel</a>
         </div>
 
         <!-- Módulo Mentor -->
@@ -488,10 +470,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="quick-label">Módulo Mentor</div>
             <div class="quick-stats"><?= $mentTotal ?> Mentorias</div>
             <div class="quick-sub mb-3">Acompanhamento e Feedback</div>
-            <div class="d-flex gap-2">
-                <a href="/incubadora_ispsn/app/views/dashboard/mentor.php" class="btn-saas px-2 py-1" style="font-size:0.65rem; background:#8B5CF6">Abrir</a>
-                <a href="?simular_perfil=mentor" class="btn-ghost p-1" style="font-size:0.65rem; color:#8B5CF6" title="Simular como Mentor"><i class="fa fa-mask"></i> Simular</a>
-            </div>
+            <a href="/incubadora_ispsn/app/views/dashboard/mentor.php" class="btn-saas w-100" style="font-size:0.75rem; background:#8B5CF6; text-align:center;">Abrir Painel</a>
         </div>
 
         <!-- Módulo Admin -->
@@ -500,10 +479,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="quick-label">Módulo Admin</div>
             <div class="quick-stats"><?= $totalStartups ?> Startups</div>
             <div class="quick-sub mb-3">Gestão Administrativa</div>
-            <div class="d-flex gap-2">
-                <a href="/incubadora_ispsn/app/views/admin/projetos.php" class="btn-saas px-2 py-1" style="font-size:0.65rem; background:#10B981">Abrir</a>
-                <a href="?simular_perfil=admin" class="btn-ghost p-1 text-success" style="font-size:0.65rem" title="Simular como Admin"><i class="fa fa-mask"></i> Simular</a>
-            </div>
+            <a href="/incubadora_ispsn/app/views/dashboard/admin.php" class="btn-saas w-100" style="font-size:0.75rem; background:#10B981; text-align:center;">Abrir Painel</a>
         </div>
 
         <!-- Módulo Super Admin / Configs -->

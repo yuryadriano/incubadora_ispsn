@@ -39,6 +39,8 @@ if (!$token && empty($convite)) {
     $bloqueado = false;
 }
 
+$perfilConvite = ($convite && !empty($convite['perfil'])) ? $convite['perfil'] : 'utilizador';
+
 // ── Processar registo ────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
     $nome             = limpar($_POST['nome'] ?? '');
@@ -50,20 +52,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
     // SEGURANÇA: Ignorar email do POST — usar sempre o do convite
     $email = strtolower(trim($convite['email']));
 
-    // SEGURANÇA: Verificar número de estudante contra a candidatura
-    $numeroEsperado = $convite['numero_esperado'] ?? '';
-    if ($numeroEsperado && $numero_estudante !== $numeroEsperado) {
-        $erro = 'O número de estudante não corresponde ao registado na candidatura. Verifique e tente novamente.';
-    } elseif (strlen($nome) < 3) {
-        $erro = 'Nome muito curto.';
-    } elseif (strlen($numero_estudante) < 5) {
-        $erro = 'Número de estudante inválido.';
+    $perfil = $perfilConvite;
+    $tipo   = ($perfil === 'mentor') ? 'mentor' : 'estudante';
+
+    $valido = true;
+    if ($perfil !== 'mentor') {
+        // SEGURANÇA: Verificar número de estudante contra a candidatura
+        $numeroEsperado = $convite['numero_esperado'] ?? '';
+        if ($numeroEsperado && $numero_estudante !== $numeroEsperado) {
+            $erro = 'O número de estudante não corresponde ao registado na candidatura. Verifique e tente novamente.';
+            $valido = false;
+        } elseif (strlen($numero_estudante) < 5) {
+            $erro = 'Número de estudante inválido.';
+            $valido = false;
+        } else {
+            $senha  = $numero_estudante;
+        }
     } else {
-        // Senha = número de estudante (como padrão do sistema)
-        $senha  = $numero_estudante;
+        if (strlen($senha) < 6) {
+            $erro = 'A palavra-passe deve ter pelo menos 6 caracteres.';
+            $valido = false;
+        }
+        $numero_estudante = null;
+    }
+
+    if ($valido && strlen($nome) < 3) {
+        $erro = 'Nome muito curto.';
+        $valido = false;
+    }
+
+    if ($valido) {
         $hash   = password_hash($senha, PASSWORD_DEFAULT);
-        $perfil = 'utilizador';
-        $tipo   = 'estudante';
 
         // Verificar se email já existe
         $chk = $mysqli->prepare("SELECT id FROM usuarios WHERE email=? LIMIT 1");
@@ -71,7 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
         $chk->execute();
         if ($chk->get_result()->fetch_assoc()) {
             $erro = 'Este email já tem uma conta registada. Aceda ao login.';
+            $chk->close();
         } else {
+            $chk->close();
             $stmt = $mysqli->prepare("
                 INSERT INTO usuarios (nome, email, numero_estudante, telefone, senha_hash, perfil, tipo_utilizador, activo)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 0)
@@ -80,17 +101,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
 
             if ($stmt->execute()) {
                 $novoId = $mysqli->insert_id;
+                $stmt->close();
+
+                // Se for mentor, criar registo na tabela 'mentores' e associar se convite tiver id_projeto
+                if ($perfil === 'mentor') {
+                    // 1. Criar perfil de mentor (pré-inicialização do id_mentor)
+                    $stmtM = $mysqli->prepare("INSERT INTO mentores (id_usuario, especialidade, bio, linkedin, disponivel) VALUES (?, 'A definir', '', '', 1)");
+                    $stmtM->bind_param('i', $novoId);
+                    $stmtM->execute();
+                    $idNovoMentor = $mysqli->insert_id;
+                    $stmtM->close();
+
+                    // 2. Criar a mentoria associando o mentor ao projeto, se aplicável
+                    if (!empty($convite['id_projeto'])) {
+                        $idProjConv = (int)$convite['id_projeto'];
+                        $stmtMent = $mysqli->prepare("INSERT INTO mentorias (id_projeto, id_mentor, estado) VALUES (?, ?, 'activa')");
+                        $stmtMent->bind_param('ii', $idProjConv, $idNovoMentor);
+                        $stmtMent->execute();
+                        $stmtMent->close();
+                    }
+                }
 
                 // Marcar convite como aceite + destruir token
                 $stmt2 = $mysqli->prepare("UPDATE convites SET aceite=1 WHERE token=?");
                 $stmt2->bind_param('s', $token);
                 $stmt2->execute();
+                $stmt2->close();
 
                 // Atualizar candidatura como registada
                 if (!empty($convite['id_candidatura'])) {
                     $stmt3 = $mysqli->prepare("UPDATE candidaturas SET estado='registado' WHERE id=?");
                     $stmt3->bind_param('i', $convite['id_candidatura']);
                     $stmt3->execute();
+                    $stmt3->close();
                 }
 
                 // Notificar admins
@@ -99,12 +142,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
                     $sn = $mysqli->prepare("INSERT INTO notificacoes (id_usuario,titulo,mensagem,tipo) VALUES (?,?,?,'sucesso')");
                     $tit = "Novo Registo: $nome";
                     $msg = "$nome ($email) criou conta via convite e aguarda ativação.";
-                    while ($a = $admins->fetch_assoc()) { $sn->bind_param('iss',$a['id'],$tit,$msg); $sn->execute(); }
+                    while ($a = $admins->fetch_assoc()) { 
+                        $sn->bind_param('iss',$a['id'],$tit,$msg); 
+                        $sn->execute(); 
+                    }
+                    $sn->close();
                 }
 
                 $sucesso = true;
             } else {
-                $erro = 'Erro ao criar conta. Tente novamente.';
+                $erro = 'Erro ao criar conta. Tente novamente. ' . $stmt->error;
+                $stmt->close();
             }
         }
     }
@@ -174,9 +222,11 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
         <h2>Conta Criada!</h2>
         <p>A sua conta foi criada com sucesso e está a aguardar ativação pela equipa da Incubadora.</p>
         <p>Será notificado via WhatsApp quando o acesso for activado.</p>
+        <?php if ($perfilConvite !== 'mentor'): ?>
         <p style="margin-top:12px;font-size:0.8rem;color:#94A3B8">
             <strong>Senha inicial:</strong> o seu número de estudante
         </p>
+        <?php endif; ?>
         <a href="/incubadora_ispsn/public/login.php">Ir para o Login</a>
     </div>
 
@@ -213,7 +263,11 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
 
     <div class="alert alert-info">
         <i class="fa fa-info-circle"></i>
+        <?php if ($perfilConvite === 'mentor'): ?>
+        <span>O seu e-mail já está pré-definido. Defina uma palavra-passe segura para aceder à plataforma.</span>
+        <?php else: ?>
         <span>O seu email institucional já está pré-definido. A palavra-passe inicial será o seu número de estudante.</span>
+        <?php endif; ?>
     </div>
 
     <form method="post">
@@ -227,18 +281,25 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
         </div>
 
         <div class="form-group">
-            <label>Email Institucional</label>
+            <label>Email de Registo</label>
             <input type="email" name="email"
                    value="<?= htmlspecialchars($convite['email'] ?? '') ?>"
                    readonly>
         </div>
 
+        <?php if ($perfilConvite !== 'mentor'): ?>
         <div class="form-group">
             <label>Número de Estudante * <span style="color:#EF4444">(usado para verificação)</span></label>
             <input type="text" name="numero_estudante"
-                   placeholder="Ex: 122400024" required
-                   <?= !empty($convite['numero_esperado']) ? '' : '' ?>>
+                   placeholder="Ex: 122400024" required>
         </div>
+        <?php else: ?>
+        <div class="form-group">
+            <label>Definir Palavra-passe *</label>
+            <input type="password" name="senha"
+                   placeholder="Mínimo 6 caracteres" required minlength="6">
+        </div>
+        <?php endif; ?>
 
         <div class="form-group">
             <label>Telefone / WhatsApp</label>

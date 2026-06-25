@@ -5,6 +5,8 @@ require_once __DIR__ . '/../../config/config.php';
 
 obrigarPerfil(['admin', 'superadmin']);
 
+csrf_verificar();
+
 $action = $_POST['action'] ?? '';
 $redirect = $_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/usuarios.php';
 

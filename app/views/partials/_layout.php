@@ -11,12 +11,7 @@ $perfil       = $_SESSION['usuario_perfil']   ?? 'utilizador';
 $nomeUsuario  = $_SESSION['usuario_nome']     ?? 'Utilizador';
 $idUsuario    = (int)($_SESSION['usuario_id'] ?? 0);
 
-// Suporte para Simulação de Perfil (Developer Mode)
 $isSimulando = false;
-if ($perfil === 'superadmin' && !empty($_SESSION['contexto_simulado'])) {
-    $perfil = $_SESSION['contexto_simulado'];
-    $isSimulando = true;
-}
 
 // Contar notificações não lidas
 $naoLidas = 0;
@@ -79,7 +74,6 @@ $menus = [
         ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php',    'id'=>'ranking'],
         ['icon'=>'fa-star',            'label'=>'Avaliações',       'href'=>'/incubadora_ispsn/app/views/admin/avaliacoes.php',      'id'=>'avaliacoes'],
         ['icon'=>'fa-bullseye',        'label'=>'Gestão de Metas',  'href'=>'/incubadora_ispsn/app/views/admin/gestao_metas.php',   'id'=>'gestao_metas'],
-        ['icon'=>'fa-plus-circle',     'label'=>'Simular Submissão','href'=>'/incubadora_ispsn/app/views/dashboard/utilizador.php',  'id'=>'meu_painel'],
         // ── Gestão Operacional ─────────────
         ['icon'=>'fa-handshake',       'label'=>'Mentorias',        'href'=>'/incubadora_ispsn/app/views/funcionario/mentorias.php', 'id'=>'mentorias'],
         ['icon'=>'fa-money-bill-wave', 'label'=>'Financiamentos',   'href'=>'/incubadora_ispsn/app/views/funcionario/financiamentos.php','id'=>'financiamentos'],
@@ -272,14 +266,4 @@ if (document.documentElement.classList.contains('dark-mode')) {
     <!-- ZONA DE CONTEÚDO — cada página injeta o seu conteúdo aqui -->
     <div class="page-content">
 
-    <?php if ($isSimulando): ?>
-        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-left: 5px solid #f59e0b; border-radius:12px">
-            <div>
-                <i class="fa fa-mask me-2"></i> <strong>MODO DE SIMULAÇÃO ACTIVO:</strong> 
-                Você está a visualizar o sistema como <u><?= strtoupper($perfil) ?></u>.
-            </div>
-            <a href="/incubadora_ispsn/app/views/dashboard/superadmin.php?parar_simulacao=1" class="btn btn-dark btn-sm">
-                <i class="fa fa-right-from-bracket me-1"></i> Voltar ao Meu Painel
-            </a>
-        </div>
-    <?php endif; ?>
+

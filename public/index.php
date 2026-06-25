@@ -4,11 +4,6 @@ obrigarLogin();
 
 $perfil = $_SESSION['usuario_perfil'];
 
-// Sobreposição para Simulação do Super Admin
-if ($perfil === 'superadmin' && !empty($_SESSION['contexto_simulado'])) {
-    $perfil = $_SESSION['contexto_simulado'];
-}
-
 switch ($perfil) {
     case 'superadmin':
         require_once __DIR__ . '/../app/views/dashboard/superadmin.php';

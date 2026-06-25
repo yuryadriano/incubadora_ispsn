@@ -162,6 +162,37 @@ if ($stmtM) {
     $stmtM->close();
 }
 
+// ── Mentor associado e mentores disponíveis ─
+$mentorAssoc = null;
+$stmtMent = $mysqli->prepare("
+    SELECT m.id as id_mentoria, mt.id as id_mentor, u.nome, u.email, mt.especialidade
+    FROM mentorias m
+    JOIN mentores mt ON mt.id = m.id_mentor
+    JOIN usuarios u ON u.id = mt.id_usuario
+    WHERE m.id_projeto = ? AND m.estado = 'activa'
+    LIMIT 1
+");
+if ($stmtMent) {
+    $stmtMent->bind_param('i', $idProjeto);
+    $stmtMent->execute();
+    $mentorAssoc = $stmtMent->get_result()->fetch_assoc();
+    $stmtMent->close();
+}
+
+$mentoresDisponiveis = [];
+$resMent = $mysqli->query("
+    SELECT mt.id, u.nome, mt.especialidade 
+    FROM mentores mt 
+    JOIN usuarios u ON u.id = mt.id_usuario 
+    WHERE mt.disponivel = 1 
+    ORDER BY u.nome
+");
+if ($resMent) {
+    while ($row = $resMent->fetch_assoc()) {
+        $mentoresDisponiveis[] = $row;
+    }
+}
+
 $isDono = ($idUsuario === (int)$projeto['criado_por']);
 $podeGerirMembros = $isDono || in_array($perfil, ['admin','superadmin']);
 
@@ -636,6 +667,62 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
             </div>
         </div>
+
+        <!-- Mentoria / Orientação -->
+        <?php if ($perfil !== 'utilizador'): ?>
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <div class="card-title-custom"><i class="fa fa-user-tie"></i> Mentoria / Orientação</div>
+            </div>
+            <div class="card-body-custom">
+                <?php if ($mentorAssoc): ?>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="user-avatar" style="background:#8B5CF6; width:34px; height:34px; border-radius:50%; color:#fff; font-size:0.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+                            <?= strtoupper(substr($mentorAssoc['nome'], 0, 1)) ?>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:0.875rem"><?= htmlspecialchars($mentorAssoc['nome']) ?></div>
+                            <div style="font-size:0.75rem;color:var(--text-secondary)"><?= htmlspecialchars($mentorAssoc['especialidade']) ?></div>
+                            <small class="text-muted" style="font-size:0.72rem"><?= htmlspecialchars($mentorAssoc['email']) ?></small>
+                        </div>
+                    </div>
+                    <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
+                        <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
+                            <input type="hidden" name="action" value="mudar_estado_mentoria">
+                            <input type="hidden" name="id_mentoria" value="<?= $mentorAssoc['id_mentoria'] ?>">
+                            <input type="hidden" name="estado_m" value="cancelada">
+                            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                            <button type="submit" class="btn-ghost text-danger btn-sm w-100 mt-3" onclick="return confirm('Tem a certeza que deseja remover a orientação deste mentor?')">
+                                <i class="fa fa-user-xmark"></i> Remover Mentor
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p class="text-muted small mb-3">Nenhum mentor associado a esta startup no momento.</p>
+                    <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
+                        <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
+                            <input type="hidden" name="action" value="criar_mentoria">
+                            <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
+                            <input type="hidden" name="data_inicio" value="<?= date('Y-m-d') ?>">
+                            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                            
+                            <div class="mb-2">
+                                <select name="id_mentor" class="form-control-custom" style="font-size: 0.8rem; padding: 8px 12px;" required>
+                                    <option value="">— Seleccionar Orientador —</option>
+                                    <?php foreach ($mentoresDisponiveis as $mD): ?>
+                                        <option value="<?= $mD['id'] ?>"><?= htmlspecialchars($mD['nome']) ?> (<?= htmlspecialchars($mD['especialidade']) ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary-custom w-100" style="padding: 7px 12px; font-size:0.8rem; justify-content:center;">
+                                <i class="fa fa-user-plus"></i> Associar Orientador
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Membros da equipa -->
         <div class="card-custom mb-4">
