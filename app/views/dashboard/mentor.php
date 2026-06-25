@@ -3,8 +3,37 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['mentor', 'admin', 'superadmin']);
 
-$idUsuario = (int)($_SESSION['usuario_id'] ?? 0);
-$nome = $_SESSION['usuario_nome'] ?? 'Mentor';
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'mentor';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin']);
+
+if ($isAdminOrSuper) {
+    // Admin can choose which mentor to view
+    $idUsuario = (int)($_GET['id_usuario'] ?? 0);
+    if ($idUsuario <= 0) {
+        // Fallback to first mentor profile creator
+        $fallback = $mysqli->query("SELECT id_usuario FROM mentores LIMIT 1")->fetch_assoc();
+        $idUsuario = $fallback ? (int)$fallback['id_usuario'] : 0;
+    }
+    
+    // Fetch mentor's name
+    $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ?");
+    if ($stmtU) {
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uData = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        $nome = $uData['nome'] ?? 'Mentor';
+    } else {
+        $nome = 'Mentor';
+    }
+    
+    // Override variables for layout
+    $nomeUsuario = $nome;
+    $perfil = 'mentor'; // Force layout to render mentor menus
+} else {
+    $idUsuario = (int)($_SESSION['usuario_id'] ?? 0);
+    $nome = $_SESSION['usuario_nome'] ?? 'Mentor';
+}
 
 // Lógica de salvar perfil de mentor (caso idMentor == 0)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'completar_perfil') {
@@ -193,6 +222,37 @@ require_once __DIR__ . '/../partials/_layout.php';
 <!-- FLASH MESSAGES -->
 <?php if ($flashOk):   ?><div class="alert-custom alert-success mb-4"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
 <?php if ($flashErro): ?><div class="alert-custom alert-danger mb-4"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
+
+<?php if ($isAdminOrSuper): ?>
+    <div class="card-custom mb-4" style="background:#EEF2FF; border: 1px solid #C7D2FE; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div class="card-body-custom d-flex align-items-center justify-content-between flex-wrap gap-3 py-3 px-4">
+            <div>
+                <h6 class="fw-bold mb-1" style="color:#3730A3; font-size:0.95rem;"><i class="fa fa-eye me-2"></i>Visualização de Mentor (Painel Admin)</h6>
+                <p class="small text-muted mb-0">Você está a ver o painel do mentor <strong><?= htmlspecialchars($nome) ?></strong> exatamente como ele o vê.</p>
+            </div>
+            <div>
+                <form method="GET" class="d-flex align-items-center gap-2" style="margin:0;">
+                    <select name="id_usuario" class="form-select" style="font-size:0.82rem; padding:6px 36px 6px 12px; border-radius:8px; border:1.5px solid #A5B4FC;" onchange="this.form.submit()">
+                        <?php
+                        $mentoresList = $mysqli->query("
+                            SELECT u.id, u.nome, m.especialidade
+                            FROM usuarios u
+                            JOIN mentores m ON m.id_usuario = u.id
+                            ORDER BY u.nome
+                        ");
+                        if ($mentoresList) {
+                            while ($mt = $mentoresList->fetch_assoc()) {
+                                $selected = $mt['id'] == $idUsuario ? 'selected' : '';
+                                echo "<option value='{$mt['id']}' {$selected}>" . htmlspecialchars($mt['nome']) . " (" . htmlspecialchars($mt['especialidade']) . ")</option>";
+                            }
+                        }
+                        ?>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!-- TÍTULO -->
 <div class="page-header">

@@ -4,8 +4,42 @@ require_once __DIR__ . '/../../../config/config.php';
 
 obrigarLogin();
 
-$idUsuario = (int)($_SESSION['usuario_id'] ?? 0);
-$nome = $_SESSION['usuario_nome'] ?? 'Utilizador';
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'utilizador';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin']);
+
+if ($isAdminOrSuper) {
+    // Admin can choose which student to view
+    $idUsuario = (int)($_GET['id_usuario'] ?? 0);
+    if ($idUsuario <= 0) {
+        // Fallback to first student project creator
+        $fallback = $mysqli->query("
+            SELECT u.id, u.nome 
+            FROM usuarios u 
+            JOIN projetos p ON p.criado_por = u.id 
+            ORDER BY p.criado_em DESC LIMIT 1
+        ")->fetch_assoc();
+        $idUsuario = $fallback ? (int)$fallback['id'] : 0;
+    }
+    
+    // Fetch student's name
+    $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ?");
+    if ($stmtU) {
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uData = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        $nome = $uData['nome'] ?? 'Estudante';
+    } else {
+        $nome = 'Estudante';
+    }
+    
+    // Override variables for layout
+    $nomeUsuario = $nome;
+    $perfil = 'utilizador'; // Force layout to render student menus
+} else {
+    $idUsuario = (int)($_SESSION['usuario_id'] ?? 0);
+    $nome = $_SESSION['usuario_nome'] ?? 'Utilizador';
+}
 
 /* ============================
    COMENTÁRIOS DO ORIENTADOR
@@ -440,6 +474,37 @@ require_once __DIR__ . '/../partials/_layout.php';
 
 <?php if ($flashOk):   ?><div class="flash-ok"><i class="fa fa-check-circle"></i><?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
 <?php if ($flashErro): ?><div class="flash-err"><i class="fa fa-triangle-exclamation"></i><?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
+
+<?php if ($isAdminOrSuper): ?>
+    <div class="card-custom mb-4" style="background:#FFFDF5; border: 1px solid #FEF3C7; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div class="card-body-custom d-flex align-items-center justify-content-between flex-wrap gap-3 py-3 px-4">
+            <div>
+                <h6 class="fw-bold mb-1" style="color:#B45309; font-size:0.95rem;"><i class="fa fa-eye me-2"></i>Visualização de Estudante (Painel Admin)</h6>
+                <p class="small text-muted mb-0">Você está a ver o painel do estudante <strong><?= htmlspecialchars($nome) ?></strong> exatamente como ele o vê.</p>
+            </div>
+            <div>
+                <form method="GET" class="d-flex align-items-center gap-2" style="margin:0;">
+                    <select name="id_usuario" class="form-select" style="font-size:0.82rem; padding:6px 36px 6px 12px; border-radius:8px; border:1.5px solid #FCD34D;" onchange="this.form.submit()">
+                        <?php
+                        $estudantesList = $mysqli->query("
+                            SELECT DISTINCT u.id, u.nome, p.titulo
+                            FROM usuarios u
+                            JOIN projetos p ON p.criado_por = u.id
+                            ORDER BY u.nome
+                        ");
+                        if ($estudantesList) {
+                            while ($est = $estudantesList->fetch_assoc()) {
+                                $selected = $est['id'] == $idUsuario ? 'selected' : '';
+                                echo "<option value='{$est['id']}' {$selected}>" . htmlspecialchars($est['nome']) . " (" . htmlspecialchars($est['titulo']) . ")</option>";
+                            }
+                        }
+                        ?>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php
 $horaAtual = (int)date('H');

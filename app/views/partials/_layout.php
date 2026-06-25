@@ -7,9 +7,9 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarLogin();
 
-$perfil       = $_SESSION['usuario_perfil']   ?? 'utilizador';
-$nomeUsuario  = $_SESSION['usuario_nome']     ?? 'Utilizador';
-$idUsuario    = (int)($_SESSION['usuario_id'] ?? 0);
+$perfil       = $perfil ?? $_SESSION['usuario_perfil'] ?? 'utilizador';
+$nomeUsuario  = $nomeUsuario ?? $_SESSION['usuario_nome'] ?? 'Utilizador';
+$idUsuario    = $idUsuario ?? (int)($_SESSION['usuario_id'] ?? 0);
 
 $isSimulando = false;
 
