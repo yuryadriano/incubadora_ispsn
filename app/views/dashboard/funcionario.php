@@ -35,7 +35,7 @@ if ($mysqli->query("SHOW TABLES LIKE 'financiamentos'")->num_rows) {
 }
 
 // Projectos activos
-$r3 = $mysqli->query("SELECT COUNT(*) n FROM projetos WHERE estado IN ('aprovado','em_andamento')");
+$r3 = $mysqli->query("SELECT COUNT(*) n FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento')");
 $stats['projectos_activos'] = (int)($r3 ? $r3->fetch_assoc()['n'] : 0);
 
 // Sessões de mentoria recentes

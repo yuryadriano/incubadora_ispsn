@@ -28,7 +28,7 @@ $totalProjetos  = count(array_unique(array_column($financiamentos, 'id_projeto')
 
 // Projectos para formulário
 $projetosLista = [];
-$rp = $mysqli->query("SELECT id, titulo FROM projetos WHERE estado IN ('em_analise','em_andamento') ORDER BY titulo");
+$rp = $mysqli->query("SELECT id, titulo FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento') ORDER BY titulo");
 if ($rp) while ($row = $rp->fetch_assoc()) $projetosLista[] = $row;
 
 // Flash messages
