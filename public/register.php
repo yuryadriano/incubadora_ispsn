@@ -11,7 +11,7 @@ $convite  = null;
 
 if ($token) {
     $stmt = $mysqli->prepare("
-        SELECT c.*, cand.numero_estudante as numero_esperado, cand.nome as nome_sugerido
+        SELECT c.*, cand.numero_estudante as numero_esperado, cand.nome as nome_sugerido, cand.tipo_candidato
         FROM convites c
         LEFT JOIN candidaturas cand ON cand.id = c.id_candidatura
         WHERE c.token = ? AND c.aceite = 0
@@ -40,6 +40,15 @@ if (!$token && empty($convite)) {
 }
 
 $perfilConvite = ($convite && !empty($convite['perfil'])) ? $convite['perfil'] : 'utilizador';
+$isPreLicenciado = ($convite && ($convite['tipo_candidato'] ?? '') === 'pre_licenciado');
+
+if ($perfilConvite === 'mentor') {
+    $tipoRegisto = 'mentor';
+} elseif ($isPreLicenciado) {
+    $tipoRegisto = 'pre_licenciado';
+} else {
+    $tipoRegisto = 'estudante';
+}
 
 // ── Processar registo ────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
@@ -53,10 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
     $email = strtolower(trim($convite['email']));
 
     $perfil = $perfilConvite;
-    $tipo   = ($perfil === 'mentor') ? 'mentor' : 'estudante';
+    $tipo   = $tipoRegisto;
 
     $valido = true;
-    if ($perfil !== 'mentor') {
+    if ($tipo === 'estudante') {
         // SEGURANÇA: Verificar número de estudante contra a candidatura
         $numeroEsperado = $convite['numero_esperado'] ?? '';
         if ($numeroEsperado && $numero_estudante !== $numeroEsperado) {
@@ -222,7 +231,7 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
         <h2>Conta Criada!</h2>
         <p>A sua conta foi criada com sucesso e está a aguardar ativação pela equipa da Incubadora.</p>
         <p>Será notificado via WhatsApp quando o acesso for activado.</p>
-        <?php if ($perfilConvite !== 'mentor'): ?>
+        <?php if ($tipoRegisto === 'estudante'): ?>
         <p style="margin-top:12px;font-size:0.8rem;color:#94A3B8">
             <strong>Senha inicial:</strong> o seu número de estudante
         </p>
@@ -263,7 +272,7 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
 
     <div class="alert alert-info">
         <i class="fa fa-info-circle"></i>
-        <?php if ($perfilConvite === 'mentor'): ?>
+        <?php if ($tipoRegisto !== 'estudante'): ?>
         <span>O seu e-mail já está pré-definido. Defina uma palavra-passe segura para aceder à plataforma.</span>
         <?php else: ?>
         <span>O seu email institucional já está pré-definido. A palavra-passe inicial será o seu número de estudante.</span>
@@ -287,7 +296,7 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
                    readonly>
         </div>
 
-        <?php if ($perfilConvite !== 'mentor'): ?>
+        <?php if ($tipoRegisto === 'estudante'): ?>
         <div class="form-group">
             <label>Número de Estudante * <span style="color:#EF4444">(usado para verificação)</span></label>
             <input type="text" name="numero_estudante"

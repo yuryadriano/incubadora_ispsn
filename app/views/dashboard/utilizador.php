@@ -802,7 +802,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
 <div class="modal fade" id="modalProjeto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content" style="border:none; border-radius:18px; overflow:hidden;">
-            <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+            <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="criar_projeto">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
                 <div style="padding:22px 24px; border-bottom:1px solid #F3F4F6; background:#FFFBF2;">
@@ -838,6 +838,11 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                     <div class="mb-3">
                         <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Descrição *</label>
                         <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva o projecto..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Pitch da Ideia (PDF, PPT, PPTX ou ZIP) *</label>
+                        <input type="file" name="pitch_ficheiro" class="form-control" accept=".pdf,.ppt,.pptx,.zip" required>
+                        <small class="text-muted" style="font-size: 0.75rem;">Carregue a apresentação ou documento do seu Pitch (Máx. 15MB).</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Problema que resolve</label>

@@ -279,6 +279,22 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
                 <div class="card-body-custom">
                     <p><strong>Descrição:</strong><br><?= nl2br(htmlspecialchars($projeto['descricao'])) ?></p>
+
+                    <?php if (!empty($projeto['pitch_path'])): ?>
+                    <div class="mt-3 mb-3 p-3 d-flex align-items-center justify-content-between border" style="background:#f8fafc; border-radius:12px; border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa fa-file-pdf text-danger fa-2x"></i>
+                            <div>
+                                <span class="d-block fw-bold" style="font-size:0.85rem; color:#1e293b;">Pitch da Ideia</span>
+                                <small class="text-muted" style="font-size:0.72rem;">Apresentação principal da startup</small>
+                            </div>
+                        </div>
+                        <a href="/incubadora_ispsn/<?= htmlspecialchars($projeto['pitch_path']) ?>" target="_blank" class="btn btn-sm btn-outline-warning fw-bold py-2 px-3 rounded-3" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
+                            <i class="fa fa-download me-1"></i> Descarregar Pitch
+                        </a>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <div class="alert alert-info py-2" style="font-size:0.875rem">

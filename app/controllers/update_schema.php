@@ -27,6 +27,10 @@ adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'evidencia_path', 'VARCHAR(255) 
 adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'evidencia_nota', 'TEXT DEFAULT NULL');
 adicionarColunaSeNaoExistir($mysqli, 'tarefas', 'validada_mentor', 'TINYINT(1) DEFAULT 0');
 
+// Adicionar coluna pitch_path nas tabelas de candidaturas e projetos
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_path', 'VARCHAR(255) DEFAULT NULL');
+adicionarColunaSeNaoExistir($mysqli, 'projetos', 'pitch_path', 'VARCHAR(255) DEFAULT NULL');
+
 // Criar tabelas adicionais de reservas, espaços, equipamentos, visitantes e empréstimos
 $mysqli->query("CREATE TABLE IF NOT EXISTS `espacos` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -243,5 +247,12 @@ adicionarIndiceSeNaoExistir($mysqli, 'reunioes', 'id_mentor', 'idx_reunioes_ment
 adicionarIndiceSeNaoExistir($mysqli, 'reunioes', 'id_projeto', 'idx_reunioes_projeto');
 adicionarIndiceSeNaoExistir($mysqli, 'mensagens', 'id_projeto', 'idx_mensagens_projeto');
 
+// Adicionar tipo_candidato na tabela candidaturas
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'tipo_candidato', "ENUM('estudante', 'pre_licenciado') DEFAULT 'estudante'");
+
+// Atualizar tipo_utilizador na tabela usuarios para aceitar pre_licenciado
+$mysqli->query("ALTER TABLE `usuarios` MODIFY COLUMN `tipo_utilizador` ENUM('estudante', 'docente', 'outro', 'pre_licenciado', 'mentor', 'funcionario') NOT NULL DEFAULT 'estudante'");
+
 echo "Schema updated v2.0!";
+
 

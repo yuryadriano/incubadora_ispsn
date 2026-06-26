@@ -109,11 +109,12 @@ if ($action === 'triagem_automatica') {
 
     while ($c = $res->fetch_assoc()) {
         $motivoRejeicao = '';
+        $isPre = ($c['tipo_candidato'] ?? '') === 'pre_licenciado';
 
         // 1. Validação do e-mail
         if (!filter_var($c['email'], FILTER_VALIDATE_EMAIL)) {
             $motivoRejeicao = 'E-mail em formato inválido.';
-        } elseif (!str_ends_with($c['email'], '@ispsn.org')) {
+        } elseif (!$isPre && !str_ends_with($c['email'], '@ispsn.org')) {
             $motivoRejeicao = 'O e-mail deve ser institucional (@ispsn.org).';
         }
 
@@ -124,7 +125,7 @@ if ($action === 'triagem_automatica') {
         }
 
         // 3. Validação do número de estudante
-        if (empty($c['numero_estudante']) || strlen(trim($c['numero_estudante'])) < 5) {
+        if (!$isPre && (empty($c['numero_estudante']) || strlen(trim($c['numero_estudante'])) < 5)) {
             $motivoRejeicao = 'Número de estudante inválido ou curto demais.';
         }
 
@@ -138,18 +139,28 @@ if ($action === 'triagem_automatica') {
         // 5. Validação de duplicados
         if (empty($motivoRejeicao)) {
             $emailEscaped = $mysqli->real_escape_string($c['email']);
-            $numEstEscaped = $mysqli->real_escape_string($c['numero_estudante']);
             $idCand = (int)$c['id'];
             
-            // Procurar outras candidaturas registadas ou selecionadas neste mesmo processo
-            $chkDup = $mysqli->query("
-                SELECT id FROM candidaturas 
-                WHERE id_processo = $idProcesso 
-                  AND id != $idCand 
-                  AND (email = '$emailEscaped' OR numero_estudante = '$numEstEscaped')
-                  AND estado IN ('em_analise', 'selecionado', 'convite_enviado', 'registado')
-                LIMIT 1
-            ");
+            if ($isPre) {
+                $chkDup = $mysqli->query("
+                    SELECT id FROM candidaturas 
+                    WHERE id_processo = $idProcesso 
+                      AND id != $idCand 
+                      AND email = '$emailEscaped'
+                      AND estado IN ('em_analise', 'selecionado', 'convite_enviado', 'registado')
+                    LIMIT 1
+                ");
+            } else {
+                $numEstEscaped = $mysqli->real_escape_string($c['numero_estudante']);
+                $chkDup = $mysqli->query("
+                    SELECT id FROM candidaturas 
+                    WHERE id_processo = $idProcesso 
+                      AND id != $idCand 
+                      AND (email = '$emailEscaped' OR (numero_estudante != '' AND numero_estudante = '$numEstEscaped'))
+                      AND estado IN ('em_analise', 'selecionado', 'convite_enviado', 'registado')
+                    LIMIT 1
+                ");
+            }
             if ($chkDup && $chkDup->num_rows > 0) {
                 $motivoRejeicao = 'Duplicidade de candidatura identificada (já existe registo para este estudante/e-mail neste processo).';
             }
@@ -256,6 +267,7 @@ if ($action === 'gerar_convite_seguro') {
     // Construir mensagem WhatsApp
     $nome   = $cand['nome'];
     $primeiroNome = explode(' ', $nome)[0];
+    $isPre = ($cand['tipo_candidato'] ?? '') === 'pre_licenciado';
     $msg = "Olá {$primeiroNome}! 🎉\n\n";
     $msg .= "A sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\n";
     $msg .= "Para criar a sua conta no portal e iniciar o processo, aceda ao link abaixo:\n\n";
@@ -263,7 +275,11 @@ if ($action === 'gerar_convite_seguro') {
     $msg .= "⏰ *Atenção:* Este link é válido por apenas *48 horas* e pode ser usado *uma única vez*.\n\n";
     $msg .= "Ao registar-se, use:\n";
     $msg .= "• *Email:* {$cand['email']}\n";
-    $msg .= "• *Nº Estudante:* {$cand['numero_estudante']}\n\n";
+    if (!$isPre) {
+        $msg .= "• *Nº Estudante:* {$cand['numero_estudante']}\n\n";
+    } else {
+        $msg .= "\n";
+    }
     $msg .= "Este link é *pessoal e intransferível* — não o partilhe.\n\n";
     $msg .= "Bem-vindo(a) à família ISPSN! 🌟\n";
     $msg .= "_Incubadora Académica ISPSN_";
@@ -370,6 +386,7 @@ if ($action === 'gerar_convite_ajax') {
 
     $nome   = $cand['nome'];
     $primeiroNome = explode(' ', $nome)[0];
+    $isPre = ($cand['tipo_candidato'] ?? '') === 'pre_licenciado';
     $msg = "Olá {$primeiroNome}! 🎉\n\n";
     $msg .= "A sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\n";
     $msg .= "Para criar a sua conta no portal e iniciar o processo, aceda ao link abaixo:\n\n";
@@ -377,7 +394,11 @@ if ($action === 'gerar_convite_ajax') {
     $msg .= "⏰ *Atenção:* Este link é válido por apenas *48 horas* e pode ser usado *uma única vez*.\n\n";
     $msg .= "Ao registar-se, use:\n";
     $msg .= "• *Email:* {$cand['email']}\n";
-    $msg .= "• *Nº Estudante:* {$cand['numero_estudante']}\n\n";
+    if (!$isPre) {
+        $msg .= "• *Nº Estudante:* {$cand['numero_estudante']}\n\n";
+    } else {
+        $msg .= "\n";
+    }
     $msg .= "Este link é *pessoal e intransferível* — não o partilhe.\n\n";
     $msg .= "Bem-vindo(a) à família ISPSN! 🌟\n";
     $msg .= "_Incubadora Académica ISPSN_";

@@ -46,19 +46,63 @@ if ($action === 'criar_projeto') {
     } elseif (!in_array($tipo, $tiposValidos)) {
         $_SESSION['flash_erro'] = 'Tipo de projecto inválido.';
     } else {
-        // id_responsavel = o próprio criador por defeito
-        // Todos os projetos novos iniciam como 'submetido'
-        $stmt = $mysqli->prepare("
-            INSERT INTO projetos
-                (titulo, tipo, descricao, problema, solucao, area_tematica, estado, id_responsavel, criado_por)
-            VALUES (?, ?, ?, ?, ?, ?, 'submetido', ?, ?)
-        ");
-        $stmt->bind_param('ssssssii',
-            $titulo, $tipo, $descricao, $problema, $solucao,
-            $area_tematica, $idUsuario, $idUsuario
-        );
+        $pitch_path = '';
+        if (isset($_FILES['pitch_ficheiro']) && $_FILES['pitch_ficheiro']['error'] === UPLOAD_ERR_OK) {
+            $maxBytes = 15 * 1024 * 1024; // 15 MB
+            $exts = ['pdf', 'ppt', 'pptx', 'zip'];
+            $mimes = [
+                'application/pdf',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'application/zip',
+                'application/x-zip-compressed'
+            ];
+            
+            $fileSize = $_FILES['pitch_ficheiro']['size'];
+            $tmpPath = $_FILES['pitch_ficheiro']['tmp_name'];
+            $ext = strtolower(pathinfo($_FILES['pitch_ficheiro']['name'], PATHINFO_EXTENSION));
+            
+            if ($fileSize > $maxBytes) {
+                $_SESSION['flash_erro'] = 'Ficheiro do Pitch demasiado grande. Limite máximo: 15 MB.';
+            } elseif (!in_array($ext, $exts)) {
+                $_SESSION['flash_erro'] = 'Tipo de ficheiro para Pitch não permitido. Extensões aceites: PDF, PPT, PPTX, ZIP.';
+            } else {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeReal = finfo_file($finfo, $tmpPath);
+                finfo_close($finfo);
+                
+                if (!in_array($mimeReal, $mimes)) {
+                    $_SESSION['flash_erro'] = 'O conteúdo do ficheiro do Pitch não corresponde ao tipo de ficheiro aceite.';
+                } else {
+                    $novoNome = "pitch_proj_" . time() . '_' . bin2hex(random_bytes(4)) . ".{$ext}";
+                    $folder = __DIR__ . '/../../uploads/pitches/';
+                    if (!is_dir($folder)) mkdir($folder, 0755, true);
+                    
+                    if (move_uploaded_file($tmpPath, $folder . $novoNome)) {
+                        $pitch_path = 'uploads/pitches/' . $novoNome;
+                    } else {
+                        $_SESSION['flash_erro'] = 'Falha ao mover o ficheiro do Pitch para o servidor.';
+                    }
+                }
+            }
+        } else {
+            $_SESSION['flash_erro'] = 'O carregamento do Pitch da Ideia é obrigatório.';
+        }
 
-        if ($stmt->execute()) {
+        if (empty($_SESSION['flash_erro'])) {
+            // id_responsavel = o próprio criador por defeito
+            // Todos os projetos novos iniciam como 'submetido'
+            $stmt = $mysqli->prepare("
+                INSERT INTO projetos
+                    (titulo, tipo, descricao, problema, solucao, area_tematica, estado, id_responsavel, criado_por, pitch_path)
+                VALUES (?, ?, ?, ?, ?, ?, 'submetido', ?, ?, ?)
+            ");
+            $stmt->bind_param('ssssssiiis',
+                $titulo, $tipo, $descricao, $problema, $solucao,
+                $area_tematica, $idUsuario, $idUsuario, $pitch_path
+            );
+
+            if ($stmt->execute()) {
             $idNovoProjeto = $mysqli->insert_id;
             // Adicionar criador como membro
             $s2 = $mysqli->prepare("INSERT IGNORE INTO membros_projeto (id_projeto, id_usuario, papel) VALUES (?,?,'Líder')");
@@ -78,6 +122,7 @@ if ($action === 'criar_projeto') {
             $_SESSION['flash_ok'] = 'Projecto submetido com sucesso! Aguarda avaliação.';
         } else {
             $_SESSION['flash_erro'] = 'Erro ao salvar o projecto. Tente novamente.';
+        }
         }
     }
     header("Location: $redirect");

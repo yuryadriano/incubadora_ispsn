@@ -226,6 +226,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                         <label class="form-label-custom">Tipo</label>
                                         <select name="tipo_utilizador" class="form-control-custom" required>
                                             <option value="estudante" <?= $u['tipo_utilizador']==='estudante'?'selected':''?>>Estudante</option>
+                                            <option value="pre_licenciado" <?= $u['tipo_utilizador']==='pre_licenciado'?'selected':''?>>Pré-licenciado</option>
                                             <option value="docente"   <?= $u['tipo_utilizador']==='docente'  ?'selected':''?>>Docente</option>
                                             <option value="mentor"    <?= $u['tipo_utilizador']==='mentor'   ?'selected':''?>>Mentor</option>
                                             <option value="outro"     <?= $u['tipo_utilizador']==='outro'    ?'selected':''?>>Outro</option>
@@ -282,6 +283,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <label class="form-label-custom">Tipo de Conta</label>
                             <select name="tipo_utilizador" class="form-control-custom" required>
                                 <option value="estudante">Estudante</option>
+                                <option value="pre_licenciado">Pré-licenciado</option>
                                 <option value="docente">Docente</option>
                                 <option value="mentor">Mentor</option>
                                 <option value="outro">Equipa Parceira</option>

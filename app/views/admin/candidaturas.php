@@ -51,7 +51,7 @@ unset($_SESSION['flash_ok'], $_SESSION['flash_erro'], $_SESSION['wa_redirect']);
 $waLink = '';
 if (isset($_GET['wa']) && isset($_GET['token'])) {
     $tkn = $_GET['token'];
-    $stmt = $mysqli->prepare("SELECT c.*, cand.telefone as tel FROM convites c LEFT JOIN candidaturas cand ON cand.id = c.id_candidatura WHERE c.token = ? LIMIT 1");
+    $stmt = $mysqli->prepare("SELECT c.*, cand.telefone as tel, cand.tipo_candidato FROM convites c LEFT JOIN candidaturas cand ON cand.id = c.id_candidatura WHERE c.token = ? LIMIT 1");
     $stmt->bind_param('s', $tkn);
     $stmt->execute();
     $cv = $stmt->get_result()->fetch_assoc();
@@ -61,7 +61,11 @@ if (isset($_GET['wa']) && isset($_GET['token'])) {
         $nome    = $cv['nome_sugerido'] ?? 'Estudante';
         $tel     = preg_replace('/\D/', '', $cv['telefone'] ?? $cv['tel'] ?? '');
         if (strlen($tel) === 9) $tel = '244' . $tel;
-        $msg = "Olá! 🎉\n\nA sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\nCrie a sua conta aqui (válido 48h, uso único):\n🔗 {$link}\n\nUse o seu email e número de estudante ao registar-se.\n\n_Este link é pessoal e intransferível._";
+        if (($cv['tipo_candidato'] ?? '') === 'pre_licenciado') {
+            $msg = "Olá! 🎉\n\nA sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\nCrie a sua conta aqui (válido 48h, uso único):\n🔗 {$link}\n\nUse o seu email ao registar-se.\n\n_Este link é pessoal e intransferível._";
+        } else {
+            $msg = "Olá! 🎉\n\nA sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀\n\nCrie a sua conta aqui (válido 48h, uso único):\n🔗 {$link}\n\nUse o seu email e número de estudante ao registar-se.\n\n_Este link é pessoal e intransferível._";
+        }
         $waLink = 'https://wa.me/' . $tel . '?text=' . rawurlencode($msg);
     }
 }
@@ -369,8 +373,14 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <div class="val-mini text-truncate" style="max-width: 150px;"><?= htmlspecialchars($c['email']) ?></div>
                 </div>
                 <div>
-                    <div class="label-mini">Institucional</div>
-                    <div class="val-mini">Nº <?= htmlspecialchars($c['numero_estudante']) ?></div>
+                    <div class="label-mini">Tipo / Inst.</div>
+                    <div class="val-mini">
+                        <?php if ($c['tipo_candidato'] === 'pre_licenciado'): ?>
+                            <span class="badge bg-info-subtle text-info small px-2 py-0.5 rounded-2" style="font-size: 0.65rem;">Pré-licenciado</span>
+                        <?php else: ?>
+                            Nº <?= htmlspecialchars($c['numero_estudante']) ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div>
                     <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
@@ -534,19 +544,24 @@ const usuarioPerfil = <?= json_encode($_SESSION['usuario_perfil']) ?>;
 const candidatosAprovados = <?= json_encode(array_values(array_filter($candidaturas, function($c) { return $c['estado'] === 'selecionado'; }))) ?>;
 
 function abrirModal(c) {
+    const isPre = c.tipo_candidato === 'pre_licenciado';
+    const emailLabel = isPre ? 'Email Pessoal' : 'Email Institucional';
+    const numEstudanteText = isPre ? 'N/A (Pré-licenciado)' : (c.numero_estudante || '—');
+    const tipoBadge = isPre ? '<span class="badge bg-info text-white ms-2" style="font-size:0.7rem;">Pré-licenciado</span>' : '<span class="badge bg-primary text-white ms-2" style="font-size:0.7rem;">Estudante ISPSN</span>';
+
     document.getElementById('modalConteudo').innerHTML = `
         <div class="row g-4">
             <div class="col-md-6">
                 <div class="label-mini">Nome Completo</div>
-                <div class="fw-bold border-bottom pb-2">${c.nome}</div>
+                <div class="fw-bold border-bottom pb-2">${c.nome} ${tipoBadge}</div>
             </div>
             <div class="col-md-6">
-                <div class="label-mini">Email Institucional</div>
+                <div class="label-mini">${emailLabel}</div>
                 <div class="fw-bold border-bottom pb-2">${c.email}</div>
             </div>
             <div class="col-md-6">
                 <div class="label-mini">Nº Estudante</div>
-                <div class="fw-bold border-bottom pb-2">${c.numero_estudante}</div>
+                <div class="fw-bold border-bottom pb-2">${numEstudanteText}</div>
             </div>
             <div class="col-md-6">
                 <div class="label-mini">Telefone</div>
@@ -557,6 +572,13 @@ function abrirModal(c) {
                     <div class="label-mini text-primary mb-2">Ideia de Negócio</div>
                     <h5 class="fw-bold mb-3">${c.titulo_ideia}</h5>
                     <p class="text-muted mb-0 small" style="line-height:1.7">${c.descricao_ideia}</p>
+                    ${c.pitch_path ? `
+                        <div class="mt-3">
+                            <a href="/incubadora_ispsn/${c.pitch_path}" target="_blank" class="btn btn-sm btn-outline-warning fw-bold py-2 px-3 rounded-3" style="font-size:0.8rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
+                                <i class="fa fa-file-pdf me-2"></i> Ver Pitch da Ideia
+                            </a>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         </div>
@@ -624,11 +646,14 @@ function mostrarWizardStep() {
     document.getElementById('wizardProgress').textContent = `Candidato ${wizardIndex + 1} de ${wizardQueue.length}`;
     document.getElementById('btnWizardNext').style.display = 'none';
 
+    const isPre = c.tipo_candidato === 'pre_licenciado';
+    const numEstudanteText = isPre ? 'Pré-licenciado' : 'Nº ' + c.numero_estudante;
+
     document.getElementById('wizardContent').innerHTML = `
         <div class="p-3 bg-light rounded-4 border mb-4">
             <div class="label-mini text-primary">Candidato Atual</div>
             <h5 class="fw-bold mb-1">${c.nome}</h5>
-            <div class="text-muted small">${c.email} · Nº ${c.numero_estudante}</div>
+            <div class="text-muted small">${c.email} · ${numEstudanteText}</div>
             <div class="mt-2"><span class="badge bg-success-subtle text-success small" style="font-size:0.8rem; color:#166534;"><i class="fa fa-phone me-1"></i>${c.telefone}</span></div>
         </div>
 

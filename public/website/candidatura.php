@@ -17,10 +17,11 @@ $erro = '';
 $sucesso = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
+    $tipo_candidato   = limpar($_POST['tipo_candidato'] ?? 'estudante');
     $nome             = limpar($_POST['nome'] ?? '');
     $email            = strtolower(limpar($_POST['email'] ?? ''));
     $telefone         = limpar($_POST['telefone'] ?? '');
-    $numero_estudante = limpar($_POST['numero_estudante'] ?? '');
+    $numero_estudante = $tipo_candidato === 'estudante' ? limpar($_POST['numero_estudante'] ?? '') : '';
     $curso            = limpar($_POST['curso'] ?? '');
     $ano_estudo       = limpar($_POST['ano_estudo'] ?? '');
     $titulo_ideia     = limpar($_POST['titulo_ideia'] ?? '');
@@ -34,44 +35,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     // Validações
     if (strlen($nome) < 3) $erro = 'Nome muito curto.';
     elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $erro = 'Email inválido.';
-    elseif (strlen($numero_estudante) < 5) $erro = 'Número de estudante inválido.';
+    elseif ($tipo_candidato === 'estudante' && strlen($numero_estudante) < 5) $erro = 'Número de estudante inválido.';
+    elseif ($tipo_candidato === 'estudante' && !preg_match('/@ispsn\.org$/i', $email)) $erro = 'Por favor, use o seu e-mail institucional (@ispsn.org).';
     elseif (strlen($telefone) < 9) $erro = 'Telefone inválido.';
     elseif (strlen($titulo_ideia) < 5) $erro = 'Título da ideia muito curto.';
     elseif (strlen($descricao_ideia) < 30) $erro = 'A descrição da ideia deve ter pelo menos 30 caracteres.';
     else {
-        // Verificar candidatura duplicada (mesmo email ou nº estudante neste processo)
-        $chk = $mysqli->prepare("SELECT id FROM candidaturas WHERE id_processo=? AND (email=? OR numero_estudante=?) LIMIT 1");
-        $chk->bind_param('iss', $id_processo, $email, $numero_estudante);
-        $chk->execute();
-        if ($chk->get_result()->fetch_assoc()) {
-            $erro = 'Já existe uma candidatura registada com este email ou número de estudante para este processo.';
-        } else {
-            $stmt = $mysqli->prepare("
-                INSERT INTO candidaturas 
-                (id_processo, nome, email, telefone, numero_estudante, curso, ano_estudo,
-                 titulo_ideia, descricao_ideia, problema, solucao, area_tematica, ip_submissao)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ");
-            $stmt->bind_param('issssssssssss',
-                $id_processo, $nome, $email, $telefone, $numero_estudante,
-                $curso, $ano_estudo, $titulo_ideia, $descricao_ideia,
-                $problema, $solucao, $area_tematica, $ip
-            );
-            if ($stmt->execute()) {
-                // Notificar admins internamente
-                $admins = $mysqli->query("SELECT id FROM usuarios WHERE perfil IN ('admin','superadmin') AND activo=1");
-                if ($admins) {
-                    $sn = $mysqli->prepare("INSERT INTO notificacoes (id_usuario,titulo,mensagem,tipo) VALUES (?,?,?,'info')");
-                    $tit = "Nova Candidatura: $titulo_ideia";
-                    $msg = "Nova candidatura recebida de $nome ($email). Aceda ao painel para rever.";
-                    while ($a = $admins->fetch_assoc()) {
-                        $sn->bind_param('iss', $a['id'], $tit, $msg);
-                        $sn->execute();
+        $pitch_path = '';
+        if (isset($_FILES['pitch_ficheiro']) && $_FILES['pitch_ficheiro']['error'] === UPLOAD_ERR_OK) {
+            $maxBytes = 15 * 1024 * 1024; // 15 MB
+            $exts = ['pdf', 'ppt', 'pptx', 'zip'];
+            $mimes = [
+                'application/pdf',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'application/zip',
+                'application/x-zip-compressed'
+            ];
+            
+            $fileSize = $_FILES['pitch_ficheiro']['size'];
+            $tmpPath = $_FILES['pitch_ficheiro']['tmp_name'];
+            $ext = strtolower(pathinfo($_FILES['pitch_ficheiro']['name'], PATHINFO_EXTENSION));
+            
+            if ($fileSize > $maxBytes) {
+                $erro = 'Ficheiro do Pitch demasiado grande. Limite máximo: 15 MB.';
+            } elseif (!in_array($ext, $exts)) {
+                $erro = 'Tipo de ficheiro para Pitch não permitido. Extensões aceites: PDF, PPT, PPTX, ZIP.';
+            } else {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeReal = finfo_file($finfo, $tmpPath);
+                finfo_close($finfo);
+                
+                if (!in_array($mimeReal, $mimes)) {
+                    $erro = 'O conteúdo do ficheiro do Pitch não corresponde ao tipo de ficheiro aceite.';
+                } else {
+                    $novoNome = "pitch_cand_" . time() . '_' . bin2hex(random_bytes(4)) . ".{$ext}";
+                    $folder = __DIR__ . '/../../uploads/pitches/';
+                    if (!is_dir($folder)) mkdir($folder, 0755, true);
+                    
+                    if (move_uploaded_file($tmpPath, $folder . $novoNome)) {
+                        $pitch_path = 'uploads/pitches/' . $novoNome;
+                    } else {
+                        $erro = 'Falha ao mover o ficheiro do Pitch para o servidor.';
                     }
                 }
-                $sucesso = true;
+            }
+        } else {
+            $erro = 'O carregamento do Pitch da Ideia é obrigatório.';
+        }
+
+        if (empty($erro)) {
+            // Verificar candidatura duplicada (mesmo email ou nº estudante se preenchido neste processo)
+            if ($tipo_candidato === 'estudante') {
+                $chk = $mysqli->prepare("SELECT id FROM candidaturas WHERE id_processo=? AND (email=? OR (numero_estudante != '' AND numero_estudante=?)) LIMIT 1");
+                $chk->bind_param('iss', $id_processo, $email, $numero_estudante);
             } else {
-                $erro = 'Erro ao registar candidatura. Tente novamente.';
+                $chk = $mysqli->prepare("SELECT id FROM candidaturas WHERE id_processo=? AND email=? LIMIT 1");
+                $chk->bind_param('is', $id_processo, $email);
+            }
+            $chk->execute();
+            if ($chk->get_result()->fetch_assoc()) {
+                $erro = 'Já existe uma candidatura registada com este email ou número de estudante para este processo.';
+            } else {
+                $stmt = $mysqli->prepare("
+                    INSERT INTO candidaturas 
+                    (id_processo, nome, email, telefone, numero_estudante, curso, ano_estudo,
+                     titulo_ideia, descricao_ideia, problema, solucao, area_tematica, pitch_path, ip_submissao, tipo_candidato)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ");
+                $stmt->bind_param('issssssssssssss',
+                    $id_processo, $nome, $email, $telefone, $numero_estudante,
+                    $curso, $ano_estudo, $titulo_ideia, $descricao_ideia,
+                    $problema, $solucao, $area_tematica, $pitch_path, $ip, $tipo_candidato
+                );
+                if ($stmt->execute()) {
+                    // Notificar admins internamente
+                    $admins = $mysqli->query("SELECT id FROM usuarios WHERE perfil IN ('admin','superadmin') AND activo=1");
+                    if ($admins) {
+                        $sn = $mysqli->prepare("INSERT INTO notificacoes (id_usuario,titulo,mensagem,tipo) VALUES (?,?,?,'info')");
+                        $tit = "Nova Candidatura: $titulo_ideia";
+                        $msg = "Nova candidatura recebida de $nome ($email) como " . ($tipo_candidato === 'pre_licenciado' ? 'Pré-licenciado' : 'Estudante ISPSN') . ". Aceda ao painel para rever.";
+                        while ($a = $admins->fetch_assoc()) {
+                            $sn->bind_param('iss', $a['id'], $tit, $msg);
+                            $sn->execute();
+                        }
+                    }
+                    $sucesso = true;
+                } else {
+                    $erro = 'Erro ao registar candidatura. Tente novamente.';
+                }
             }
         }
     }
@@ -214,25 +266,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
             <div class="step-dot" id="dot2"></div>
             <div class="step-dot" id="dot3"></div>
         </div>
-
-        <form method="post" id="candidaturaForm" novalidate>
+        <form method="post" id="candidaturaForm" novalidate enctype="multipart/form-data">
 
             <!-- PASSO 1: Dados Pessoais -->
             <div class="form-section active" id="section1">
                 <div class="cand-card">
                     <h3><i class="fa fa-user"></i> Dados Pessoais</h3>
+                    
+                    <div class="form-group">
+                        <label>Tipo de Candidato *</label>
+                        <select name="tipo_candidato" id="tipo_candidato" onchange="toggleTipoCandidato(this.value)">
+                            <option value="estudante">Estudante ISPSN</option>
+                            <option value="pre_licenciado">Pré-licenciado</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label>Nome Completo *</label>
                         <input type="text" name="nome" placeholder="O teu nome completo" required minlength="3">
                     </div>
+
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Número de Estudante *</label>
-                            <input type="text" name="numero_estudante" placeholder="Ex: 122400024" required>
+                            <label id="lbl_numero_estudante">Número de Estudante *</label>
+                            <input type="text" name="numero_estudante" id="numero_estudante" placeholder="Ex: 122400024" required>
                         </div>
                         <div class="form-group">
-                            <label>Email Institucional *</label>
-                            <input type="email" name="email" placeholder="número@ispsn.org" required>
+                            <label id="lbl_email">Email Institucional *</label>
+                            <input type="email" name="email" id="email" placeholder="número@ispsn.org" required>
                         </div>
                     </div>
                     <div class="form-row">
@@ -288,6 +349,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                         <label>Descrição Geral da Ideia * (mín. 30 caracteres)</label>
                         <textarea name="descricao_ideia" id="desc" placeholder="Descreve a tua ideia de forma clara e objetiva..." required oninput="updateCount('desc','descCount',30)"></textarea>
                         <div class="char-count"><span id="descCount">0</span> caracteres</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Pitch da Ideia (PDF, PPT, PPTX ou ZIP) *</label>
+                        <input type="file" name="pitch_ficheiro" id="pitch_ficheiro" accept=".pdf,.ppt,.pptx,.zip" style="padding: 10px 14px;">
+                        <small class="text-white-50" style="font-size: 0.75rem; margin-top: 4px;">Carrega a apresentação ou documento do teu Pitch (Máx. 15MB).</small>
                     </div>
                     <div class="form-group">
                         <label>Que Problema Resolve?</label>
@@ -346,10 +412,37 @@ function updateProgress(step) {
     }
 }
 
+function toggleTipoCandidato(value) {
+    const numEstudanteInput = document.getElementById('numero_estudante');
+    const lblNumeroEstudante = document.getElementById('lbl_numero_estudante');
+    const emailInput = document.getElementById('email');
+    const lblEmail = document.getElementById('lbl_email');
+    
+    if (value === 'pre_licenciado') {
+        numEstudanteInput.disabled = true;
+        numEstudanteInput.required = false;
+        numEstudanteInput.value = '';
+        numEstudanteInput.placeholder = 'N/A - Pré-licenciado';
+        lblNumeroEstudante.innerHTML = 'Número de Estudante (Inativo)';
+        
+        emailInput.placeholder = 'exemplo@email.com';
+        lblEmail.innerHTML = 'Email Pessoal *';
+    } else {
+        numEstudanteInput.disabled = false;
+        numEstudanteInput.required = true;
+        numEstudanteInput.placeholder = 'Ex: 122400024';
+        lblNumeroEstudante.innerHTML = 'Número de Estudante *';
+        
+        emailInput.placeholder = 'número@ispsn.org';
+        lblEmail.innerHTML = 'Email Institucional *';
+    }
+}
+
 function validateStep(step) {
     const section = document.getElementById('section' + step);
     const inputs = section.querySelectorAll('input[required], select[required], textarea[required]');
     for (const input of inputs) {
+        if (input.disabled) continue;
         if (!input.value.trim()) {
             input.focus();
             input.style.borderColor = '#EF4444';
@@ -360,16 +453,28 @@ function validateStep(step) {
     }
     // Email domain check
     if (step === 1) {
+        const tipo = document.getElementById('tipo_candidato').value;
         const email = section.querySelector('[name="email"]').value;
-        if (!email.endsWith('@ispsn.org')) {
-            alert('Por favor, usa o teu email institucional (@ispsn.org).');
-            return false;
+        if (tipo === 'estudante') {
+            if (!email.endsWith('@ispsn.org')) {
+                alert('Por favor, usa o teu email institucional (@ispsn.org).');
+                return false;
+            }
         }
-        const desc_step = section.querySelector('[name="descricao_ideia"]');
     }
     if (step === 2) {
         const desc = document.querySelector('[name="descricao_ideia"]').value;
         if (desc.length < 30) { alert('A descrição deve ter pelo menos 30 caracteres.'); return false; }
+        const pitch = document.getElementById('pitch_ficheiro');
+        if (!pitch || !pitch.files || pitch.files.length === 0) {
+            alert('Por favor, carregue o ficheiro do Pitch da sua Ideia (PDF, PPT, PPTX ou ZIP).');
+            if (pitch) {
+                pitch.focus();
+                pitch.style.borderColor = '#EF4444';
+                setTimeout(() => pitch.style.borderColor = '', 2000);
+            }
+            return false;
+        }
     }
     return true;
 }
@@ -396,9 +501,15 @@ function prevStep(from) {
 
 function buildResumo() {
     const f = document.getElementById('candidaturaForm');
-    const g = (n) => (f.querySelector('[name="' + n + '"]') || {}).value || '—';
+    const g = (n) => {
+        const el = f.querySelector('[name="' + n + '"]');
+        if (el && el.disabled) return 'N/A';
+        return el ? el.value || '—' : '—';
+    };
+    const tipoText = g('tipo_candidato') === 'pre_licenciado' ? 'Pré-licenciado' : 'Estudante ISPSN';
     document.getElementById('resumo').innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Tipo Candidato</strong><br>${tipoText}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Nome</strong><br>${g('nome')}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Nº Estudante</strong><br>${g('numero_estudante')}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Email</strong><br>${g('email')}</div>

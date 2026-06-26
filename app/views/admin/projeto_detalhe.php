@@ -942,6 +942,21 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="card-body-custom">
                 <p style="line-height:1.7;color:var(--text-primary)"><?= nl2br(htmlspecialchars($projeto['descricao'] ?? '—')) ?></p>
 
+                <?php if (!empty($projeto['pitch_path'])): ?>
+                <div class="mt-3 mb-3 p-3 d-flex align-items-center justify-content-between border" style="background:#f8fafc; border-radius:12px; border: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="fa fa-file-pdf text-danger fa-2x"></i>
+                        <div>
+                            <span class="d-block fw-bold" style="font-size:0.85rem; color:#1e293b;">Pitch da Ideia</span>
+                            <small class="text-muted" style="font-size:0.72rem;">Apresentação principal da startup</small>
+                        </div>
+                    </div>
+                    <a href="/incubadora_ispsn/<?= htmlspecialchars($projeto['pitch_path']) ?>" target="_blank" class="btn btn-sm btn-outline-warning fw-bold py-2 px-3 rounded-3" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
+                        <i class="fa fa-download me-1"></i> Descarregar Pitch
+                    </a>
+                </div>
+                <?php endif; ?>
+
                 <?php if ($projeto['problema']): ?>
                 <div style="margin-top:20px;padding:14px 16px;background:#FEF9C3;border-radius:var(--radius);border-left:4px solid #F59E0B">
                     <div style="font-weight:700;font-size:0.82rem;color:#A16207;margin-bottom:6px;text-transform:uppercase">Problema Identificado</div>
