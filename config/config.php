@@ -37,9 +37,25 @@ if (!$connected || $mysqli->connect_errno) {
 
 $mysqli->set_charset('utf8mb4');
 
-// Auto-verificação de Schema: Se a tabela metas_projeto não existir, executa o update_schema.php automaticamente
+// Auto-verificação de Schema: Se a tabela metas_projeto não existir, ou se colunas cruciais estiverem em falta, executa o update_schema.php
+$runUpdate = false;
 $checkTable = $mysqli->query("SHOW TABLES LIKE 'metas_projeto'");
 if ($checkTable && $checkTable->num_rows === 0) {
+    $runUpdate = true;
+} else {
+    // Verificar se as colunas adicionadas recentemente em candidaturas existem
+    $checkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'tipo_candidato'");
+    if ($checkCol && $checkCol->num_rows === 0) {
+        $runUpdate = true;
+    } else {
+        $checkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_path'");
+        if ($checkCol2 && $checkCol2->num_rows === 0) {
+            $runUpdate = true;
+        }
+    }
+}
+
+if ($runUpdate) {
     $schemaFile = __DIR__ . '/../app/controllers/update_schema.php';
     if (file_exists($schemaFile)) {
         ob_start();
