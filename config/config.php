@@ -37,45 +37,48 @@ if (!$connected || $mysqli->connect_errno) {
 
 $mysqli->set_charset('utf8mb4');
 
-// Auto-verificação de Schema: Se a tabela metas_projeto não existir, ou se colunas cruciais estiverem em falta, executa o update_schema.php
-$runUpdate = false;
-$checkTable = $mysqli->query("SHOW TABLES LIKE 'metas_projeto'");
-if ($checkTable && $checkTable->num_rows === 0) {
-    $runUpdate = true;
-} else {
-    // Verificar se as colunas adicionadas recentemente em candidaturas existem
-    $checkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'tipo_candidato'");
-    if ($checkCol && $checkCol->num_rows === 0) {
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Auto-verificação de Schema: Se a tabela metas_projeto não existir, ou se colunas cruciais estiverem em falta, executa o update_schema.php (apenas uma vez por sessão de utilizador para evitar sobrecarga e concorrência)
+if (empty($_SESSION['schema_checked'])) {
+    $runUpdate = false;
+    $checkTable = $mysqli->query("SHOW TABLES LIKE 'metas_projeto'");
+    if ($checkTable && $checkTable->num_rows === 0) {
         $runUpdate = true;
     } else {
-        $checkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_path'");
-        if ($checkCol2 && $checkCol2->num_rows === 0) {
+        // Verificar se as colunas adicionadas recentemente em candidaturas existem
+        $checkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'tipo_candidato'");
+        if ($checkCol && $checkCol->num_rows === 0) {
             $runUpdate = true;
         } else {
-            $checkCol3 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_inovacao'");
-            if ($checkCol3 && $checkCol3->num_rows === 0) {
+            $checkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_path'");
+            if ($checkCol2 && $checkCol2->num_rows === 0) {
                 $runUpdate = true;
             } else {
-                $checkCol4 = $mysqli->query("SHOW COLUMNS FROM `termos_incubacao` LIKE 'tipo_contrato'");
-                if ($checkCol4 && $checkCol4->num_rows === 0) {
+                $checkCol3 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_inovacao'");
+                if ($checkCol3 && $checkCol3->num_rows === 0) {
                     $runUpdate = true;
+                } else {
+                    $checkCol4 = $mysqli->query("SHOW COLUMNS FROM `termos_incubacao` LIKE 'tipo_contrato'");
+                    if ($checkCol4 && $checkCol4->num_rows === 0) {
+                        $runUpdate = true;
+                    }
                 }
             }
         }
     }
-}
 
-if ($runUpdate) {
-    $schemaFile = __DIR__ . '/../app/controllers/update_schema.php';
-    if (file_exists($schemaFile)) {
-        ob_start();
-        include $schemaFile;
-        ob_end_clean();
+    if ($runUpdate) {
+        $schemaFile = __DIR__ . '/../app/controllers/update_schema.php';
+        if (file_exists($schemaFile)) {
+            ob_start();
+            include $schemaFile;
+            ob_end_clean();
+        }
     }
-}
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+    $_SESSION['schema_checked'] = true;
 }
 
 /* =============================================================
