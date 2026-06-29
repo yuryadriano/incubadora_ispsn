@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../../../config/auth.php';
-obrigarPerfil(['admin', 'superadmin']);
+obrigarPerfil(['admin', 'superadmin', 'mentor']);
 
 $tituloPagina = 'Candidaturas';
 $paginaActiva = 'candidaturas';
@@ -16,13 +16,23 @@ if ($res) while ($r = $res->fetch_assoc()) $processos[] = $r;
 
 // Processo selecionado para ver candidaturas
 $id_processo_sel = (int)($_GET['processo'] ?? ($processos[0]['id'] ?? 0));
-$filtro_estado   = $_GET['estado'] ?? '';
+$filtro_fase     = $_GET['fase'] ?? 'rastreio_pitch';
 
 // Candidaturas do processo selecionado
 $candidaturas = [];
 if ($id_processo_sel) {
-    $where = "WHERE c.id_processo = $id_processo_sel";
-    if ($filtro_estado) $where .= " AND c.estado = '" . $mysqli->real_escape_string($filtro_estado) . "'";
+    if ($filtro_fase === 'rastreio_pitch') {
+        $where = "WHERE c.id_processo = $id_processo_sel AND (c.estado = 'pendente' OR c.estado = 'em_analise') AND c.pitch_inovacao IS NULL";
+    } elseif ($filtro_fase === 'selecao_admissao') {
+        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'em_analise' AND c.pitch_inovacao IS NOT NULL";
+    } elseif ($filtro_fase === 'admitidos') {
+        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado IN ('selecionado', 'convite_enviado', 'registado')";
+    } elseif ($filtro_fase === 'rejeitados') {
+        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'rejeitado'";
+    } else {
+        $where = "WHERE c.id_processo = $id_processo_sel";
+    }
+
     $res = $mysqli->query("
         SELECT c.*, u.nome as avaliador_nome
         FROM candidaturas c
@@ -33,13 +43,31 @@ if ($id_processo_sel) {
     if ($res) while ($r = $res->fetch_assoc()) $candidaturas[] = $r;
 }
 
-// Contagens por estado
-$contagens = [];
+// Contagens por fase operacional
+$contFases = [
+    'rastreio_pitch' => 0,
+    'selecao_admissao' => 0,
+    'admitidos' => 0,
+    'rejeitados' => 0
+];
 if ($id_processo_sel) {
-    $res = $mysqli->query("SELECT estado, COUNT(*) n FROM candidaturas WHERE id_processo=$id_processo_sel GROUP BY estado");
-    if ($res) while ($r = $res->fetch_assoc()) $contagens[$r['estado']] = $r['n'];
+    // 1. Rastreio Pitch
+    $r1 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND (estado = 'pendente' OR estado = 'em_analise') AND pitch_inovacao IS NULL");
+    if ($r1) $contFases['rastreio_pitch'] = (int)$r1->fetch_assoc()['n'];
+
+    // 2. Seleção Admissão
+    $r2 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado = 'em_analise' AND pitch_inovacao IS NOT NULL");
+    if ($r2) $contFases['selecao_admissao'] = (int)$r2->fetch_assoc()['n'];
+
+    // 3. Admitidos
+    $r3 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado IN ('selecionado', 'convite_enviado', 'registado')");
+    if ($r3) $contFases['admitidos'] = (int)$r3->fetch_assoc()['n'];
+
+    // 4. Rejeitados
+    $r4 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado = 'rejeitado'");
+    if ($r4) $contFases['rejeitados'] = (int)$r4->fetch_assoc()['n'];
 }
-$totalCand = array_sum($contagens);
+$totalCand = array_sum($contFases);
 
 // Flash messages
 $flash_ok   = $_SESSION['flash_ok'] ?? '';
@@ -273,24 +301,24 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="kpi-row-v2">
         <div class="kpi-card-v2">
             <div class="kpi-icon-v2" style="background:#F1F5F9; color:#475569;"><i class="fa fa-inbox"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $totalCand ?></div><div class="label-mini">Total</div></div>
+            <div><div class="h4 fw-900 mb-0"><?= $totalCand ?></div><div class="label-mini">Total Filtro</div></div>
         </div>
-        <div class="kpi-card-v2">
-            <div class="kpi-icon-v2" style="background:#FEF3C7; color:#B45309;"><i class="fa fa-clock"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contagens['pendente']??0 ?></div><div class="label-mini">Pendentes</div></div>
+        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=rastreio_pitch'" style="cursor:pointer;">
+            <div class="kpi-icon-v2" style="background:#FEF3C7; color:#B45309;"><i class="fa fa-magnifying-glass"></i></div>
+            <div><div class="h4 fw-900 mb-0"><?= $contFases['rastreio_pitch'] ?></div><div class="label-mini">Rastreio Pitch</div></div>
         </div>
-        <div class="kpi-card-v2">
-            <div class="kpi-icon-v2" style="background:#DCFCE7; color:#166534;"><i class="fa fa-check-circle"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contagens['selecionado']??0 ?></div><div class="label-mini">Aprovados</div></div>
+        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=selecao_admissao'" style="cursor:pointer;">
+            <div class="kpi-icon-v2" style="background:#DCFCE7; color:#166534;"><i class="fa fa-circle-check"></i></div>
+            <div><div class="h4 fw-900 mb-0"><?= $contFases['selecao_admissao'] ?></div><div class="label-mini">Para Seleção</div></div>
         </div>
-        <div class="kpi-card-v2">
+        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=admitidos'" style="cursor:pointer;">
             <div class="kpi-icon-v2" style="background:#DBEAFE; color:#1E40AF;"><i class="fa fa-user-plus"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contagens['registado']??0 ?></div><div class="label-mini">Finalizados</div></div>
+            <div><div class="h4 fw-900 mb-0"><?= $contFases['admitidos'] ?></div><div class="label-mini">Admitidos</div></div>
         </div>
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#94A3B8;">Filtrar por Estado</div>
+        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#94A3B8;">Funil de Triagem</div>
         <div class="dropdown">
             <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="fa fa-file-csv me-1"></i> Exportar CSV
@@ -303,19 +331,26 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=projetos"><i class="fa fa-rocket me-2 text-warning"></i>Exportar Startups</a></li>
             </ul>
         </div>
-    </div>    <div class="filter-tabs-v2">
+    </div>
+
+    <div class="filter-tabs-v2">
         <?php
-        $estados = [''=> 'Todas','pendente'=>'Pendentes','em_analise'=>'Análise','selecionado'=>'Aprovados','rejeitado'=>'Recusados','convite_enviado'=>'Convidados','registado'=>'Incubados'];
-        foreach ($estados as $k=>$v):
-            $count = $k ? ($contagens[$k] ?? 0) : $totalCand;
+        $fases = [
+            'rastreio_pitch' => '1. Rastreio de Pitch 🔬',
+            'selecao_admissao' => '2. Fila de Seleção 🗳️',
+            'admitidos' => '3. Admitidos (Convites) ✉️',
+            'rejeitados' => 'Recusados ✗'
+        ];
+        foreach ($fases as $k=>$v):
+            $count = $contFases[$k] ?? 0;
         ?>
-        <a href="?processo=<?= $id_processo_sel ?>&estado=<?= $k ?>" class="filter-tab-v2 <?= $filtro_estado===$k?'active':'' ?>">
+        <a href="?processo=<?= $id_processo_sel ?>&fase=<?= $k ?>" class="filter-tab-v2 <?= $filtro_fase===$k?'active':'' ?>">
             <?= $v ?> <span class="tab-count"><?= $count ?></span>
         </a>
         <?php endforeach; ?>
     </div>
 
-    <?php if ($filtro_estado === 'selecionado' && !empty($candidaturas)): ?>
+    <?php if ($filtro_fase === 'admitidos' && !empty($candidaturas)): ?>
     <div class="card border-0 shadow-sm mb-4 rounded-4" style="background: linear-gradient(to right, #FFFBEB, #fff); border-left: 5px solid var(--primary) !important; border-radius: 16px;">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -360,19 +395,21 @@ require_once __DIR__ . '/../partials/_layout.php';
                     'registado' => ['bg'=>'#F5F3FF', 'color'=>'#5B21B6']
                 ][$st] ?? ['bg'=>'#eee', 'color'=>'#333'];
             ?>
-            <div class="cand-item-v2">
-                <div class="d-flex align-items-center gap-3">
+            <div class="cand-item-v2" style="border-left: 4px solid <?= $filtro_fase==='rastreio_pitch'?'#F59E0B':($filtro_fase==='selecao_admissao'?'#10B981':'#3B82F6') ?>">
+                <div class="d-flex align-items-center gap-3" style="flex: 2; min-width: 250px;">
                     <div class="cand-avatar-v2" style="background:<?= $color ?>"><?= strtoupper($iniciais) ?></div>
                     <div class="cand-info-v2">
                         <span class="name"><?= htmlspecialchars($c['nome']) ?></span>
                         <span class="idea"><i class="fa fa-lightbulb text-warning me-1"></i> <?= htmlspecialchars(mb_substr($c['titulo_ideia'],0,50)) ?>...</span>
                     </div>
                 </div>
-                <div>
+                
+                <div style="flex: 1; min-width: 140px;">
                     <div class="label-mini">Contacto</div>
-                    <div class="val-mini text-truncate" style="max-width: 150px;"><?= htmlspecialchars($c['email']) ?></div>
+                    <div class="val-mini text-truncate" style="max-width: 130px;" title="<?= htmlspecialchars($c['email']) ?>"><?= htmlspecialchars($c['email']) ?></div>
                 </div>
-                <div>
+
+                <div style="flex: 1; min-width: 120px;">
                     <div class="label-mini">Tipo / Inst.</div>
                     <div class="val-mini">
                         <?php if ($c['tipo_candidato'] === 'pre_licenciado'): ?>
@@ -382,48 +419,78 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?php endif; ?>
                     </div>
                 </div>
-                <div>
-                    <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
-                        <?= ucfirst(str_replace('_',' ',$st)) ?>
-                    </span>
+
+                <!-- Painel Central de Informações de acordo com a Fase -->
+                <div style="flex: 1.5; min-width: 180px;">
+                    <?php if ($filtro_fase === 'rastreio_pitch'): ?>
+                        <div class="label-mini">Primeiro Rastreio</div>
+                        <span class="badge bg-warning-subtle text-warning-dark fw-bold px-2 py-1 rounded" style="font-size:0.7rem;"><i class="fa fa-clock me-1"></i>Aguardando Notas</span>
+                    <?php elseif ($filtro_fase === 'selecao_admissao'): ?>
+                        <div class="label-mini">Notas do Pitch (Média: <strong><?= number_format($c['pitch_nota_final'], 1) ?>/10</strong>)</div>
+                        <div class="val-mini" style="font-size:0.7rem; color:var(--text-secondary)">
+                            Ino: <?= $c['pitch_inovacao'] ?> · Aut: <?= $c['pitch_sustentabilidade'] ?> · Emp: <?= $c['pitch_empreendedorismo'] ?>
+                        </div>
+                    <?php elseif ($filtro_fase === 'admitidos'): ?>
+                        <div class="label-mini">Estado Admissão</div>
+                        <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
+                            <?= $st === 'registado' ? 'Conta Aberta' : ($st === 'convite_enviado' ? 'Convite Enviado' : 'Aprovado') ?>
+                        </span>
+                    <?php else: ?>
+                        <div class="label-mini">Estado</div>
+                        <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
+                            <?= ucfirst(str_replace('_',' ',$st)) ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+
+                <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 120px; justify-content: flex-end;">
                     <button class="btn-action-v2" title="Dossier" onclick='abrirModal(<?= json_encode($c) ?>)'><i class="fa fa-id-card"></i></button>
                     
-                    <?php if (in_array($st, ['pendente','em_analise'])): ?>
+                    <?php if ($filtro_fase === 'rastreio_pitch'): ?>
+                        <!-- Qualquer admin/superadmin/mentor pode avaliar pitch -->
+                        <button class="btn-action-v2 btn-warning" title="Avaliar Pitch" onclick='abrirModalAvaliar(<?= json_encode($c) ?>)'><i class="fa fa-star"></i></button>
+                    <?php endif; ?>
+
+                    <?php if ($filtro_fase === 'selecao_admissao'): ?>
                         <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
                             <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
-                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar"><i class="fa fa-check"></i></button>
+                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar Admissão"><i class="fa fa-check"></i></button>
                         </form>
-                        <?php else: ?>
-                            <?php if ($st === 'em_analise'): ?>
-                            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-2" style="font-size:0.65rem;" title="Apenas Super Admin (DG/PR) pode aprovar"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
-                            <?php endif; ?>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <?php if ($st === 'selecionado'): ?>
-                    <button class="btn-action-v2" style="color:#25D366; border-color:#25D366; background:#F0FDF4" title="WhatsApp" onclick='gerarConvite(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
-                    <?php endif; ?>
-
-                    <?php if (!in_array($st, ['rejeitado','registado'])): ?>
-                        <?php if (in_array($st, ['pendente', 'em_analise'])): ?>
-                            <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
-                            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                                <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                                <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar" onclick="return confirm('Rejeitar?')"><i class="fa fa-ban"></i></button>
-                            </form>
-                            <?php endif; ?>
-                        <?php else: ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
                             <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
-                            <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar" onclick="return confirm('Rejeitar?')"><i class="fa fa-ban"></i></button>
+                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                            <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar Candidatura" onclick="return confirm('Tem a certeza que deseja rejeitar esta candidatura?')"><i class="fa fa-ban"></i></button>
+                        </form>
+                        <?php else: ?>
+                            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-2" style="font-size:0.65rem;" title="Apenas Super Admin (DG/PR) pode aprovar a admissão"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
+                        <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php if ($filtro_fase === 'admitidos'): ?>
+                        <?php if ($st === 'selecionado'): ?>
+                            <button class="btn-action-v2" style="color:#25D366; border-color:#25D366; background:#F0FDF4" title="Enviar Convite WhatsApp" onclick='gerarConvite(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
+                        <?php endif; ?>
+
+                        <?php if ($st !== 'registado' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
+                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                            <button type="submit" class="btn-action-v2 btn-danger" title="Cancelar Admissão / Rejeitar" onclick="return confirm('Cancelar admissão e rejeitar?')"><i class="fa fa-ban"></i></button>
                         </form>
                         <?php endif; ?>
+                    <?php endif; ?>
+
+                    <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                    <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;" onsubmit="return confirm('Tem a certeza que deseja eliminar DEFINITIVAMENTE esta candidatura? Esta acção não pode ser desfeita.')">
+                        <input type="hidden" name="action" value="remover_candidatura">
+                        <input type="hidden" name="id_cand" value="<?= $c['id'] ?>">
+                        <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                        <button type="submit" class="btn-action-v2 text-danger" style="border-color:#FEE2E2; background:#FEF2F2;" title="Eliminar Candidatura">
+                            <i class="fa fa-trash-can"></i>
+                        </button>
+                    </form>
                     <?php endif; ?>
                 </div>
             </div>
@@ -431,8 +498,57 @@ require_once __DIR__ . '/../partials/_layout.php';
         <?php endif; ?>
     </div>
 </div>
-
 <!-- MODAIS -->
+<!-- MODAL AVALIAÇÃO DE PITCH -->
+<div class="modal-overlay" id="modalAvaliarPitch">
+    <div class="modal-box-v2" style="max-width: 500px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #f5f3ff 0%, var(--primary) 100%);">
+            <h6 class="mb-0 fw-bold"><i class="fa fa-star me-2"></i> Avaliar Pitch da Startup</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalAvaliarPitch')"></button>
+        </div>
+        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+            <input type="hidden" name="action" value="avaliar_pitch_candidatura">
+            <input type="hidden" name="id_cand" id="avaliarIdCand">
+            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+            
+            <div class="modal-body-v2">
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini">Candidato</div>
+                    <div class="fw-bold" id="avaliarNome" style="font-size: 1rem;"></div>
+                    <div class="text-muted small" id="avaliarIdeia" style="font-style: italic; margin-top:4px;"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold">Inovação (0 a 10)</label>
+                    <input type="number" name="pitch_inovacao" class="form-control-custom" min="0" max="10" required placeholder="Ex: 8">
+                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Grau de novidade e diferenciação no mercado.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold">Autossustentabilidade (0 a 10)</label>
+                    <input type="number" name="pitch_sustentabilidade" class="form-control-custom" min="0" max="10" required placeholder="Ex: 7">
+                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Viabilidade financeira e modelo de negócio sustentável.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold">Empreendedorismo (0 a 10)</label>
+                    <input type="number" name="pitch_empreendedorismo" class="form-control-custom" min="0" max="10" required placeholder="Ex: 9">
+                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Capacidade de execução da equipa e ambição.</small>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label-custom fw-bold">Observações / Parecer Técnico</label>
+                    <textarea name="pitch_observacoes" class="form-control-custom" rows="3" placeholder="Insira o seu parecer sobre o pitch..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer-v2">
+                <button type="button" class="btn btn-light border fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3" style="background:var(--primary); border:none; color:white;"><i class="fa fa-save me-1"></i> Gravar Avaliação</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalDetalhe">
     <div class="modal-box-v2">
         <div class="modal-header-v2">
@@ -590,7 +706,7 @@ function abrirModal(c) {
             footer = `
                 <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
                     <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="${c.id}"><input type="hidden" name="estado" value="selecionado">
-                    <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&estado=<?= $filtro_estado ?>">
+                    <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
                     <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar</button>
                 </form>
             `;
@@ -603,6 +719,13 @@ function abrirModal(c) {
 }
 
 function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function abrirModalAvaliar(c) {
+    document.getElementById('avaliarIdCand').value = c.id;
+    document.getElementById('avaliarNome').textContent = c.nome;
+    document.getElementById('avaliarIdeia').textContent = `Ideia: ${c.titulo_ideia}`;
+    document.getElementById('modalAvaliarPitch').classList.add('open');
+}
 
 function gerarConvite(c) {
     document.getElementById('conviteIdCand').value = c.id;

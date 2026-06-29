@@ -17,6 +17,21 @@ class GeradorPDF {
         $hash = $termo['assinatura_hash'] ?? '';
         $assinado_em = $termo['assinado_em'] ?? '';
         
+        // Obter tipo de contrato e duração
+        $tipoContrato = $termo['tipo_contrato'] ?? $dados['tipo_contrato'] ?? 'incubacao';
+        
+        if ($tipoContrato === 'pre_incubacao') {
+            $tituloDocumento = "CONTRATO DE ADESÃO AO PROGRAMA DE PRÉ-INCUBAÇÃO";
+            $clausulaDuracao = "O presente contrato tem a duração de 3 (três) meses, contados a partir da data de assinatura, podendo ser prorrogado por igual período, mediante avaliação favorável do desempenho da equipa e validação do progresso pelo Orientador designado.";
+            $clausulaApoio = "O Incubado terá direito a: (a) Apoio técnico e mentoria para validação da ideia de negócio; (b) Acesso aos recursos físicos e laboratórios da incubadora mediante agendamento; (c) Apoio na facilitação de contactos e preparação para o pitch de investimento.";
+            $faseLabel = "Pré-Incubação (Validação)";
+        } else {
+            $tituloDocumento = "CONTRATO DE INCUBAÇÃO DE EMPRESA";
+            $clausulaDuracao = "O ciclo de incubação terá a duração de 12 (doze) meses, contados a partir da data de assinatura, podendo ser prorrogado por até mais 6 (seis) meses, mediante avaliação favorável da INCUBADORA e cumprimento das metas de tração e mercado.";
+            $clausulaApoio = "O Incubado terá direito a: (a) Espaço físico ou virtual de incubação e mentoria avançada; (b) Acesso aos recursos de rede, networking e eventos exclusivos da incubadora; (c) Apoio direto na facilitação de parcerias estratégicas e atração de investimento.";
+            $faseLabel = "Incubação 🚀";
+        }
+        
         // Formatar notas
         $notasHTML = '';
         if (!empty($aval['notas'])) {
@@ -58,7 +73,7 @@ class GeradorPDF {
         <html>
         <head>
             <meta charset='utf-8'>
-            <title>Termo de Incubação - $codigo</title>
+            <title>$tituloDocumento - $codigo</title>
             <style>
                 body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.5; padding: 10px; font-size: 13px; }
                 .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; }
@@ -83,14 +98,14 @@ class GeradorPDF {
                 <p class='subtitle'>Incubadora Académica do Instituto Superior Politécnico Sol Nascente</p>
             </div>
             
-            <h2 class='title'>TERMO DE COMPROMISSO E INGRESSO EM INCUBAÇÃO</h2>
+            <h2 class='title'>$tituloDocumento</h2>
             <div class='codigo'>Ref: $codigo</div>
             
             <div class='section-title'>1. IDENTIFICAÇÃO DO PROJECTO</div>
             <table>
                 <tr>
                     <td class='w-30 bold'>Título da Startup/Projecto:</td>
-                    <td>" . htmlspecialchars($proj['titulo']) . "</td>
+                    <td>\"" . htmlspecialchars($proj['titulo']) . "\"</td>
                 </tr>
                 <tr>
                     <td class='bold'>Área Temática:</td>
@@ -105,8 +120,8 @@ class GeradorPDF {
                     <td>" . htmlspecialchars($mentor) . "</td>
                 </tr>
                 <tr>
-                    <td class='bold'>Fase Inicial:</td>
-                    <td>Ideação 🚀</td>
+                    <td class='bold'>Programa / Fase Inicial:</td>
+                    <td>$faseLabel</td>
                 </tr>
             </table>
 
@@ -119,19 +134,22 @@ class GeradorPDF {
                 $notasHTML
             </table>
 
-            <div class='section-title'>3. CLAUSULADO DE COMPROMISSO</div>
+            <div class='section-title'>3. CLAUSULADO DE COMPROMISSO E CONDIÇÕES</div>
             <div class='clauses'>
                 <div class='clause-title'>Cláusula Primeira: Objecto</div>
-                <p style='margin: 3px 0;'>O presente termo estabelece os direitos e obrigações do Incubado durante a sua permanência na Incubadora Académica ISPSN, com vista ao desenvolvimento e validação do projecto acima identificado.</p>
+                <p style='margin: 3px 0;'>O presente contrato estabelece as condições de apoio, acompanhamento e responsabilidades mútuas entre a INCUBADORA e os proponentes do projecto acima identificado, durante a sua permanência no programa.</p>
                 
-                <div class='clause-title'>Cláusula Segunda: Deveres do Incubado</div>
-                <p style='margin: 3px 0;'>O Incubado compromete-se a: (a) Cumprir activamente as metas definidas pelo sistema e orientações do mentor; (b) Submeter evidências reais e atempadas de cada meta activada; (c) Participar nas sessões de mentoria agendadas; (d) Fazer uso responsável dos espaços e equipamentos disponibilizados pela incubadora.</p>
+                <div class='clause-title'>Cláusula Segunda: Duração</div>
+                <p style='margin: 3px 0;'>$clausulaDuracao</p>
 
-                <div class='clause-title'>Cláusula Terceira: Direitos do Incubado</div>
-                <p style='margin: 3px 0;'>O Incubado terá direito a: (a) Apoio técnico e mentoria especializada; (b) Acesso aos recursos físicos da incubadora mediante agendamento; (c) Apoio na facilitação de contactos para financiamento externa e parcerias; (d) Participação em eventos de networking e capacitação organizados pelo ISPSN.</p>
+                <div class='clause-title'>Cláusula Terceira: Apoio e Recursos Disponibilizados</div>
+                <p style='margin: 3px 0;'>$clausulaApoio</p>
                 
-                <div class='clause-title'>Cláusula Quarta: Confidencialidade</div>
-                <p style='margin: 3px 0;'>Todas as partes obrigam-se a manter total confidencialidade sobre quaisquer informações de carácter comercial, industrial ou tecnológico trocadas no decurso da incubação.</p>
+                <div class='clause-title'>Cláusula Quarta: Obrigações do Incubado</div>
+                <p style='margin: 3px 0;'>O Incubado compromete-se a: (a) Cumprir activamente o pipeline de metas da sua fase operacional; (b) Submeter evidências claras e reais do progresso das metas; (c) Participar de forma assídua nas sessões de mentoria; (d) Fazer bom uso dos recursos físicos cedidos pela incubadora.</p>
+                
+                <div class='clause-title'>Cláusula Quinta: Confidencialidade</div>
+                <p style='margin: 3px 0;'>Ambas as partes obrigam-se a guardar sigilo profissional sobre todas as informações, dados e metodologias técnicas ou comerciais de que tenham conhecimento no âmbito deste contrato.</p>
             </div>
             
             $assinaturaStatus

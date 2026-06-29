@@ -1,7 +1,7 @@
 <?php
 // app/controllers/candidatura_action.php
 require_once __DIR__ . '/../../config/auth.php';
-obrigarPerfil(['admin', 'superadmin']);
+obrigarPerfil(['admin', 'superadmin', 'mentor']);
 
 // ── Verificação CSRF (excepto AJAX/JSON) ──
 $isAjaxCand = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) ||
@@ -16,6 +16,15 @@ $idAdmin  = (int)$_SESSION['usuario_id'];
 
 if (!str_starts_with($redirect, '/incubadora_ispsn/')) {
     $redirect = '/incubadora_ispsn/app/views/admin/candidaturas.php';
+}
+
+// ── Segurança de Perfil por Ação ──
+$perfilUsuario = $_SESSION['usuario_perfil'] ?? 'utilizador';
+$acoesAdmin = ['criar_processo', 'toggle_processo', 'triagem_automatica', 'gerar_convite_seguro', 'gerar_convite_ajax', 'mudar_estado_cand', 'remover_candidatura'];
+if (in_array($action, $acoesAdmin) && !in_array($perfilUsuario, ['admin', 'superadmin'])) {
+    $_SESSION['flash_erro'] = '⚠️ Permissão negada para esta ação.';
+    header("Location: $redirect");
+    exit;
 }
 
 /* ── CRIAR PROCESSO ─────────────────────── */
@@ -420,6 +429,79 @@ if ($action === 'gerar_convite_ajax') {
             'telefone' => $cand['telefone']
         ]
     ]);
+    exit;
+}
+
+/* ── AVALIAR PITCH DE CANDIDATURA ────────── */
+if ($action === 'avaliar_pitch_candidatura') {
+    $idCand                 = (int)($_POST['id_cand'] ?? 0);
+    $pitchInovacao          = min(10, max(0, (int)($_POST['pitch_inovacao'] ?? 0)));
+    $pitchSustentabilidade  = min(10, max(0, (int)($_POST['pitch_sustentabilidade'] ?? 0)));
+    $pitchEmpreendedorismo  = min(10, max(0, (int)($_POST['pitch_empreendedorismo'] ?? 0)));
+    $pitchObservacoes       = trim($_POST['pitch_observacoes'] ?? '');
+
+    if ($idCand > 0) {
+        $pitchNotaFinal = ($pitchInovacao + $pitchSustentabilidade + $pitchEmpreendedorismo) / 3;
+
+        $stmt = $mysqli->prepare("
+            UPDATE candidaturas SET 
+                pitch_inovacao = ?, 
+                pitch_sustentabilidade = ?, 
+                pitch_empreendedorismo = ?, 
+                pitch_nota_final = ?, 
+                pitch_observacoes = ?, 
+                pitch_avaliado_por = ?, 
+                pitch_avaliado_em = NOW(),
+                estado = 'em_analise'
+            WHERE id = ?
+        ");
+        $stmt->bind_param('ddddsii', 
+            $pitchInovacao, 
+            $pitchSustentabilidade, 
+            $pitchEmpreendedorismo, 
+            $pitchNotaFinal, 
+            $pitchObservacoes, 
+            $idAdmin, 
+            $idCand
+        );
+        if ($stmt->execute()) {
+            $_SESSION['flash_ok'] = 'Avaliação do Pitch registada com sucesso! A candidatura foi movida para a Fila de Seleção.';
+        } else {
+            $_SESSION['flash_erro'] = 'Erro ao registar a avaliação do pitch: ' . $mysqli->error;
+        }
+        $stmt->close();
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+/* ── REMOVER CANDIDATURA ─────────────────── */
+if ($action === 'remover_candidatura') {
+    obrigarPerfil(['superadmin']); // Apenas SuperAdmin pode eliminar candidaturas por segurança
+    $idCand = (int)($_POST['id_cand'] ?? 0);
+
+    if ($idCand > 0) {
+        // Verificar se existem convites associados a esta candidatura
+        $stmtChk = $mysqli->prepare("SELECT id FROM convites WHERE id_candidatura = ?");
+        $stmtChk->bind_param('i', $idCand);
+        $stmtChk->execute();
+        $hasConvite = $stmtChk->get_result()->num_rows > 0;
+        $stmtChk->close();
+
+        if ($hasConvite) {
+            $_SESSION['flash_erro'] = 'Não é possível remover esta candidatura pois já existe um convite de conta associado a ela.';
+        } else {
+            $stmt = $mysqli->prepare("DELETE FROM candidaturas WHERE id = ?");
+            $stmt->bind_param('i', $idCand);
+            if ($stmt->execute()) {
+                $_SESSION['flash_ok'] = 'Candidatura removida com sucesso!';
+            } else {
+                $_SESSION['flash_erro'] = 'Erro ao remover a candidatura: ' . $mysqli->error;
+            }
+            $stmt->close();
+        }
+    }
+    header("Location: $redirect");
     exit;
 }
 

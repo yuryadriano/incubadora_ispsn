@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
             $chk->close();
             $stmt = $mysqli->prepare("
                 INSERT INTO usuarios (nome, email, numero_estudante, telefone, senha_hash, perfil, tipo_utilizador, activo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
             ");
             $stmt->bind_param('sssssss', $nome, $email, $numero_estudante, $telefone, $hash, $perfil, $tipo);
 
@@ -131,6 +131,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
                     }
                 }
 
+                // Se for utilizador comum (empreendedor) e convite estiver ligado a uma candidatura, cria o projeto automaticamente
+                if ($perfil === 'utilizador' && !empty($convite['id_candidatura'])) {
+                    $idCand = (int)$convite['id_candidatura'];
+                    $stmtCand = $mysqli->prepare("SELECT * FROM candidaturas WHERE id = ?");
+                    $stmtCand->bind_param('i', $idCand);
+                    $stmtCand->execute();
+                    $candData = $stmtCand->get_result()->fetch_assoc();
+                    $stmtCand->close();
+
+                    if ($candData) {
+                        $projTitulo = $candData['titulo_ideia'];
+                        $projDesc   = $candData['descricao_ideia'];
+                        $projProb   = $candData['problema'];
+                        $projSol    = $candData['solucao'];
+                        $projArea   = $candData['area_tematica'];
+                        $projPitch  = $candData['pitch_path'];
+                        $projTipo   = 'incubado';
+                        $projEst    = 'aprovado'; // Inicia como aprovado, aguardando mentor e contrato
+
+                        $stmtProj = $mysqli->prepare("
+                            INSERT INTO projetos (titulo, tipo, descricao, problema, solucao, area_tematica, estado, id_responsavel, criado_por, pitch_path)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmtProj->bind_param('ssssssiiis', 
+                            $projTitulo, 
+                            $projTipo, 
+                            $projDesc, 
+                            $projProb, 
+                            $projSol, 
+                            $projArea, 
+                            $projEst, 
+                            $novoId, 
+                            $novoId, 
+                            $projPitch
+                        );
+                        if ($stmtProj->execute()) {
+                            $idNovoProj = $mysqli->insert_id;
+                            
+                            // Adicionar o utilizador como membro 'Líder' do projeto
+                            $stmtMemb = $mysqli->prepare("INSERT IGNORE INTO membros_projeto (id_projeto, id_usuario, papel) VALUES (?, ?, 'Líder')");
+                            $stmtMemb->bind_param('ii', $idNovoProj, $novoId);
+                            $stmtMemb->execute();
+                            $stmtMemb->close();
+
+                            // Criar registo correspondente na tabela de avaliações usando as notas do pitch
+                            $pitchIno   = (int)($candData['pitch_inovacao'] ?? 0);
+                            $pitchSust  = (int)($candData['pitch_sustentabilidade'] ?? 0);
+                            $pitchEmp   = (int)($candData['pitch_empreendedorismo'] ?? 0);
+                            $pitchAvg   = (float)($candData['pitch_nota_final'] ?? 0.0);
+                            $pitchObs   = $candData['pitch_observacoes'] ?? 'Importado automaticamente da avaliação de pitch.';
+                            $avaliador  = (int)($candData['pitch_avaliado_por'] ?? $novoId);
+
+                            $stmtAval = $mysqli->prepare("
+                                INSERT INTO avaliacoes
+                                    (id_projeto, id_avaliador, nota_inovacao, nota_viabilidade, nota_impacto,
+                                     nota_equipa, nota_sustentabilidade, nota_escalabilidade, nota_mercado, nota_proposta,
+                                     pontuacao_total, observacoes, decisao)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'aprovado')
+                            ");
+                            $stmtAval->bind_param('iiiiiiiiiids',
+                                $idNovoProj, $avaliador, $pitchIno, $pitchSust, $pitchEmp,
+                                $pitchEmp, $pitchSust, $pitchIno, $pitchIno, $pitchIno,
+                                $pitchAvg, $pitchObs
+                            );
+                            $stmtAval->execute();
+                            $stmtAval->close();
+                        }
+                        $stmtProj->close();
+                    }
+                }
+
                 // Marcar convite como aceite + destruir token
                 $stmt2 = $mysqli->prepare("UPDATE convites SET aceite=1 WHERE token=?");
                 $stmt2->bind_param('s', $token);
@@ -149,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
                 $admins = $mysqli->query("SELECT id FROM usuarios WHERE perfil IN ('admin','superadmin') AND activo=1");
                 if ($admins) {
                     $sn = $mysqli->prepare("INSERT INTO notificacoes (id_usuario,titulo,mensagem,tipo) VALUES (?,?,?,'sucesso')");
-                    $tit = "Novo Registo: $nome";
-                    $msg = "$nome ($email) criou conta via convite e aguarda ativação.";
+                    $tit = "Nova Conta Ativada: $nome";
+                    $msg = "$nome ($email) registou-se via convite. A conta está ativa e o projeto foi criado automaticamente.";
                     while ($a = $admins->fetch_assoc()) { 
                         $sn->bind_param('iss',$a['id'],$tit,$msg); 
                         $sn->execute(); 

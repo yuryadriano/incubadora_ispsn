@@ -193,6 +193,20 @@ if ($resMent) {
     }
 }
 
+// ── Buscar termo de incubação gerado para o projeto ─
+$termoGerado = null;
+$stmtTermo = $mysqli->prepare("
+    SELECT * FROM termos_incubacao 
+    WHERE id_projeto = ? AND estado IN ('gerado', 'pendente_assinatura', 'assinado')
+    ORDER BY criado_em DESC LIMIT 1
+");
+if ($stmtTermo) {
+    $stmtTermo->bind_param('i', $idProjeto);
+    $stmtTermo->execute();
+    $termoGerado = $stmtTermo->get_result()->fetch_assoc();
+    $stmtTermo->close();
+}
+
 $isDono = ($idUsuario === (int)$projeto['criado_por']);
 $podeGerirMembros = $isDono || in_array($perfil, ['admin','superadmin']);
 
@@ -686,7 +700,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <small class="text-muted" style="font-size:0.72rem"><?= htmlspecialchars($mentorAssoc['email']) ?></small>
                         </div>
                     </div>
-                    <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
+                    <?php if ($perfil === 'superadmin'): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
                             <input type="hidden" name="action" value="mudar_estado_mentoria">
                             <input type="hidden" name="id_mentoria" value="<?= $mentorAssoc['id_mentoria'] ?>">
@@ -699,7 +713,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <?php endif; ?>
                 <?php else: ?>
                     <p class="text-muted small mb-3">Nenhum mentor associado a esta startup no momento.</p>
-                    <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
+                    <?php if ($perfil === 'superadmin'): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
                             <input type="hidden" name="action" value="criar_mentoria">
                             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
@@ -718,6 +732,104 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 <i class="fa fa-user-plus"></i> Associar Orientador
                             </button>
                         </form>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Contrato / Termo de Adesão -->
+        <?php if ($perfil !== 'utilizador'): ?>
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <div class="card-title-custom"><i class="fa fa-file-contract"></i> Contrato de Adesão</div>
+            </div>
+            <div class="card-body-custom">
+                <?php if ($termoGerado): 
+                    $lblTipo = $termoGerado['tipo_contrato'] === 'pre_incubacao' ? 'Pré-Incubação (3 meses)' : 'Incubação de Empresa (12 meses)';
+                    $estT = $termoGerado['estado'];
+                    $colorEst = $estT === 'assinado' ? 'var(--success)' : 'var(--warning)';
+                ?>
+                    <div class="p-3 rounded mb-3 border bg-light">
+                        <div class="small text-muted mb-1">Código do Termo:</div>
+                        <div class="fw-bold mb-2" style="font-size:0.88rem;"><?= htmlspecialchars($termoGerado['codigo_termo']) ?></div>
+                        
+                        <div class="small text-muted mb-1">Tipo de Contrato:</div>
+                        <div class="fw-bold mb-2" style="font-size:0.82rem;"><?= $lblTipo ?></div>
+
+                        <div class="small text-muted mb-1">Estado do Contrato:</div>
+                        <span class="badge" style="background:<?= $colorEst ?>; color:white; font-size:0.7rem; padding: 4px 8px; border-radius:6px; font-weight:700;">
+                            <?= $estT === 'assinado' ? 'Assinado ✓' : ($estT === 'pendente_assinatura' ? 'Pendente Assinatura ✍' : 'Gerado') ?>
+                        </span>
+                    </div>
+
+                    <div class="d-flex flex-column gap-2">
+                        <?php if ($termoGerado['path_pdf']): ?>
+                            <a href="/incubadora_ispsn/<?= htmlspecialchars($termoGerado['path_pdf']) ?>" target="_blank" class="btn btn-sm btn-outline-warning w-100 fw-bold py-2 rounded-3 text-center" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary); text-decoration:none; display:block;">
+                                <i class="fa fa-file-pdf me-2"></i> Ver PDF do Contrato
+                            </a>
+                        <?php else: ?>
+                            <a href="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?= $termoGerado['id'] ?>" class="btn btn-sm btn-outline-warning w-100 fw-bold py-2 rounded-3 text-center" style="font-size:0.78rem; border-color:var(--primary); color:var(--primary); text-decoration:none; display:block;">
+                                <i class="fa fa-eye me-2"></i> Pré-visualizar Termo
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($estT === 'pendente_assinatura' && $perfil === 'superadmin'): ?>
+                            <a href="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?= $termoGerado['id'] ?>" class="btn btn-warning w-100 fw-bold py-2 rounded-3 text-center" style="font-size:0.78rem; text-decoration:none; display:block;">
+                                <i class="fa fa-signature me-2"></i> Assinar Digitalmente
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($perfil === 'superadmin' && $estT === 'assinado'): ?>
+                            <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php" style="margin:0" onsubmit="return confirm('Tem a certeza que deseja revogar este contrato?')">
+                                <input type="hidden" name="action" value="revogar_termo">
+                                <input type="hidden" name="id_termo" value="<?= $termoGerado['id'] ?>">
+                                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                                <div class="mb-2 mt-2">
+                                    <input type="text" name="motivo_revogacao" class="form-control-custom" placeholder="Motivo da revogação..." required style="font-size:0.75rem; padding:6px 10px;">
+                                </div>
+                                <button type="submit" class="btn btn-danger btn-sm w-100 py-2 fw-bold rounded-3" style="font-size:0.78rem;">
+                                    <i class="fa fa-file-circle-xmark me-2"></i> Revogar Contrato
+                                </button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <?php if (in_array($projeto['estado'], ['aprovado', 'em_avaliacao', 'incubado'])): ?>
+                        <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
+                            <p class="text-muted small mb-3">Gere o contrato de adesão para formalizar o ingresso do projeto na incubadora.</p>
+                            <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php" style="margin:0">
+                                <input type="hidden" name="action" value="gerar_termo">
+                                <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
+                                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                                
+                                <div class="mb-2">
+                                    <label class="form-label-custom fw-bold" style="font-size:0.72rem;">Tipo de Contrato</label>
+                                    <select name="tipo_contrato" class="form-control-custom" style="font-size: 0.8rem; padding: 8px 12px;" required>
+                                        <option value="pre_incubacao">Pré-Incubação (3 meses - Anexo IV)</option>
+                                        <option value="incubacao">Incubação de Empresa (12 meses - Anexo V)</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label-custom fw-bold" style="font-size:0.72rem;">Orientador / Mentor</label>
+                                    <select name="id_mentor" class="form-control-custom" style="font-size: 0.8rem; padding: 8px 12px;" required>
+                                        <option value="">— Seleccionar Orientador —</option>
+                                        <?php foreach ($mentoresDisponiveis as $mD): ?>
+                                            <option value="<?= $mD['id'] ?>"><?= htmlspecialchars($mD['nome']) ?> (<?= htmlspecialchars($mD['especialidade']) ?>)</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn-primary-custom w-100" style="padding: 10px; font-size:0.8rem; justify-content:center;">
+                                    <i class="fa fa-file-invoice me-2"></i> Gerar Contrato
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <p class="text-muted small mb-0">Contrato ainda não gerado pela administração.</p>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <p class="text-muted small mb-0">O projeto deve estar aprovado para gerar o contrato de adesão.</p>
                     <?php endif; ?>
                 <?php endif; ?>
             </div>

@@ -14,6 +14,12 @@ if (!str_starts_with($redirect, '/incubadora_ispsn/')) {
 }
 
 if ($action === 'criar_mentoria') {
+    if ($_SESSION['usuario_perfil'] !== 'superadmin') {
+        $_SESSION['flash_erro'] = 'Apenas o Super Admin tem permissão para atribuir mentores.';
+        header("Location: $redirect");
+        exit;
+    }
+
     $idProjeto  = (int)($_POST['id_projeto'] ?? 0);
     $idMentor   = (int)($_POST['id_mentor']  ?? 0);
     $dataInicio = !empty($_POST['data_inicio']) ? $_POST['data_inicio'] : null;
@@ -53,6 +59,12 @@ if ($action === 'criar_mentoria') {
 }
 
 if ($action === 'mudar_estado_mentoria') {
+    if ($_SESSION['usuario_perfil'] !== 'superadmin') {
+        $_SESSION['flash_erro'] = 'Apenas o Super Admin tem permissão para alterar o estado de mentorias.';
+        header("Location: $redirect");
+        exit;
+    }
+
     $idMentoria = (int)($_POST['id_mentoria'] ?? 0);
     $estado     = $_POST['estado_m'] ?? '';
 

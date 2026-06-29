@@ -39,7 +39,7 @@ $idUsuario    = (int)($_SESSION['usuario_id'] ?? 0);
 $termosPendentes = [];
 if ($mysqli->query("SHOW TABLES LIKE 'termos_incubacao'")->num_rows) {
     $res = $mysqli->query("
-        SELECT t.id, t.codigo_termo, t.criado_em, t.estado,
+        SELECT t.id, t.codigo_termo, t.criado_em, t.estado, t.tipo_contrato,
                p.titulo as proj_titulo, u.nome as autor
         FROM termos_incubacao t
         JOIN projetos p ON p.id = t.id_projeto
@@ -326,7 +326,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="border-color:#F1F5F9!important;">
         <div>
             <div style="font-weight:700; font-size:0.88rem;"><?= htmlspecialchars($tp['proj_titulo']) ?></div>
-            <div style="font-size:0.72rem; color:#94A3B8;"><span style="font-weight:700; color:#D97706;"><?= $tp['codigo_termo'] ?></span> · <?= htmlspecialchars($tp['autor']) ?> · <?= date('d/m/Y', strtotime($tp['criado_em'])) ?></div>
+            <div style="font-size:0.72rem; color:#94A3B8;"><span style="font-weight:700; color:#D97706;"><?= $tp['codigo_termo'] ?></span> · <strong style="color:var(--primary);"><?= $tp['tipo_contrato'] === 'pre_incubacao' ? 'Pré-Incubação' : 'Incubação' ?></strong> · <?= htmlspecialchars($tp['autor']) ?> · <?= date('d/m/Y', strtotime($tp['criado_em'])) ?></div>
         </div>
         <div class="d-flex gap-2">
             <button class="btn btn-warning btn-sm fw-bold px-3" style="border-radius:8px;" onclick="assinarTermo(<?= $tp['id'] ?>, '<?= htmlspecialchars($tp['codigo_termo'], ENT_QUOTES) ?>')">

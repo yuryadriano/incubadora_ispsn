@@ -80,6 +80,10 @@ if ($action === 'gerar_termo' && in_array($perfil, ['admin','superadmin'])) {
         }
         
         // Snapshot dos dados para o PDF
+        $tipoContrato = $_POST['tipo_contrato'] ?? 'incubacao';
+        if ($tipoContrato !== 'pre_incubacao') $tipoContrato = 'incubacao';
+        $duracaoMeses = $tipoContrato === 'pre_incubacao' ? 3 : 12;
+
         $dadosJson = json_encode([
             'projeto' => [
                 'id' => $projeto['id'],
@@ -106,24 +110,27 @@ if ($action === 'gerar_termo' && in_array($perfil, ['admin','superadmin'])) {
                 ],
             ],
             'mentor' => $mentorNome,
+            'tipo_contrato' => $tipoContrato,
+            'duracao_meses' => $duracaoMeses,
             'gerado_por' => $_SESSION['usuario_nome'],
             'data_geracao' => date('Y-m-d H:i:s'),
         ], JSON_UNESCAPED_UNICODE);
         
         // Inserir termo
         $stmt = $mysqli->prepare("
-            INSERT INTO termos_incubacao (id_projeto, id_avaliacao, id_mentor, codigo_termo, dados_json, estado)
-            VALUES (?, ?, ?, ?, ?, 'pendente_assinatura')
+            INSERT INTO termos_incubacao (id_projeto, id_avaliacao, id_mentor, codigo_termo, dados_json, tipo_contrato, duracao_meses, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pendente_assinatura')
         ");
         $mentorVal = $idMentor > 0 ? $idMentor : null;
-        $stmt->bind_param('iiiss', $idProjeto, $avaliacao['id'], $mentorVal, $codigoTermo, $dadosJson);
+        $stmt->bind_param('iiissis', $idProjeto, $avaliacao['id'], $mentorVal, $codigoTermo, $dadosJson, $tipoContrato, $duracaoMeses);
         $stmt->execute();
         $termoId = $stmt->insert_id;
         $stmt->close();
         
         // Log de histórico
         $stmt = $mysqli->prepare("INSERT INTO historico_estados (id_projeto, estado_anterior, estado_novo, id_usuario, motivo) VALUES (?, 'aprovado', 'pendente_incubacao', ?, ?)");
-        $motivo = "Termo de incubação $codigoTermo gerado e enviado para assinatura do SuperAdmin.";
+        $lblContrato = $tipoContrato === 'pre_incubacao' ? 'Contrato de Pré-Incubação' : 'Contrato de Incubação de Empresa';
+        $motivo = "{$lblContrato} {$codigoTermo} gerado e enviado para assinatura do SuperAdmin.";
         $stmt->bind_param('iis', $idProjeto, $idUsuario, $motivo);
         $stmt->execute();
         $stmt->close();
@@ -133,11 +140,11 @@ if ($action === 'gerar_termo' && in_array($perfil, ['admin','superadmin'])) {
         if ($admins) {
             while ($a = $admins->fetch_assoc()) {
                 enviarNotificacao($a['id'], "📄 Termo de Incubação Pendente", 
-                    "O termo $codigoTermo para o projecto \"" . htmlspecialchars($projeto['titulo']) . "\" aguarda a sua assinatura digital.", 'info');
+                    "O contrato {$codigoTermo} para o projecto \"" . htmlspecialchars($projeto['titulo']) . "\" aguarda a sua assinatura digital.", 'info');
             }
         }
         
-        $_SESSION['flash_ok'] = "Termo de Incubação $codigoTermo gerado e enviado para assinatura do SuperAdmin!";
+        $_SESSION['flash_ok'] = "{$lblContrato} {$codigoTermo} gerado e enviado para assinatura do SuperAdmin!";
     }
     header("Location: $redirect");
     exit;

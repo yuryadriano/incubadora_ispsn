@@ -51,6 +51,16 @@ if ($checkTable && $checkTable->num_rows === 0) {
         $checkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_path'");
         if ($checkCol2 && $checkCol2->num_rows === 0) {
             $runUpdate = true;
+        } else {
+            $checkCol3 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_inovacao'");
+            if ($checkCol3 && $checkCol3->num_rows === 0) {
+                $runUpdate = true;
+            } else {
+                $checkCol4 = $mysqli->query("SHOW COLUMNS FROM `termos_incubacao` LIKE 'tipo_contrato'");
+                if ($checkCol4 && $checkCol4->num_rows === 0) {
+                    $runUpdate = true;
+                }
+            }
         }
     }
 }

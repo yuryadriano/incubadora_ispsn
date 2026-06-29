@@ -253,6 +253,20 @@ adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'tipo_candidato', "ENUM('es
 // Atualizar tipo_utilizador na tabela usuarios para aceitar pre_licenciado
 $mysqli->query("ALTER TABLE `usuarios` MODIFY COLUMN `tipo_utilizador` ENUM('estudante', 'docente', 'outro', 'pre_licenciado', 'mentor', 'funcionario') NOT NULL DEFAULT 'estudante'");
 
-echo "Schema updated v2.0!";
+// NOVAS COLUNAS PARA AVALIAÇÃO DE PITCH NAS CANDIDATURAS
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_inovacao', "TINYINT DEFAULT NULL COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_sustentabilidade', "TINYINT DEFAULT NULL COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_empreendedorismo', "TINYINT DEFAULT NULL COMMENT '0-10'");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_nota_final', "DECIMAL(4,2) DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_observacoes', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_avaliado_por', "INT UNSIGNED DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_avaliado_em', "DATETIME DEFAULT NULL");
+
+// NOVAS COLUNAS PARA CONTRATO NOS TERMOS DE INCUBAÇÃO
+adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'tipo_contrato', "ENUM('pre_incubacao', 'incubacao') NOT NULL DEFAULT 'incubacao'");
+adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'duracao_meses', "TINYINT NOT NULL DEFAULT 12");
+
+echo "Schema updated v2.1!";
+?>
 
 
