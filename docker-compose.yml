@@ -15,6 +15,8 @@ services:
       - DB_NAME=imcubadora_ispsn
     depends_on:
       - db
+    volumes:
+      - incubadora_uploads:/var/www/html/uploads
     networks:
       - incubadora_network
 
@@ -57,3 +59,4 @@ networks:
 
 volumes:
   incubadora_db_data:
+  incubadora_uploads:
