@@ -477,7 +477,7 @@ if ($action === 'avaliar_pitch_candidatura') {
 
 /* ── REMOVER CANDIDATURA ─────────────────── */
 if ($action === 'remover_candidatura') {
-    obrigarPerfil(['superadmin']); // Apenas SuperAdmin pode eliminar candidaturas por segurança
+    obrigarPerfil(['admin', 'superadmin']); // Permite Admin ou SuperAdmin eliminar candidaturas por facilidade de gestão
     $idCand = (int)($_POST['id_cand'] ?? 0);
 
     if ($idCand > 0) {

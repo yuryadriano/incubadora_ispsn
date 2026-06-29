@@ -482,7 +482,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                    <?php if (in_array($_SESSION['usuario_perfil'], ['admin', 'superadmin'])): ?>
                     <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;" onsubmit="return confirm('Tem a certeza que deseja eliminar DEFINITIVAMENTE esta candidatura? Esta acção não pode ser desfeita.')">
                         <input type="hidden" name="action" value="remover_candidatura">
                         <input type="hidden" name="id_cand" value="<?= $c['id'] ?>">
