@@ -347,6 +347,91 @@ if ($action === 'desactivar_meta' && in_array($perfil, ['superadmin', 'admin']))
     exit;
 }
 
+if ($action === 'inicializar_e_activar_todas' && in_array($perfil, ['superadmin','admin'])) {
+    $idProjeto = (int)($_POST['id_projeto'] ?? 0);
+    $fase = $_POST['fase'] ?? 'ideacao';
+    
+    if ($idProjeto > 0 && in_array($fase, ['ideacao','validacao','mvp','tracao','mercado'])) {
+        // 1. Buscar metas padrão da fase
+        $stmt = $mysqli->prepare("SELECT id, prazo_dias FROM metas_padrao WHERE fase = ? AND activo = 1 ORDER BY numero");
+        $stmt->bind_param('s', $fase);
+        $stmt->execute();
+        $metas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        
+        // 2. Inserir (ignore) em metas_projeto
+        $stmtInsert = $mysqli->prepare("INSERT IGNORE INTO metas_projeto (id_projeto, id_meta_padrao, estado) VALUES (?, ?, 'inactiva')");
+        foreach ($metas as $m) {
+            $stmtInsert->bind_param('ii', $idProjeto, $m['id']);
+            $stmtInsert->execute();
+        }
+        $stmtInsert->close();
+        
+        // 3. Activar todas as metas desta fase para o projecto que estejam inactivas
+        $stmtSelect = $mysqli->prepare("
+            SELECT mp.id, mpd.prazo_dias, mpd.titulo as meta_titulo, p.criado_por, p.titulo as proj_titulo
+            FROM metas_projeto mp
+            JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+            JOIN projetos p ON p.id = mp.id_projeto
+            WHERE mp.id_projeto = ? AND mpd.fase = ? AND mp.estado = 'inactiva'
+        ");
+        $stmtSelect->bind_param('is', $idProjeto, $fase);
+        $stmtSelect->execute();
+        $metasInactivas = $stmtSelect->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtSelect->close();
+        
+        $stmtUpdate = $mysqli->prepare("UPDATE metas_projeto SET estado='activa', activada_por=?, activada_em=NOW(), data_limite=? WHERE id=?");
+        foreach ($metasInactivas as $mi) {
+            $dataLimite = date('Y-m-d', strtotime('+' . $mi['prazo_dias'] . ' days'));
+            $stmtUpdate->bind_param('isi', $idUsuario, $dataLimite, $mi['id']);
+            $stmtUpdate->execute();
+            
+            // Notificar o estudante
+            $tituloNotif = "🎯 Nova Meta Activada!";
+            $msgNotif = "A meta \"" . htmlspecialchars($mi['meta_titulo']) . "\" foi activada para o teu projecto \"" . htmlspecialchars($mi['proj_titulo']) . "\". Prazo: " . date('d/m/Y', strtotime($dataLimite)) . ".";
+            enviarNotificacao($mi['criado_por'], $tituloNotif, $msgNotif, 'info');
+        }
+        $stmtUpdate->close();
+        
+        $_SESSION['flash_ok'] = "Metas da fase " . strtoupper($fase) . " inicializadas e activadas com sucesso!";
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+if ($action === 'editar_meta_padrao' && $perfil === 'superadmin') {
+    $idMetaPadrao = (int)($_POST['id_meta_padrao'] ?? 0);
+    $fase = $_POST['fase'] ?? '';
+    $numero = (int)($_POST['numero'] ?? 1);
+    $titulo = trim($_POST['titulo'] ?? '');
+    $descricao = trim($_POST['descricao'] ?? '');
+    $evidencia_tipo = $_POST['evidencia_tipo'] ?? 'ficheiro';
+    $evidencia_desc = trim($_POST['evidencia_desc'] ?? '');
+    $peso_percentual = (int)($_POST['peso_percentual'] ?? 20);
+    $prazo_dias = (int)($_POST['prazo_dias'] ?? 15);
+    
+    if ($idMetaPadrao > 0 && !empty($fase) && !empty($titulo) && !empty($descricao)) {
+        $stmt = $mysqli->prepare("
+            UPDATE metas_padrao SET 
+                fase = ?, numero = ?, titulo = ?, descricao = ?, 
+                evidencia_tipo = ?, evidencia_desc = ?, 
+                peso_percentual = ?, prazo_dias = ?
+            WHERE id = ?
+        ");
+        $stmt->bind_param('sissssiii', $fase, $numero, $titulo, $descricao, $evidencia_tipo, $evidencia_desc, $peso_percentual, $prazo_dias, $idMetaPadrao);
+        if ($stmt->execute()) {
+            $_SESSION['flash_ok'] = "Meta padrão atualizada com sucesso!";
+        } else {
+            $_SESSION['flash_erro'] = "Erro ao atualizar meta padrão: " . $mysqli->error;
+        }
+        $stmt->close();
+    } else {
+        $_SESSION['flash_erro'] = "Preencha todos os campos obrigatórios.";
+    }
+    header("Location: $redirect");
+    exit;
+}
+
 /* ════════════════════════════════════════════════
    ACÇÃO: criar_meta_padrao
    SuperAdmin cria/define uma nova meta padrão no dicionário

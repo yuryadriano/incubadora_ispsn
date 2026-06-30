@@ -7,6 +7,25 @@ obrigarPerfil(['superadmin','admin']);
 $tituloPagina = 'Gestão de Metas';
 $paginaActiva = 'gestao_metas';
 
+// Auto-seed para a fase tracao se não houver nenhuma meta padrão para tracao
+$resCountTracao = $mysqli->query("SELECT COUNT(*) n FROM metas_padrao WHERE fase = 'tracao'");
+$countTracao = $resCountTracao ? (int)$resCountTracao->fetch_assoc()['n'] : 0;
+if ($countTracao === 0) {
+    $metasTracaoDefault = [
+        [1, 'Crescimento de Utilizadores', 'Alcançar um crescimento mensal consistente de utilizadores ativos ou downloads de pelo menos 15%.', 'ficheiro', 'Relatório ou gráfico de analytics comprovando o crescimento', 20.00, 15],
+        [2, 'Aquisição Escalonável (Growth)', 'Identificar e provar um canal de aquisição escalonável com cálculo do CAC (Custo de Aquisição de Cliente) e LTV.', 'ficheiro', 'Relatório de métricas de aquisição, CAC e LTV', 20.00, 15],
+        [3, 'Parcerias Comerciais', 'Assinar ou operacionalizar no mínimo duas parcerias estratégicas ou contratos comerciais.', 'ficheiro', 'Contratos ou acordos assinados digitalizados', 20.00, 20],
+        [4, 'Otimização do Funil (AARRR)', 'Mapear e documentar a jornada e taxas de conversão dos utilizadores (Aquisição, Ativação, Retenção, Receita, Recomendação).', 'ficheiro', 'Documento de análise do funil com plano de otimização', 20.00, 15],
+        [5, 'Pitch Deck para Investidores', 'Desenvolver e validar com mentores um Pitch Deck refinado para apresentação a fundos de Venture Capital ou Business Angels.', 'ficheiro', 'Apresentação em PDF do Pitch Deck atualizado', 20.00, 15]
+    ];
+    $stmtSeed = $mysqli->prepare("INSERT INTO metas_padrao (fase, numero, titulo, descricao, evidencia_tipo, evidencia_desc, peso_percentual, prazo_dias, activo) VALUES ('tracao', ?, ?, ?, ?, ?, ?, ?, 1)");
+    foreach ($metasTracaoDefault as $mt) {
+        $stmtSeed->bind_param('issssdi', $mt[0], $mt[1], $mt[2], $mt[3], $mt[4], $mt[5], $mt[6]);
+        $stmtSeed->execute();
+    }
+    $stmtSeed->close();
+}
+
 // Flash messages
 $flashOk   = $_SESSION['flash_ok'] ?? ''; unset($_SESSION['flash_ok']);
 $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
@@ -178,6 +197,61 @@ require_once __DIR__ . '/../partials/_layout.php';
 </div>
 
 <?php if ($modo === 'dicionario' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+
+<!-- ALERT INFORMATIVO -->
+<div class="alert alert-info border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3" style="background:#EFF6FF; border-left: 4px solid #3B82F6 !important;">
+    <div class="d-flex align-items-center text-start">
+        <div style="font-size:1.5rem; color:#3B82F6; margin-right:15px;"><i class="fa fa-info-circle"></i></div>
+        <div>
+            <strong style="color:#1E293B; font-size:0.88rem;">Dicionário Global do Sistema</strong>
+            <p class="text-muted mb-0 small" style="font-size:0.78rem;">Estas são as metas padrão (modelos) da incubadora. Para ativar metas para uma startup específica, aceda à aba <strong>Acompanhamento de Startups</strong>.</p>
+        </div>
+    </div>
+    <a href="?modo=projetos" class="btn btn-primary btn-sm fw-bold px-3 py-2 rounded-3" style="font-size:0.75rem; text-decoration:none;">
+        <i class="fa fa-rocket me-1"></i> Ir para Acompanhamento
+    </a>
+</div>
+
+<!-- PAINEL DE ATIVAÇÃO RÁPIDA -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius:16px; background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); color:#fff;">
+    <div class="card-body p-4 text-start">
+        <h6 class="fw-bold mb-2 text-warning"><i class="fa fa-bolt me-2"></i>Ativação Rápida de Metas por Startup</h6>
+        <p class="small text-white-50 mb-3" style="font-size:0.8rem;">Selecione uma startup e a fase para inicializar e ativar todas as metas correspondentes em simultâneo.</p>
+        
+        <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" class="row g-3 align-items-end m-0">
+            <input type="hidden" name="action" value="inicializar_e_activar_todas">
+            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+            
+            <div class="col-md-5">
+                <label class="form-label small fw-bold text-white-50" style="font-size:0.75rem;">Startup</label>
+                <select name="id_projeto" class="form-select border-0 rounded-3 text-slate-800" style="background:#fff; height:38px; font-size:0.83rem;" required>
+                    <option value="" disabled selected>Escolha a Startup...</option>
+                    <?php foreach ($projectosIncubados as $p): ?>
+                        <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['titulo']) ?> (Fase: <?= strtoupper($p['fase']) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-white-50" style="font-size:0.75rem;">Fase das Metas</label>
+                <select name="fase" class="form-select border-0 rounded-3 text-slate-800" style="background:#fff; height:38px; font-size:0.83rem;" required>
+                    <option value="ideacao">Ideação 💡</option>
+                    <option value="validacao">Validação 🔬</option>
+                    <option value="mvp">MVP 📦</option>
+                    <option value="tracao">Tracção 📈</option>
+                    <option value="mercado">Mercado 📊</option>
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3 text-dark border-0" style="background:#FBBF24; height:38px; font-size:0.83rem;">
+                    <i class="fa fa-play me-1"></i>Inicializar & Activar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card-custom mb-4">
     <div class="card-header-custom d-flex justify-content-between align-items-center">
         <div class="card-title-custom"><i class="fa fa-book text-warning"></i> Dicionário de Metas Padrão do Sistema</div>
@@ -240,14 +314,19 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 <td><strong><?= $mp['prazo_dias'] ?></strong> dias</td>
                                 <td><span class="badge bg-warning-subtle text-warning fw-bold"><?= $mp['peso_percentual'] ?>%</span></td>
                                 <td>
-                                    <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Deseja eliminar esta meta padrão? Ela deixará de aparecer em futuras inicializações.')" class="m-0">
-                                        <input type="hidden" name="action" value="eliminar_meta_padrao">
-                                        <input type="hidden" name="id_meta_padrao" value="<?= $mp['id'] ?>">
-                                        <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-3">
-                                            <i class="fa fa-trash me-1"></i> Eliminar
+                                    <div class="d-flex gap-2">
+                                        <button type="button" class="btn btn-warning btn-sm rounded-3 fw-bold text-dark px-2.5" onclick="abrirModalEditarMetaPadrao(<?= htmlspecialchars(json_encode($mp)) ?>)" style="font-size:0.75rem;">
+                                            <i class="fa fa-edit"></i>
                                         </button>
-                                    </form>
+                                        <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Deseja eliminar esta meta padrão? Ela deixará de aparecer em futuras inicializações.')" class="m-0">
+                                            <input type="hidden" name="action" value="eliminar_meta_padrao">
+                                            <input type="hidden" name="id_meta_padrao" value="<?= $mp['id'] ?>">
+                                            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-3 px-2.5" style="font-size:0.75rem;">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -696,6 +775,84 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
+<!-- Modal de Edição de Meta Padrão -->
+<div class="modal fade" id="modalEditarMetaPadrao" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <input type="hidden" name="action" value="editar_meta_padrao">
+                <input type="hidden" name="id_meta_padrao" id="editarMetaId">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">⚙️ Editar Meta Padrão</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                
+                <div class="modal-body text-start">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Fase</label>
+                            <select name="fase" id="editarFase" class="form-select form-control" required style="border-radius:10px;">
+                                <option value="ideacao">Ideação 💡</option>
+                                <option value="validacao">Validação 🔬</option>
+                                <option value="mvp">MVP 📦</option>
+                                <option value="tracao">Tracção 📈</option>
+                                <option value="mercado">Mercado 📊</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Número Sequencial</label>
+                            <input type="number" name="numero" id="editarNumero" class="form-control" required min="1" style="border-radius:10px;">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Título da Meta *</label>
+                        <input type="text" name="titulo" id="editarTitulo" class="form-control" required style="border-radius:10px;">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Descrição detalhada *</label>
+                        <textarea name="descricao" id="editarDescricao" class="form-control" rows="3" required style="border-radius:10px;"></textarea>
+                    </div>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Tipo de Evidência</label>
+                            <select name="evidencia_tipo" id="editarEvidenciaTipo" class="form-select form-control" required style="border-radius:10px;">
+                                <option value="ficheiro">Upload de Ficheiro PDF/Imagem</option>
+                                <option value="texto">Texto Descritivo</option>
+                                <option value="link">Link URL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Descrição do entregável *</label>
+                            <input type="text" name="evidencia_desc" id="editarEvidenciaDesc" class="form-control" required style="border-radius:10px;">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-0">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Prazo Padrão (Dias)</label>
+                            <input type="number" name="prazo_dias" id="editarPrazoDias" class="form-control" required min="1" style="border-radius:10px;">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-uppercase" style="font-size:0.7rem;">Peso Percentual (%)</label>
+                            <input type="number" name="peso_percentual" id="editarPesoPercentual" class="form-control" required min="1" max="100" style="border-radius:10px;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold rounded-3 px-4" style="background:#D97706; border:none; color:white;">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 function validarMeta(id, decisao) {
     document.getElementById('validarMetaId').value = id;
@@ -716,6 +873,20 @@ function abrirModalActivar(id, titulo, prazoDias) {
     document.getElementById('prazoManualInput').required = false;
     
     new bootstrap.Modal(document.getElementById('modalActivarMeta')).show();
+}
+
+function abrirModalEditarMetaPadrao(meta) {
+    document.getElementById('editarMetaId').value = meta.id;
+    document.getElementById('editarFase').value = meta.fase;
+    document.getElementById('editarNumero').value = meta.numero;
+    document.getElementById('editarTitulo').value = meta.titulo;
+    document.getElementById('editarDescricao').value = meta.descricao;
+    document.getElementById('editarEvidenciaTipo').value = meta.evidencia_tipo;
+    document.getElementById('editarEvidenciaDesc').value = meta.evidencia_desc;
+    document.getElementById('editarPrazoDias').value = meta.prazo_dias;
+    document.getElementById('editarPesoPercentual').value = Math.round(meta.peso_percentual);
+    
+    new bootstrap.Modal(document.getElementById('modalEditarMetaPadrao')).show();
 }
 
 function togglePersonalizadoInput() {
