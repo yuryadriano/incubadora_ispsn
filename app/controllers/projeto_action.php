@@ -85,8 +85,6 @@ if ($action === 'criar_projeto') {
                     }
                 }
             }
-        } else {
-            $_SESSION['flash_erro'] = 'O carregamento do Pitch da Ideia é obrigatório.';
         }
 
         if (empty($_SESSION['flash_erro'])) {

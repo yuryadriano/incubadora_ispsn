@@ -839,11 +839,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                         <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Descrição *</label>
                         <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva o projecto..."></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Pitch da Ideia (PDF, PPT, PPTX ou ZIP) *</label>
-                        <input type="file" name="pitch_ficheiro" class="form-control" accept=".pdf,.ppt,.pptx,.zip" required>
-                        <small class="text-muted" style="font-size: 0.75rem;">Carregue a apresentação ou documento do seu Pitch (Máx. 15MB).</small>
-                    </div>
+                    <!-- O Pitch foi removido do ato de inscrição (será solicitado na pré-incubação) -->
                     <div class="mb-3">
                         <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Problema que resolve</label>
                         <textarea name="problema" class="form-control" rows="2" placeholder="Qual o problema identificado?"></textarea>

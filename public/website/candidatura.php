@@ -80,8 +80,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                     }
                 }
             }
-        } else {
-            $erro = 'O carregamento do Pitch da Ideia é obrigatório.';
         }
 
         if (empty($erro)) {
@@ -350,11 +348,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                         <textarea name="descricao_ideia" id="desc" placeholder="Descreve a tua ideia de forma clara e objetiva..." required oninput="updateCount('desc','descCount',30)"></textarea>
                         <div class="char-count"><span id="descCount">0</span> caracteres</div>
                     </div>
-                    <div class="form-group">
-                        <label>Pitch da Ideia (PDF, PPT, PPTX ou ZIP) *</label>
-                        <input type="file" name="pitch_ficheiro" id="pitch_ficheiro" accept=".pdf,.ppt,.pptx,.zip" style="padding: 10px 14px;">
-                        <small class="text-white-50" style="font-size: 0.75rem; margin-top: 4px;">Carrega a apresentação ou documento do teu Pitch (Máx. 15MB).</small>
-                    </div>
+                    <!-- O Pitch foi removido do ato de inscrição por agora (será pedido na pré-incubação) -->
                     <div class="form-group">
                         <label>Que Problema Resolve?</label>
                         <textarea name="problema" placeholder="Qual é o problema que a tua solução endereça?"></textarea>
@@ -465,16 +459,6 @@ function validateStep(step) {
     if (step === 2) {
         const desc = document.querySelector('[name="descricao_ideia"]').value;
         if (desc.length < 30) { alert('A descrição deve ter pelo menos 30 caracteres.'); return false; }
-        const pitch = document.getElementById('pitch_ficheiro');
-        if (!pitch || !pitch.files || pitch.files.length === 0) {
-            alert('Por favor, carregue o ficheiro do Pitch da sua Ideia (PDF, PPT, PPTX ou ZIP).');
-            if (pitch) {
-                pitch.focus();
-                pitch.style.borderColor = '#EF4444';
-                setTimeout(() => pitch.style.borderColor = '', 2000);
-            }
-            return false;
-        }
     }
     return true;
 }
