@@ -96,6 +96,24 @@ if ($_SESSION['usuario_perfil'] === 'superadmin') {
     }
 }
 
+$metasPendentes = [];
+if ($modo === 'pendentes') {
+    $resPend = $mysqli->query("
+        SELECT mp.*, p.titulo as projeto_titulo, p.fase as projeto_fase, p.id as projeto_id,
+               mpd.titulo as meta_titulo, mpd.evidencia_desc, mpd.evidencia_tipo, mpd.fase as meta_fase,
+               u.nome as estudante_nome
+        FROM metas_projeto mp
+        JOIN projetos p ON p.id = mp.id_projeto
+        JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
+        JOIN usuarios u ON u.id = p.criado_por
+        WHERE mp.estado = 'em_avaliacao'
+        ORDER BY mp.evidencia_em ASC
+    ");
+    if ($resPend) {
+        $metasPendentes = $resPend->fetch_all(MYSQLI_ASSOC);
+    }
+}
+
 require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
@@ -141,6 +159,16 @@ require_once __DIR__ . '/../partials/_layout.php';
 <div class="d-flex gap-2 mb-4">
     <a href="?modo=projetos" class="btn btn-sm <?= $modo === 'projetos' ? 'btn-warning text-white' : 'btn-outline-secondary' ?> fw-bold px-3 py-2 rounded-3" style="font-size:0.8rem;">
         <i class="fa fa-rocket me-1"></i> Acompanhamento de Startups
+    </a>
+    <a href="?modo=pendentes" class="btn btn-sm <?= $modo === 'pendentes' ? 'btn-warning text-white' : 'btn-outline-secondary' ?> fw-bold px-3 py-2 rounded-3" style="font-size:0.8rem;">
+        <i class="fa fa-clipboard-check me-1"></i> Caixa de Entrada de Evidências
+        <?php
+        $resCountP = $mysqli->query("SELECT COUNT(*) n FROM metas_projeto WHERE estado = 'em_avaliacao'");
+        $countP = $resCountP ? (int)$resCountP->fetch_assoc()['n'] : 0;
+        if ($countP > 0) {
+            echo "<span class='badge bg-danger ms-1' style='font-size:0.65rem; padding: 2px 5px;'>$countP</span>";
+        }
+        ?>
     </a>
     <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
     <a href="?modo=dicionario" class="btn btn-sm <?= $modo === 'dicionario' ? 'btn-warning text-white' : 'btn-outline-secondary' ?> fw-bold px-3 py-2 rounded-3" style="font-size:0.8rem;">
@@ -231,6 +259,96 @@ require_once __DIR__ . '/../partials/_layout.php';
         <?php endif; ?>
     </div>
 </div>
+<?php elseif ($modo === 'pendentes'): ?>
+<div class="card-custom mb-4" style="background:#fff; border: 1px solid #E2E8F0; border-radius: 16px; overflow:hidden;">
+    <div class="card-header-custom p-4" style="border-bottom:1px solid #F1F5F9; background:#FFFBF2;">
+        <h5 class="fw-bold mb-0" style="color:#1C1917;"><i class="fa fa-clipboard-check text-warning me-2"></i>Evidências Pendentes de Avaliação</h5>
+    </div>
+    <div class="card-body-custom p-4">
+        <?php if (empty($metasPendentes)): ?>
+            <div class="text-center p-5">
+                <div style="font-size:3.5rem; color:#10B981; opacity:0.75; margin-bottom:15px;"><i class="fa fa-circle-check"></i></div>
+                <h5 class="fw-bold" style="color:#1E293B; margin-bottom:4px;">Tudo em dia!</h5>
+                <p class="text-muted small mb-0">Não existem evidências de metas pendentes de avaliação no momento.</p>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" style="width:100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background:#F8FAFC; border-bottom:2px solid #E2E8F0; font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#64748B;">
+                            <th style="padding:12px 16px; width:22%;">Startup / Empreendedor</th>
+                            <th style="padding:12px 16px; width:25%;">Meta / Fase</th>
+                            <th style="padding:12px 16px; width:30%;">Evidência Submetida</th>
+                            <th style="padding:12px 16px; width:13%;">Submetido em</th>
+                            <th style="padding:12px 16px; width:10%; text-align:right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($metasPendentes as $mp): 
+                            $faseLabels = [
+                                'ideacao' => 'Ideação 💡',
+                                'validacao' => 'Validação 🔬',
+                                'mvp' => 'MVP 📦',
+                                'tracao' => 'Tracção 📈',
+                                'mercado' => 'Mercado 📊'
+                            ];
+                            $faseLbl = $faseLabels[$mp['meta_fase']] ?? $mp['meta_fase'];
+                            $atrasado = (!empty($mp['data_limite']) && strtotime($mp['evidencia_em']) > strtotime($mp['data_limite']));
+                        ?>
+                        <tr style="border-bottom: 1px solid #F1F5F9; font-size:0.83rem;">
+                            <td style="padding:16px;">
+                                <div class="fw-bold text-slate-800" style="font-size:0.88rem;"><?= htmlspecialchars($mp['projeto_titulo']) ?></div>
+                                <div class="text-muted small"><i class="fa fa-user me-1"></i><?= htmlspecialchars($mp['estudante_nome']) ?></div>
+                            </td>
+                            <td style="padding:16px;">
+                                <div class="fw-bold text-slate-800"><?= htmlspecialchars($mp['meta_titulo']) ?></div>
+                                <span class="badge bg-secondary-subtle text-secondary rounded-pill small mt-1" style="font-size:0.68rem; font-weight:600; padding:2px 8px;"><?= $faseLbl ?></span>
+                            </td>
+                            <td style="padding:16px;">
+                                <?php if ($mp['evidencia_texto']): ?>
+                                    <div class="text-slate-700 small mb-2 p-2 rounded bg-light" style="line-height:1.4; border-left: 3px solid #CBD5E1; max-height:90px; overflow-y:auto; font-size:0.78rem;">
+                                        <?= nl2br(htmlspecialchars($mp['evidencia_texto'])) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="d-flex gap-2">
+                                    <?php if ($mp['evidencia_link']): ?>
+                                        <a href="<?= htmlspecialchars($mp['evidencia_link']) ?>" target="_blank" class="btn btn-xs btn-outline-warning fw-bold px-2 py-1 rounded-2" style="font-size:0.7rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
+                                            <i class="fa fa-link me-1"></i>Ver Link
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if ($mp['evidencia_path']): ?>
+                                        <a href="/incubadora_ispsn/<?= htmlspecialchars($mp['evidencia_path']) ?>" target="_blank" class="btn btn-xs btn-outline-dark fw-bold px-2 py-1 rounded-2" style="font-size:0.7rem; text-decoration:none;">
+                                            <i class="fa fa-download me-1"></i>Ficheiro
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td style="padding:16px;">
+                                <div class="small fw-semibold"><?= date('d/m/Y H:i', strtotime($mp['evidencia_em'])) ?></div>
+                                <?php if ($atrasado): ?>
+                                    <span class="badge bg-danger-subtle text-danger fw-bold mt-1" style="font-size:0.65rem; padding: 2px 6px; border-radius:4px;"><i class="fa fa-triangle-exclamation me-1"></i>Com atraso</span>
+                                <?php else: ?>
+                                    <span class="badge bg-success-subtle text-success fw-bold mt-1" style="font-size:0.65rem; padding: 2px 6px; border-radius:4px;"><i class="fa fa-check me-1"></i>No prazo</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding:16px; text-align:right;">
+                                <div class="d-flex flex-column gap-1" style="width:110px; margin-left:auto;">
+                                    <button class="btn btn-success btn-sm fw-bold py-1.5 px-2.5 rounded-3" style="font-size:0.72rem;" onclick="validarMeta(<?= $mp['id'] ?>, 'aprovar')">
+                                        <i class="fa fa-check me-1"></i>Validar
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm fw-bold py-1.5 px-2.5 rounded-3" style="font-size:0.72rem;" onclick="validarMeta(<?= $mp['id'] ?>, 'reprovar')">
+                                        <i class="fa fa-rotate-left me-1"></i>Devolver
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
 <?php else: ?>
 
 <?php if (empty($projectosIncubados)): ?>
@@ -277,6 +395,34 @@ require_once __DIR__ . '/../partials/_layout.php';
             <span class="meta-peso" style="background:#FEE2E2; color:#991B1B;"><i class="fa fa-rotate-left me-1"></i><?= $contEstados['reprovada'] ?> Devolvidas</span>
             <span class="meta-peso"><i class="fa fa-lock me-1"></i><?= $contEstados['inactiva'] + $contEstados['nao_inicializada'] ?> Bloqueadas</span>
         </div>
+        
+        <?php
+        $proximaFaseMap = [
+            'ideacao' => ['id' => 'validacao', 'nome' => 'Validação 🔬'],
+            'validacao' => ['id' => 'mvp', 'nome' => 'MVP 📦'],
+            'mvp' => ['id' => 'tracao', 'nome' => 'Tracção 📈'],
+            'tracao' => ['id' => 'mercado', 'nome' => 'Mercado 📊'],
+            'mercado' => null
+        ];
+        $proxInfo = $proximaFaseMap[$faseActual] ?? null;
+        if ($percentConcluido >= 100 && $proxInfo):
+        ?>
+        <div class="mt-4 p-3 rounded-4 border d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%); border-color: #10B981 !important;">
+            <div style="text-align: left;">
+                <h6 class="fw-bold mb-1" style="color:#14532d;"><i class="fa fa-rocket me-2 text-success"></i>Fase Concluída com Sucesso!</h6>
+                <p class="text-muted mb-0 small" style="font-size: 0.78rem;">Esta startup completou 100% das metas de <strong><?= strtoupper($faseActual) ?></strong>. Está apta a evoluir.</p>
+            </div>
+            <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" class="m-0">
+                <input type="hidden" name="action" value="mudar_fase">
+                <input type="hidden" name="id_projeto" value="<?= $idProjetoSel ?>">
+                <input type="hidden" name="fase" value="<?= $proxInfo['id'] ?>">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                <button type="submit" class="btn btn-success fw-bold px-4 py-2" style="border-radius:10px; font-size:0.83rem; box-shadow: 0 4px 12px rgba(16,185,129,0.2); border: none;">
+                    Avançar para <?= $proxInfo['nome'] ?>
+                </button>
+            </form>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

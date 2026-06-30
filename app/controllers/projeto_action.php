@@ -488,10 +488,11 @@ if ($action === 'upload_documento') {
     header("Location: $redirect");
     exit;
 }
-
 if ($action === 'mudar_fase') {
     $idProjeto = (int)$_POST['id_projeto'];
     $fase      = $_POST['fase'];
+    $redirectPost = $_POST['redirect'] ?? '';
+    
     if ($idProjeto > 0 && in_array($fase, ['ideacao','validacao','mvp','tracao','mercado'])) {
         $stmt = $mysqli->prepare("UPDATE projetos SET fase = ? WHERE id = ?");
         $stmt->bind_param('si', $fase, $idProjeto);
@@ -510,16 +511,33 @@ if ($action === 'mudar_fase') {
             $stD->bind_param('i', $idProjeto);
             $stD->execute();
             $proj = $stD->get_result()->fetch_assoc();
+            $stD->close();
             
             if ($proj) {
                 $tituloNotif = "🚀 Evolução: " . htmlspecialchars($proj['titulo']);
                 $msgNotif = "Parabéns! A tua startup avançou para a fase: " . strtoupper($fase) . ". Continua o excelente trabalho!";
                 enviarNotificacao($proj['criado_por'], $tituloNotif, $msgNotif, 'sucesso');
             }
+
+            // Inicializar automaticamente as metas da nova fase
+            $stmtMetas = $mysqli->prepare("SELECT id FROM metas_padrao WHERE fase = ? AND activo = 1 ORDER BY numero");
+            $stmtMetas->bind_param('s', $fase);
+            $stmtMetas->execute();
+            $metasNovas = $stmtMetas->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtMetas->close();
+            
+            $stmtInsert = $mysqli->prepare("INSERT IGNORE INTO metas_projeto (id_projeto, id_meta_padrao, estado) VALUES (?, ?, 'inactiva')");
+            foreach ($metasNovas as $mn) {
+                $stmtInsert->bind_param('ii', $idProjeto, $mn['id']);
+                $stmtInsert->execute();
+            }
+            $stmtInsert->close();
         }
         $stmt->close();
     }
-    header("Location: /incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=$idProjeto");
+    
+    $finalRedirect = (!empty($redirectPost) && str_starts_with($redirectPost, '/incubadora_ispsn/')) ? $redirectPost : "/incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=$idProjeto";
+    header("Location: $finalRedirect");
     exit;
 }
 
