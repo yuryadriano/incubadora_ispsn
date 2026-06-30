@@ -9,7 +9,7 @@ echo "<h1>Teste de Envio de E-mail</h1>";
 echo "<hr>";
 
 $errorInfo = "";
-if (Mailer::send(MAIL_USER, "Teste de Funcionamento - Incubadora", "Se você recebeu este e-mail, as configurações de SMTP estão corretas!", $errorInfo)) {
+if (Mailer::sendImmediate(MAIL_USER, "Teste de Funcionamento - Incubadora", "Se você recebeu este e-mail, as configurações de SMTP estão corretas!", $errorInfo)) {
     echo "<h2 style='color:green'>SUCESSO! O e-mail foi enviado.</h2>";
     echo "Verifique a sua caixa de entrada (incluindo SPAM).";
 } else {

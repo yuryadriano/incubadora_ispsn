@@ -6,9 +6,14 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/QueueManager.php';
 
 class Mailer {
     public static function send($to, $subject, $body, &$error = "", $attachmentPath = null) {
+        return QueueManager::adicionar($to, $subject, $body, $attachmentPath, $error);
+    }
+
+    public static function sendImmediate($to, $subject, $body, &$error = "", $attachmentPath = null) {
         $mail = new PHPMailer(true);
 
         try {

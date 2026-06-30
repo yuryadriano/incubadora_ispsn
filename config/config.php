@@ -127,3 +127,14 @@ if (!defined('IS_DEV')) {
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }
+
+// Fila de E-mails: tenta processar no final do pedido de forma assíncrona (se usar PHP-FPM)
+register_shutdown_function(function() {
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+        if (file_exists(__DIR__ . '/../app/utils/QueueManager.php')) {
+            require_once __DIR__ . '/../app/utils/QueueManager.php';
+            \App\Utils\QueueManager::processar();
+        }
+    }
+});

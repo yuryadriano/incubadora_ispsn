@@ -266,7 +266,23 @@ adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_avaliado_em', "DATET
 adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'tipo_contrato', "ENUM('pre_incubacao', 'incubacao') NOT NULL DEFAULT 'incubacao'");
 adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'duracao_meses', "TINYINT NOT NULL DEFAULT 12");
 
-echo "Schema updated v2.1!";
+// TABELA DE FILA DE E-MAILS ASSÍNCRONA
+$mysqli->query("CREATE TABLE IF NOT EXISTS `fila_emails` (
+  `id`              INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+  `destinatario`    VARCHAR(255)    NOT NULL,
+  `assunto`         VARCHAR(255)    NOT NULL,
+  `corpo`           LONGTEXT        NOT NULL,
+  `anexo`           VARCHAR(255)    NULL,
+  `estado`          ENUM('pendente','enviado','erro') NOT NULL DEFAULT 'pendente',
+  `tentativas`      TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `erro_mensagem`   TEXT            NULL,
+  `criado_em`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `processado_em`   DATETIME        NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_estado` (`estado`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+echo "Schema updated v2.1 (com fila_emails)!";
 ?>
 
 
