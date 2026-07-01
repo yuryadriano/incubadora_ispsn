@@ -52,8 +52,26 @@ if ($action === 'inicializar_metas' && in_array($perfil, ['superadmin','admin'])
 ════════════════════════════════════════════════ */
 if ($action === 'activar_meta' && in_array($perfil, ['superadmin', 'admin'])) {
     $idMetaProjeto = (int)($_POST['id_meta_projeto'] ?? 0);
+    $idProjeto     = (int)($_POST['id_projeto'] ?? 0);
+    $idMetaPadrao  = (int)($_POST['id_meta_padrao'] ?? 0);
     $opcaoPrazo    = $_POST['opcao_prazo'] ?? 'padrao';
     $prazoManual   = $_POST['prazo_manual'] ?? '';
+    
+    if ($idMetaProjeto <= 0 && $idProjeto > 0 && $idMetaPadrao > 0) {
+        // Inicializar a meta on-the-fly se não existir na tabela metas_projeto
+        $stmtIns = $mysqli->prepare("INSERT IGNORE INTO metas_projeto (id_projeto, id_meta_padrao, estado) VALUES (?, ?, 'inactiva')");
+        $stmtIns->bind_param('ii', $idProjeto, $idMetaPadrao);
+        $stmtIns->execute();
+        $stmtIns->close();
+        
+        // Obter o ID da meta criada
+        $stmtGet = $mysqli->prepare("SELECT id FROM metas_projeto WHERE id_projeto = ? AND id_meta_padrao = ?");
+        $stmtGet->bind_param('ii', $idProjeto, $idMetaPadrao);
+        $stmtGet->execute();
+        $resGet = $stmtGet->get_result()->fetch_assoc();
+        $idMetaProjeto = $resGet ? (int)$resGet['id'] : 0;
+        $stmtGet->close();
+    }
     
     if ($idMetaProjeto > 0) {
         // Buscar meta e projecto

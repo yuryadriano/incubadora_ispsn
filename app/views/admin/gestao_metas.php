@@ -69,7 +69,7 @@ if (!$faseSel) $faseSel = $faseActual;
 $metasProjeto = [];
 if ($idProjetoSel) {
     $stmt = $mysqli->prepare("
-        SELECT mp.*, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
+        SELECT mp.*, mpd.id as id_meta_padrao, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
                mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual, mpd.prazo_dias,
                mpd.fase, mpd.numero,
                ua.nome as activador_nome, uv.nome as validador_nome
@@ -595,8 +595,8 @@ require_once __DIR__ . '/../partials/_layout.php';
         
         <!-- ACÇÕES -->
         <div class="d-flex flex-column gap-2" style="min-width:140px;">
-            <?php if ($estado === 'inactiva' && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
-            <button type="button" class="btn btn-warning btn-sm fw-bold w-100" style="border-radius:8px;" onclick="abrirModalActivar(<?= $m['id'] ?>, '<?= htmlspecialchars($m['meta_titulo']) ?>', <?= $m['prazo_dias'] ?>)">
+            <?php if (($estado === 'inactiva' || $estado === 'nao_inicializada') && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
+            <button type="button" class="btn btn-warning btn-sm fw-bold w-100" style="border-radius:8px;" onclick="abrirModalActivar(<?= $m['id'] ?? 0 ?>, '<?= htmlspecialchars($m['meta_titulo']) ?>', <?= $m['prazo_dias'] ?>, <?= $idProjetoSel ?>, <?= $m['id_meta_padrao'] ?>)">
                 <i class="fa fa-bolt me-1"></i>Activar
             </button>
             <?php elseif ($estado === 'em_avaliacao' && in_array($_SESSION['usuario_perfil'], ['mentor','admin','superadmin'])): ?>
@@ -663,6 +663,8 @@ require_once __DIR__ . '/../partials/_layout.php';
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
                 <input type="hidden" name="action" value="activar_meta">
                 <input type="hidden" name="id_meta_projeto" id="activarMetaId">
+                <input type="hidden" name="id_projeto" id="activarIdProjeto" value="0">
+                <input type="hidden" name="id_meta_padrao" id="activarIdMetaPadrao" value="0">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
                 
                 <div class="modal-header border-0 pb-0">
@@ -863,8 +865,10 @@ function validarMeta(id, decisao) {
     new bootstrap.Modal(document.getElementById('modalValidar')).show();
 }
 
-function abrirModalActivar(id, titulo, prazoDias) {
+function abrirModalActivar(id, titulo, prazoDias, idProjeto = 0, idMetaPadrao = 0) {
     document.getElementById('activarMetaId').value = id;
+    document.getElementById('activarIdProjeto').value = idProjeto;
+    document.getElementById('activarIdMetaPadrao').value = idMetaPadrao;
     document.getElementById('activarTituloMeta').textContent = `🎯 Activar Meta`;
     document.getElementById('activarDescricaoMeta').innerHTML = `Está prestes a activar a meta <strong>"${titulo}"</strong>.`;
     document.getElementById('opcaoPadraoLabel').textContent = `Prazo Padrão (${prazoDias} dias)`;

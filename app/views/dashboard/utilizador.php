@@ -521,144 +521,128 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
 <div class="hero-banner">
     <div class="hero-banner-inner">
         <div class="hero-badges">
-            <span class="hero-badge hb-sp"><i class="fa fa-trophy me-1"></i><?= $pontos ?> SP</span>
             <?php if($ultimoProjeto): ?>
-            <span class="hero-badge hb-fase"><i class="fa fa-circle-play me-1"></i><?= $faseLabel ?></span>
+                <span class="hero-badge hb-sp"><i class="fa fa-trophy me-1"></i><?= $pontos ?> Startup Points (SP)</span>
+                <span class="hero-badge hb-fase"><i class="fa fa-circle-play me-1"></i>Fase Actual: <?= $faseLabel ?></span>
             <?php endif; ?>
         </div>
         <div class="hero-name"><?= $saudacao ?>, <?= $primeiroNome ?>! 👋</div>
         <div class="hero-sub">
             <?php if($ultimoProjeto): ?>
                 Startup: <strong style="color:#FBBF24"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong>
-                &nbsp;·&nbsp; Progresso: <strong><?= $progresso ?>%</strong>
-                &nbsp;·&nbsp; Fase: <strong><?= $faseLabel ?></strong>
+                &nbsp;·&nbsp; Estado da Candidatura: <strong><?= htmlspecialchars($labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado']) ?></strong>
             <?php else: ?>
                 Bem-vindo à Incubadora Académica do ISPSN. Submeta a sua primeira ideia para começar.
             <?php endif; ?>
         </div>
+        
         <?php if($ultimoProjeto): ?>
-        <div class="mt-3" style="max-width:340px;">
-            <div class="progress-track">
-                <div class="progress-fill" style="width:<?= $progresso ?>%"></div>
+        <div class="row mt-4 pt-2 g-3 align-items-center" style="max-width: 700px;">
+            <div class="col-sm-6">
+                <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:rgba(255,255,255,0.6); margin-bottom:4px; text-align:left;">Progresso da Fase (Metas)</div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="progress-track" style="flex:1; background:rgba(255,255,255,0.15);">
+                        <div class="progress-fill" style="width:<?= $percentMetasConcluidas ?>%; background:#10B981;"></div>
+                    </div>
+                    <span class="fw-bold" style="font-size:0.83rem; color:#10B981;"><?= $percentMetasConcluidas ?>%</span>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:rgba(255,255,255,0.6); margin-bottom:4px; text-align:left;">Evolução na Incubadora</div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="progress-track" style="flex:1; background:rgba(255,255,255,0.15);">
+                        <div class="progress-fill" style="width:<?= $progresso ?>%; background:#D97706;"></div>
+                    </div>
+                    <span class="fw-bold" style="font-size:0.83rem; color:#FBBF24;"><?= $progresso ?>%</span>
+                </div>
             </div>
         </div>
-        <?php endif; ?>
-        <div class="hero-btns">
-            <?php if($ultimoProjeto): ?>
-                <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="hbtn hbtn-primary"><i class="fa fa-calendar-plus"></i>Reservar Sala</a>
-                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="hbtn hbtn-outline"><i class="fa fa-rocket"></i>Ver Startup</a>
-            <?php else: ?>
-                <button class="hbtn hbtn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto"><i class="fa fa-plus"></i>Submeter Ideia</button>
-            <?php endif; ?>
+        <?php else: ?>
+        <div class="hero-btns mt-3">
+            <button class="hbtn hbtn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto"><i class="fa fa-plus"></i>Submeter Ideia</button>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
 <?php if($ultimoProjeto): ?>
-
-<!-- ══ MINI STATS ══ -->
-<div class="mini-grid">
-    <div class="mini-card">
-        <div class="mini-icon"><i class="fa fa-gauge-high"></i></div>
-        <div class="mini-val"><?= $progresso ?>%</div>
-        <div class="mini-lbl">Progresso</div>
-    </div>
-    <div class="mini-card">
-        <div class="mini-icon"><i class="fa fa-list-check"></i></div>
-        <div class="mini-val"><?= count(array_filter($minhasTarefas, fn($t)=> $t['validada_mentor']==1)) ?>/<?= count($minhasTarefas) ?></div>
-        <div class="mini-lbl">Metas Validadas</div>
-    </div>
-    <div class="mini-card">
-        <div class="mini-icon"><i class="fa fa-bookmark"></i></div>
-        <div class="mini-val"><?= count($minhasReservasPainel) ?></div>
-        <div class="mini-lbl">Reservas Activas</div>
-    </div>
-    <div class="mini-card">
-        <div class="mini-icon"><i class="fa fa-trophy"></i></div>
-        <div class="mini-val"><?= $pontos ?></div>
-        <div class="mini-lbl">Startup Points</div>
-    </div>
-</div>
-
-<!-- ══ PIPELINE ══ -->
-<div class="pipeline-card">
-    <div class="pipeline-card-header">
-        <div class="pipeline-card-title"><i class="fa fa-road" style="color:#D97706"></i> Jornada de Maturidade</div>
-        <small style="color:#9CA3AF; font-size:0.75rem;">Fase actual: <strong style="color:#D97706"><?= $faseLabel ?></strong></small>
-    </div>
-    <div class="pipeline-card-body">
-        <?php
-        $steps = [
-            ['id'=>'ideacao',           'label'=>'Ideação',     'icon'=>'lightbulb'],
-            ['id'=>'validacao',         'label'=>'Validação',   'icon'=>'vial'],
-            ['id'=>'mvp',               'label'=>'MVP',         'icon'=>'cube'],
-            ['id'=>'tracao',            'label'=>'Tração',      'icon'=>'chart-line'],
-            ['id'=>'mercado',           'label'=>'Mercado',     'icon'=>'store'],
-            ['id'=>'fundo_investimento','label'=>'Financiado',  'icon'=>'sack-dollar'],
-        ];
-        $currIdx = 0;
-        foreach($steps as $i => $s) { if($fase === $s['id']) $currIdx = $i; }
-        $pct = $currIdx > 0 ? round(($currIdx / (count($steps)-1)) * 84 + 8) : 8;
-        ?>
-        <div class="pipe-row">
-            <div class="pipe-track"><div class="pipe-fill" style="width:<?= $pct ?>%"></div></div>
-            <?php foreach($steps as $i => $s):
-                $state = $i < $currIdx ? 'done' : ($i === $currIdx ? 'active' : '');
-            ?>
-            <div class="pipe-step <?= $state ?>">
-                <div class="pipe-dot"><i class="fa fa-<?= $s['icon'] ?>"></i></div>
-                <div class="pipe-lbl"><?= $s['label'] ?></div>
+<!-- ══ CONTEÚDO PRINCIPAL (DUAS COLUNAS) ══ -->
+<div class="row">
+    <!-- COLUNA DA ESQUERDA: JORNADA E METAS (8 colunas) -->
+    <div class="col-lg-8">
+        
+        <!-- ══ PIPELINE (Jornada de Maturidade) ══ -->
+        <div class="pipeline-card">
+            <div class="pipeline-card-header">
+                <div class="pipeline-card-title"><i class="fa fa-road text-warning me-2"></i> Jornada de Maturidade</div>
+                <span class="badge bg-warning text-dark font-weight-bold" style="font-size:0.75rem;">Fase: <?= $faseLabel ?></span>
             </div>
-            <?php endforeach; ?>
+            <div class="pipeline-card-body">
+                <?php
+                $steps = [
+                    ['id'=>'ideacao',           'label'=>'Ideação',     'icon'=>'lightbulb'],
+                    ['id'=>'validacao',         'label'=>'Validação',   'icon'=>'vial'],
+                    ['id'=>'mvp',               'label'=>'MVP',         'icon'=>'cube'],
+                    ['id'=>'tracao',            'label'=>'Tração',      'icon'=>'chart-line'],
+                    ['id'=>'mercado',           'label'=>'Mercado',     'icon'=>'store'],
+                    ['id'=>'fundo_investimento','label'=>'Financiado',  'icon'=>'sack-dollar'],
+                ];
+                $currIdx = 0;
+                foreach($steps as $i => $s) { if($fase === $s['id']) $currIdx = $i; }
+                $pct = $currIdx > 0 ? round(($currIdx / (count($steps)-1)) * 84 + 8) : 8;
+                ?>
+                <div class="pipe-row">
+                    <div class="pipe-track"><div class="pipe-fill" style="width:<?= $pct ?>%"></div></div>
+                    <?php foreach($steps as $i => $s):
+                        $state = $i < $currIdx ? 'done' : ($i === $currIdx ? 'active' : '');
+                    ?>
+                    <div class="pipe-step <?= $state ?>">
+                        <div class="pipe-dot"><i class="fa fa-<?= $s['icon'] ?>"></i></div>
+                        <div class="pipe-lbl"><?= $s['label'] ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
-
-<?php if ($ultimoProjeto && $ultimoProjeto['estado'] !== 'rejeitado'): ?>
-<!-- ══ METAS DA FASE ══ -->
-<div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
-    <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-bullseye text-warning me-2"></i>Jornada de Metas: <?= $faseLabel ?></h6>
-        <span class="badge bg-warning text-dark font-weight-bold" style="padding: 5px 12px; border-radius: 8px; font-size: 0.78rem;"><?= $percentMetasConcluidas ?>% Concluído</span>
-    </div>
-    <div class="card-body">
-        <div class="progress mb-4" style="height: 10px; border-radius: 5px; background: #F1F5F9;">
-            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: <?= $percentMetasConcluidas ?>%" aria-valuenow="<?= $percentMetasConcluidas ?>" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
-
-        <div class="row">
-            <!-- Coluna da Esquerda: Lista de Metas Detalhada -->
-            <div class="col-lg-8">
+        
+        <!-- ══ JORNADA DE METAS ══ -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+            <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-bullseye text-warning me-2"></i>Jornada de Metas: <?= $faseLabel ?></h6>
+                <span class="badge bg-warning text-dark font-weight-bold" style="padding: 5px 12px; border-radius: 8px; font-size: 0.78rem;"><?= $percentMetasConcluidas ?>% Concluído</span>
+            </div>
+            <div class="card-body">
                 <?php if (empty($metasFase)): ?>
                     <div class="text-center p-5 text-muted border border-dashed rounded-4 bg-light">
                         <i class="fa fa-info-circle fa-2x mb-2 text-warning" style="opacity:0.6;"></i>
-                        <h6 class="fw-bold mb-1">Nenhuma meta ativa</h6>
-                        <p class="small mb-0">Nenhuma meta foi inicializada para esta fase ainda. Aguarde a activação pelo Administrador.</p>
+                        <h6 class="fw-bold mb-1">Sem metas definidas</h6>
+                        <p class="small mb-0">Nenhuma meta padrão configurada para a fase de <?= htmlspecialchars($faseLabel) ?> ainda.</p>
                     </div>
                 <?php else: ?>
                     <div style="display:flex; flex-direction:column; gap:16px;">
                         <?php foreach ($metasFase as $m): 
-                            $est = $m['estado'];
+                            $est = $m['estado'] ?? 'nao_inicializada';
+                            if (!$est) $est = 'nao_inicializada';
                             $itemStyle = '';
                             $badge = '';
                             if ($est === 'concluida') {
                                 $itemStyle = 'border-left: 4px solid #10B981; background: #F8FAFC;';
-                                $badge = '<span class="badge bg-success-subtle text-success fw-bold"><i class="fa fa-check-circle me-1"></i>Concluída</span>';
+                                $badge = '<span class="badge bg-success text-white fw-bold"><i class="fa fa-check-circle me-1"></i>Concluída</span>';
                             } elseif ($est === 'activa') {
                                 $itemStyle = 'border-left: 4px solid #D97706; background: #FFFBEB;';
-                                $badge = '<span class="badge bg-warning-subtle text-warning fw-bold"><i class="fa fa-bolt me-1"></i>Activa</span>';
+                                $badge = '<span class="badge bg-warning text-dark fw-bold"><i class="fa fa-bolt me-1"></i>Activa</span>';
                             } elseif ($est === 'em_avaliacao') {
                                 $itemStyle = 'border-left: 4px solid #3B82F6; background: #EFF6FF;';
-                                $badge = '<span class="badge bg-info-subtle text-info fw-bold"><i class="fa fa-clock me-1"></i>A avaliar</span>';
+                                $badge = '<span class="badge bg-info text-white fw-bold"><i class="fa fa-clock me-1"></i>A avaliar</span>';
                             } elseif ($est === 'reprovada') {
                                 $itemStyle = 'border-left: 4px solid #EF4444; background: #FEF2F2;';
-                                $badge = '<span class="badge bg-danger-subtle text-danger fw-bold"><i class="fa fa-triangle-exclamation me-1"></i>Devolvida</span>';
+                                $badge = '<span class="badge bg-danger text-white fw-bold"><i class="fa fa-triangle-exclamation me-1"></i>Devolvida</span>';
                             } else {
                                 $itemStyle = 'border-left: 4px solid #CBD5E1; opacity: 0.65;';
                                 $badge = '<span class="badge bg-light text-muted fw-bold"><i class="fa fa-lock me-1"></i>Bloqueada</span>';
                             }
                         ?>
-                            <div class="p-4 rounded-4 shadow-sm" style="border: 1px solid #E2E8F0; <?= $itemStyle ?>">
+                            <div class="p-4 rounded-4 shadow-sm text-start" style="border: 1px solid #E2E8F0; <?= $itemStyle ?>">
                                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
                                     <div>
                                         <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill px-2.5 py-1 mb-2" style="font-size:0.68rem; font-weight:700;">#<?= $m['numero'] ?></span>
@@ -675,7 +659,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                                 <div class="p-3 rounded-3 mb-3 text-start" style="background:#fff; border: 1px solid #E2E8F0; font-size:0.75rem; line-height:1.6;">
                                     <div class="mb-1 text-slate-600"><strong><i class="fa fa-paperclip me-1 text-warning"></i>Entregável Esperado:</strong> <?= htmlspecialchars($m['evidencia_desc']) ?> (Tipo: <?= ucfirst($m['evidencia_tipo']) ?>)</div>
                                     <?php if (!empty($m['data_limite'])): 
-                                        $atrasado = (strtotime($m['data_limite']) < strtotime(date('Y-m-d')) && $m['estado'] !== 'concluida');
+                                        $atrasado = (strtotime($m['data_limite']) < strtotime(date('Y-m-d')) && $est !== 'concluida');
                                     ?>
                                         <div class="text-slate-600">
                                             <strong><i class="fa fa-calendar me-1"></i>Prazo Limite:</strong> 
@@ -686,7 +670,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                                     <?php endif; ?>
                                 </div>
 
-                                <?php if ($m['feedback_mentor']): ?>
+                                <?php if (!empty($m['feedback_mentor'])): ?>
                                     <div class="alert alert-danger py-2 px-3 mb-3 text-start border-0" style="border-radius:10px; font-size:0.78rem; background:rgba(239, 68, 68, 0.08); color:#b91c1c;">
                                         <strong><i class="fa fa-triangle-exclamation me-1"></i>Feedback de Correção:</strong> <?= htmlspecialchars($m['feedback_mentor']) ?>
                                     </div>
@@ -711,7 +695,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                                     <?php elseif ($est === 'concluida'): ?>
                                         <div class="text-success small fw-bold" style="font-size:0.78rem;"><i class="fa fa-circle-check me-1"></i>Meta Concluída! Startup ganhou +<?= round($m['peso_percentual']) ?> SP.</div>
                                     <?php else: ?>
-                                        <div class="text-muted small" style="font-size:0.78rem;"><i class="fa fa-lock me-1"></i>Esta meta está bloqueada. Aguarde a activação.</div>
+                                        <div class="text-muted small" style="font-size:0.78rem;"><i class="fa fa-lock me-1"></i>Esta meta está bloqueada. Aguarde que a administração a active.</div>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -719,76 +703,193 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                     </div>
                 <?php endif; ?>
             </div>
+        </div>
 
-            <!-- Coluna da Direita: Regras de Avaliação e Indicadores -->
-            <div class="col-lg-4">
-                <div class="card border-0 shadow-sm p-4 text-start" style="border-radius: 12px; background: #F8FAFC; border:1px solid #E2E8F0 !important;">
-                    <h6 class="fw-bold mb-3" style="color: #1E293B;"><i class="fa fa-info-circle text-warning me-2"></i>Como Funciona?</h6>
-                    
-                    <ul class="list-unstyled mb-0" style="font-size:0.8rem; line-height:1.6; color:#475569; display:flex; flex-direction:column; gap:12px;">
-                        <li>
-                            <i class="fa fa-circle-dot text-warning me-2" style="font-size:0.6rem;"></i>
-                            <strong>Ativação:</strong> O administrador seleciona e ativa uma meta de cada vez ou todas as metas da fase para a sua startup.
-                        </li>
-                        <li>
-                            <i class="fa fa-circle-dot text-warning me-2" style="font-size:0.6rem;"></i>
-                            <strong>Submissão:</strong> Submeta relatórios, links ou ficheiros comprovativos antes do final do prazo limite.
-                        </li>
-                        <li>
-                            <i class="fa fa-circle-dot text-warning me-2" style="font-size:0.6rem;"></i>
-                            <strong>Avaliação:</strong> O mentor avalia a qualidade da evidência entregue, atribui pontuação (1 a 5) e valida-a.
-                        </li>
-                        <li>
-                            <i class="fa fa-circle-dot text-warning me-2" style="font-size:0.6rem;"></i>
-                            <strong>Pontuação e Evolução:</strong> Cada meta concluída gera <strong>Startup Points (SP)</strong>. Completar todas as metas da fase permite avançar para a fase seguinte da Jornada.
-                        </li>
-                    </ul>
+        <!-- ══ TAREFAS DO MENTOR ══ -->
+        <?php if (!empty($minhasTarefas)): ?>
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-header bg-white py-3 border-bottom-0 text-start">
+                <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-list-check text-warning me-2"></i>Tarefas de Acompanhamento</h6>
+            </div>
+            <div class="card-body pt-0">
+                <div class="d-flex flex-column gap-2 text-start">
+                    <?php foreach ($minhasTarefas as $t): 
+                        $concluido = $t['status'] === 'concluid' || $t['status'] === 'concluida' || $t['validada_mentor'] == 1;
+                        $corTarefa = $concluido ? 'text-decoration-line-through text-muted' : '';
+                        $badgeTarefa = $t['validada_mentor'] == 1 
+                            ? '<span class="badge bg-success-subtle text-success">Validada</span>' 
+                            : ($t['status'] === 'concluida' ? '<span class="badge bg-info-subtle text-info">Aguardando Validação</span>' : '<span class="badge bg-warning-subtle text-warning">Pendente</span>');
+                    ?>
+                        <div class="p-3 border rounded-3 d-flex align-items-center justify-content-between bg-light">
+                            <div>
+                                <div class="fw-bold <?= $corTarefa ?>" style="font-size:0.88rem;"><?= htmlspecialchars($t['titulo']) ?></div>
+                                <div class="text-muted small"><?= htmlspecialchars($t['descricao']) ?></div>
+                                <?php if (!empty($t['data_limite'])): ?>
+                                    <div class="small mt-1"><i class="fa fa-calendar me-1"></i>Prazo: <?= date('d/m/Y', strtotime($t['data_limite'])) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div>
+                                <?= $badgeTarefa ?>
+                           </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
+        <?php endif; ?>
+
     </div>
-</div>
-<?php endif; ?>
-
-<!-- ══ AÇÕES RÁPIDAS ══ -->
-<div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#9CA3AF; margin-bottom:10px;">Acções Rápidas</div>
-<div class="qa-grid">
-
-    <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="qa-card">
-        <div class="qa-icon"><i class="fa fa-rocket"></i></div>
-        <div>
-            <div class="qa-label">Minha Startup</div>
-            <div class="qa-desc">Ver projecto, metas e progresso</div>
-        </div>
-        <i class="fa fa-chevron-right qa-arrow"></i>
-    </a>
-
-    <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="qa-card">
-        <div class="qa-icon"><i class="fa fa-calendar-check"></i></div>
-        <div>
-            <div class="qa-label">Reservas de Espaço</div>
-            <div class="qa-desc">
-                <?php
-                $pendentes = count(array_filter($minhasReservasPainel, fn($r)=>$r['status']==='pendente'));
-                $confirmadas = count(array_filter($minhasReservasPainel, fn($r)=>$r['status']==='confirmada'));
-                echo $confirmadas ? "$confirmadas confirmada" . ($confirmadas>1?'s':'') : ($pendentes ? "$pendentes pendente" . ($pendentes>1?'s':'') : 'Nenhuma reserva activa');
-                ?>
+    
+    <!-- COLUNA DA DIREITA: SIDEBAR (4 colunas) -->
+    <div class="col-lg-4">
+        
+        <!-- CARD DA STARTUP -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px; overflow:hidden;">
+            <div class="card-header py-3 bg-white border-bottom-0 text-start">
+                <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-rocket text-warning me-2"></i>A Minha Startup</h6>
+            </div>
+            <div class="card-body pt-0 text-start">
+                <h5 class="fw-bold text-slate-800 mb-1" style="font-size:1.1rem;"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></h5>
+                <div class="mb-3">
+                    <span class="badge" style="background:#D9770615; color:#D97706; font-weight:700; font-size:0.75rem; padding: 4px 10px; border-radius:6px;"><?= htmlspecialchars($labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado']) ?></span>
+                </div>
+                <p class="text-muted small mb-3" style="line-height:1.4;"><?= htmlspecialchars($ultimoProjeto['descricao'] ?? 'Sem descrição disponível.') ?></p>
+                <div class="p-3 bg-light rounded-3 small mb-3" style="display:flex; flex-direction:column; gap:6px;">
+                    <div><strong>Área:</strong> <?= htmlspecialchars($ultimoProjeto['area_tematica'] ?? 'Outra') ?></div>
+                    <div><strong>Tipo:</strong> <?= htmlspecialchars(str_replace('_', ' ', $ultimoProjeto['tipo'] ?? '')) ?></div>
+                    <div><strong>Pontuação:</strong> <span class="fw-bold text-warning"><?= $pontos ?> SP</span></div>
+                </div>
+                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="btn btn-outline-warning btn-sm w-100 fw-bold rounded-3 py-2" style="border-color:#D97706; color:#D97706;"><i class="fa fa-eye me-1"></i>Ver Detalhes Completos</a>
             </div>
         </div>
-        <i class="fa fa-chevron-right qa-arrow"></i>
-    </a>
 
-    <a href="/incubadora_ispsn/app/views/admin/ranking.php" class="qa-card">
-        <div class="qa-icon"><i class="fa fa-trophy"></i></div>
-        <div>
-            <div class="qa-label">Ranking de Startups</div>
-            <div class="qa-desc">Ver posição entre os outros empreendedores</div>
+        <!-- AGENDA E REUNIÕES -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-header py-3 bg-white border-bottom-0 text-start">
+                <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-calendar-days text-warning me-2"></i>Agenda e Mentorias</h6>
+            </div>
+            <div class="card-body pt-0">
+                <!-- Reuniões Agendadas -->
+                <?php if (!empty($minhasReunioes)): ?>
+                    <div class="mb-3 text-start">
+                        <div class="small fw-bold text-uppercase text-muted mb-2" style="font-size:0.68rem; letter-spacing:0.3px;">Próximas Reuniões</div>
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($minhasReunioes as $r): ?>
+                                <div class="p-2.5 border rounded-3 bg-warning-subtle text-warning-emphasis small text-start">
+                                    <div class="fw-bold text-slate-800"><?= htmlspecialchars($r['titulo'] ?? 'Reunião com Mentor') ?></div>
+                                    <div class="mt-0.5"><i class="fa fa-clock me-1 text-warning"></i><?= date('d/m/Y H:i', strtotime($r['data_reuniao'])) ?></div>
+                                    <div class="text-muted text-xs mt-0.5">Mentor: <?= htmlspecialchars($r['mentor_nome']) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Histórico de Mentoria -->
+                <div class="text-start">
+                    <div class="small fw-bold text-uppercase text-muted mb-2" style="font-size:0.68rem; letter-spacing:0.3px;">Sessões Realizadas</div>
+                    <?php if (empty($sessoesMentoria)): ?>
+                        <div class="text-center p-3 text-muted small bg-light rounded-3">Nenhuma mentoria registada ainda.</div>
+                    <?php else: ?>
+                        <div class="d-flex flex-column gap-2 text-start small" style="max-height: 200px; overflow-y: auto;">
+                            <?php foreach (array_slice($sessoesMentoria, 0, 4) as $s): ?>
+                                <div class="p-2 border-bottom">
+                                    <div class="fw-bold text-slate-700"><?= htmlspecialchars($s['resumo'] ?? 'Sessão de Mentoria') ?></div>
+                                    <div class="text-muted" style="font-size:0.68rem;"><i class="fa fa-calendar me-1"></i><?= date('d/m/Y', strtotime($s['data_sessao'])) ?> · Mentor: <?= htmlspecialchars($s['mentor_nome']) ?></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
-        <i class="fa fa-chevron-right qa-arrow"></i>
-    </a>
 
+        <!-- ESPAÇO E RESERVAS -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center text-start">
+                <h6 class="m-0 font-weight-bold text-gray-800" style="font-size:0.92rem;"><i class="fa fa-building-user text-warning me-2"></i>Espaço Coworking</h6>
+                <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="btn btn-warning btn-xs fw-bold rounded-2 px-2.5 text-white" style="font-size:0.7rem; border:none; background:#D97706;"><i class="fa fa-plus me-1"></i>Reservar</a>
+            </div>
+            <div class="card-body pt-0">
+                <?php if (empty($minhasReservasPainel)): ?>
+                    <div class="text-center p-3 text-muted small bg-light rounded-3">Nenhuma reserva activa de sala.</div>
+                <?php else: ?>
+                    <div class="d-flex flex-column gap-2 text-start small">
+                        <?php foreach ($minhasReservasPainel as $res): 
+                            $badgeRes = $res['status'] === 'confirmada' 
+                                ? '<span class="badge bg-success-subtle text-success">Confirmada</span>' 
+                                : ($res['status'] === 'rejeitada' ? '<span class="badge bg-danger-subtle text-danger">Rejeitada</span>' : '<span class="badge bg-warning-subtle text-warning">Pendente</span>');
+                        ?>
+                            <div class="p-2.5 border rounded-3 bg-light d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="fw-bold text-slate-700"><?= htmlspecialchars($res['espaco_nome']) ?></div>
+                                    <div class="text-muted" style="font-size:0.68rem;"><?= date('d/m/Y', strtotime($res['data_reserva'])) ?> · <?= substr($res['hora_inicio'], 0, 5) ?> - <?= substr($res['hora_fim'], 0, 5) ?></div>
+                                </div>
+                                <div>
+                                    <?= $badgeRes ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- KPIS E DOCUMENTOS -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
+            <div class="card-header py-3 bg-white border-bottom-0 text-start">
+                <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-chart-line text-warning me-2"></i>KPIs e Documentos</h6>
+            </div>
+            <div class="card-body pt-0">
+                <!-- KPIs -->
+                <div class="mb-3 text-start">
+                    <div class="small fw-bold text-uppercase text-muted mb-2" style="font-size:0.68rem; letter-spacing:0.3px;">KPIs do Projeto</div>
+                    <?php if (empty($meusKpis)): ?>
+                        <div class="text-center p-3 text-muted small bg-light rounded-3">Nenhum KPI active associado.</div>
+                    <?php else: ?>
+                        <div class="d-flex flex-wrap gap-2 small">
+                            <?php foreach ($meusKpis as $k): ?>
+                                <span class="badge bg-light text-slate-800 border p-2" style="font-size:0.73rem;"><i class="fa fa-gauge me-1 text-warning"></i><?= htmlspecialchars($k['nome']) ?> (<?= htmlspecialchars($k['unidade']) ?>)</span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                
+                <!-- Documentos -->
+                <div class="text-start">
+                    <div class="small fw-bold text-uppercase text-muted mb-2" style="font-size:0.68rem; letter-spacing:0.3px;">Ficheiros Carregados</div>
+                    <?php if (empty($meusDocumentos)): ?>
+                        <div class="text-center p-3 text-muted small bg-light rounded-3">Nenhum documento anexado.</div>
+                    <?php else: ?>
+                        <div class="d-flex flex-column gap-2 small" style="max-height: 150px; overflow-y: auto;">
+                            <?php foreach (array_slice($meusDocumentos, 0, 3) as $doc): ?>
+                                <div class="p-2 border-bottom d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-bold text-slate-700" style="font-size:0.8rem;"><?= htmlspecialchars($doc['nome_original'] ?? 'Ficheiro') ?></div>
+                                        <div class="text-muted" style="font-size:0.68rem;"><?= date('d/m/Y', strtotime($doc['criado_em'])) ?></div>
+                                    </div>
+                                    <a href="/incubadora_ispsn/<?= htmlspecialchars($doc['caminho_ficheiro']) ?>" target="_blank" class="text-warning"><i class="fa fa-download"></i></a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        
+        <!-- RANKING CARD -->
+        <a href="/incubadora_ispsn/app/views/admin/ranking.php" class="card border-0 shadow-sm mb-4 text-decoration-none bg-slate-900 text-white" style="border-radius:16px; overflow:hidden; background:linear-gradient(135deg, #1E293B 0%, #0F172A 100%);">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <h6 class="fw-bold text-amber-400 mb-1" style="font-size:0.95rem; color:#FBBF24;"><i class="fa fa-trophy me-2"></i>Ranking Geral</h6>
+                    <p class="text-slate-300 small mb-0" style="color:#CBD5E1; font-size:0.75rem;">Consulte a sua posição na tabela classificativa das startups.</p>
+                </div>
+                <div style="font-size:1.5rem; color:#FBBF24;"><i class="fa fa-chevron-right"></i></div>
+            </div>
+        </a>
+
+    </div>
 </div>
-
 <?php else: ?>
 <!-- ══ SEM PROJETO ══ -->
 <div class="empty-hero">
