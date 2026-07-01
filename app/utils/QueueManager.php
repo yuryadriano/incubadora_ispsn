@@ -13,23 +13,29 @@ class QueueManager {
     public static function adicionar($destinatario, $assunto, $corpo, $anexo = null, &$error = "") {
         global $mysqli;
         
-        $stmt = $mysqli->prepare("
-            INSERT INTO fila_emails (destinatario, assunto, corpo, anexo, estado, tentativas) 
-            VALUES (?, ?, ?, ?, 'pendente', 0)
-        ");
-        if (!$stmt) {
-            $error = "Erro ao preparar query da fila: " . $mysqli->error;
+        try {
+            $stmt = $mysqli->prepare("
+                INSERT INTO fila_emails (destinatario, assunto, corpo, anexo, estado, tentativas) 
+                VALUES (?, ?, ?, ?, 'pendente', 0)
+            ");
+            if (!$stmt) {
+                $error = "Erro ao preparar query da fila: " . $mysqli->error;
+                return false;
+            }
+            
+            $stmt->bind_param('ssss', $destinatario, $assunto, $corpo, $anexo);
+            $res = $stmt->execute();
+            $stmt->close();
+            
+            if ($res) {
+                // Disparar o processamento em background de forma assíncrona
+                self::dispararAssincrono();
+                return true;
+            }
+        } catch (\Exception $e) {
+            $error = "Erro na base de dados (fila_emails pode não existir): " . $e->getMessage();
+            error_log("Erro QueueManager::adicionar: " . $e->getMessage());
             return false;
-        }
-        
-        $stmt->bind_param('ssss', $destinatario, $assunto, $corpo, $anexo);
-        $res = $stmt->execute();
-        $stmt->close();
-        
-        if ($res) {
-            // Disparar o processamento em background de forma assíncrona
-            self::dispararAssincrono();
-            return true;
         }
         
         $error = "Erro ao inserir na fila de e-mails.";
@@ -52,44 +58,48 @@ class QueueManager {
             return; 
         }
         
-        // Obter até 10 e-mails pendentes com menos de 3 tentativas
-        $res = $mysqli->query("
-            SELECT * FROM fila_emails 
-            WHERE estado = 'pendente' AND tentativas < 3 
-            LIMIT 10
-        ");
-        
-        if ($res && $res->num_rows > 0) {
-            $emails = [];
-            while ($row = $res->fetch_assoc()) {
-                $emails[] = $row;
-            }
+        try {
+            // Obter até 10 e-mails pendentes com menos de 3 tentativas
+            $res = $mysqli->query("
+                SELECT * FROM fila_emails 
+                WHERE estado = 'pendente' AND tentativas < 3 
+                LIMIT 10
+            ");
             
-            foreach ($emails as $email) {
-                $id = (int)$email['id'];
-                $tentativaAtual = (int)$email['tentativas'] + 1;
+            if ($res && $res->num_rows > 0) {
+                $emails = [];
+                while ($row = $res->fetch_assoc()) {
+                    $emails[] = $row;
+                }
                 
-                // Apenas incrementa as tentativas no banco para evitar que e-mails fiquem presos como "enviados"
-                // se o script for interrompido a meio do envio. O lock de arquivo garante que não há concorrência.
-                $mysqli->query("UPDATE fila_emails SET tentativas = $tentativaAtual WHERE id = $id");
-                
-                $errorInfo = "";
-                // Usamos o método direto (síncrono/real) do Mailer
-                $sucesso = Mailer::sendImmediate($email['destinatario'], $email['assunto'], $email['corpo'], $errorInfo, $email['anexo']);
-                
-                if ($sucesso) {
-                    $mysqli->query("UPDATE fila_emails SET estado = 'enviado', processado_em = NOW(), erro_mensagem = NULL WHERE id = $id");
-                } else {
-                    $erroMsgEscaped = $mysqli->real_escape_string($errorInfo);
-                    $novoEstado = $tentativaAtual >= 3 ? 'erro' : 'pendente';
+                foreach ($emails as $email) {
+                    $id = (int)$email['id'];
+                    $tentativaAtual = (int)$email['tentativas'] + 1;
                     
-                    $mysqli->query("
-                        UPDATE fila_emails 
-                        SET estado = '$novoEstado', erro_mensagem = '$erroMsgEscaped', processado_em = NOW() 
-                        WHERE id = $id
-                    ");
+                    // Apenas incrementa as tentativas no banco para evitar que e-mails fiquem presos como "enviados"
+                    // se o script for interrompido a meio do envio. O lock de arquivo garante que não há concorrência.
+                    $mysqli->query("UPDATE fila_emails SET tentativas = $tentativaAtual WHERE id = $id");
+                    
+                    $errorInfo = "";
+                    // Usamos o método direto (síncrono/real) do Mailer
+                    $sucesso = Mailer::sendImmediate($email['destinatario'], $email['assunto'], $email['corpo'], $errorInfo, $email['anexo']);
+                    
+                    if ($sucesso) {
+                        $mysqli->query("UPDATE fila_emails SET estado = 'enviado', processado_em = NOW(), erro_mensagem = NULL WHERE id = $id");
+                    } else {
+                        $erroMsgEscaped = $mysqli->real_escape_string($errorInfo);
+                        $novoEstado = $tentativaAtual >= 3 ? 'erro' : 'pendente';
+                        
+                        $mysqli->query("
+                            UPDATE fila_emails 
+                            SET estado = '$novoEstado', erro_mensagem = '$erroMsgEscaped', processado_em = NOW() 
+                            WHERE id = $id
+                        ");
+                    }
                 }
             }
+        } catch (\Exception $e) {
+            error_log("Erro QueueManager::processar: " . $e->getMessage());
         }
         
         flock($fp, LOCK_UN);
