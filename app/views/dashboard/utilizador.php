@@ -298,7 +298,7 @@ if ($ultimoProjeto) {
     $metasFase = [];
     $percentMetasConcluidas = 0;
     $metaActiva = null;
-    if ($ultimoProjeto && $ultimoProjeto['estado'] === 'incubado') {
+    if ($ultimoProjeto && $ultimoProjeto['estado'] !== 'rejeitado') {
         $faseActual = $ultimoProjeto['fase'] ?? 'ideacao';
         
         $stmtM = $mysqli->prepare("
@@ -614,7 +614,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
     </div>
 </div>
 
-<?php if ($ultimoProjeto && $ultimoProjeto['estado'] === 'incubado'): ?>
+<?php if ($ultimoProjeto && $ultimoProjeto['estado'] !== 'rejeitado'): ?>
 <!-- ══ METAS DA FASE ══ -->
 <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
     <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
