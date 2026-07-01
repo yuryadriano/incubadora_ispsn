@@ -35,13 +35,13 @@ $idProjetoSel = (int)($_GET['projeto'] ?? 0);
 $faseSel      = $_GET['fase'] ?? '';
 $modo         = $_GET['modo'] ?? 'projetos';
 
-// Buscar projectos incubados
+// Buscar projectos (todos exceto rejeitados)
 $projectosIncubados = [];
 $res = $mysqli->query("
     SELECT p.id, p.titulo, p.fase, p.estado, p.pontos, u.nome as autor
     FROM projetos p
     JOIN usuarios u ON u.id = p.criado_por
-    WHERE p.estado IN ('incubado','aprovado','fundo_investimento')
+    WHERE p.estado != 'rejeitado'
     ORDER BY p.titulo
 ");
 if ($res) while ($r = $res->fetch_assoc()) $projectosIncubados[] = $r;
