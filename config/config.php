@@ -131,6 +131,12 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
 // Fila de E-mails: tenta processar no final do pedido de forma assíncrona (se usar PHP-FPM)
 register_shutdown_function(function() {
     if (function_exists('fastcgi_finish_request')) {
+        // Fechar a sessão PHP explicitamente antes de processar a fila para libertar o lock do ficheiro
+        // de sessão. Isto evita que outros pedidos do utilizador fiquem bloqueados em session_start()
+        // e causem erros de Gateway Timeout (504).
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
         fastcgi_finish_request();
         if (file_exists(__DIR__ . '/../app/utils/QueueManager.php')) {
             require_once __DIR__ . '/../app/utils/QueueManager.php';
@@ -138,3 +144,4 @@ register_shutdown_function(function() {
         }
     }
 });
+

@@ -69,8 +69,9 @@ class QueueManager {
                 $id = (int)$email['id'];
                 $tentativaAtual = (int)$email['tentativas'] + 1;
                 
-                // Marcar como enviado temporariamente para evitar reprocessamento rápido
-                $mysqli->query("UPDATE fila_emails SET estado = 'enviado', tentativas = $tentativaAtual WHERE id = $id");
+                // Apenas incrementa as tentativas no banco para evitar que e-mails fiquem presos como "enviados"
+                // se o script for interrompido a meio do envio. O lock de arquivo garante que não há concorrência.
+                $mysqli->query("UPDATE fila_emails SET tentativas = $tentativaAtual WHERE id = $id");
                 
                 $errorInfo = "";
                 // Usamos o método direto (síncrono/real) do Mailer
@@ -84,7 +85,7 @@ class QueueManager {
                     
                     $mysqli->query("
                         UPDATE fila_emails 
-                        SET estado = '$novoEstado', tentativas = $tentativaAtual, erro_mensagem = '$erroMsgEscaped', processado_em = NOW() 
+                        SET estado = '$novoEstado', erro_mensagem = '$erroMsgEscaped', processado_em = NOW() 
                         WHERE id = $id
                     ");
                 }
@@ -104,12 +105,18 @@ class QueueManager {
         $script = realpath($script);
         if (!$script) return;
         
+        // Obter o binário correto do PHP executado, com fallback seguro para "php"
+        $phpPath = 'php';
+        if (defined('PHP_BINARY') && !empty(PHP_BINARY) && strpos(PHP_BINARY, 'fpm') === false && strpos(PHP_BINARY, 'cgi') === false) {
+            $phpPath = PHP_BINARY;
+        }
+        
         if (str_starts_with(strtoupper(PHP_OS), 'WIN')) {
             // Windows (XAMPP local)
-            pclose(popen("start /B php " . escapeshellarg($script) . " > NUL 2>&1", "r"));
+            pclose(popen("start /B " . escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > NUL 2>&1", "r"));
         } else {
             // Linux / Unix (Servidor de produção)
-            exec("php " . escapeshellarg($script) . " > /dev/null 2>&1 &");
+            exec(escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > /dev/null 2>&1 &");
         }
     }
 }
