@@ -243,20 +243,29 @@ require_once __DIR__ . '/../partials/_layout.php';
 }
 </style>
 
-<!-- TAB NAVIGATION (SaaS Look) -->
-<div class="header-tabs">
-    <div class="header-tab active" id="tab-geral" onclick="switchTab('geral')"><i class="fa fa-chart-line me-2"></i> Visão Geral</div>
-    <div class="header-tab" id="tab-acesso" onclick="switchTab('acesso')"><i class="fa fa-th-large me-2"></i> ACESSO RÁPIDO AOS MÓDULOS</div>
-    <div class="header-tab" onclick="window.location.href='/incubadora_ispsn/app/views/admin/projetos.php'"><i class="fa fa-list me-2"></i> Lista de Startups</div>
+<!-- ── PAGE HEADER ──────────────────────── -->
+<div class="page-header d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="page-header-title h4 fw-bold mb-1">
+            <i class="fa fa-screwdriver-wrench me-2" style="color:var(--primary)"></i>
+            Painel Geral do Super Admin
+        </div>
+        <div class="page-header-sub text-muted small">
+            Controle global de usuários, termos e módulos da Incubadora ISPSN
+        </div>
+    </div>
+    <div>
+        <a href="/incubadora_ispsn/app/views/admin/projetos.php" class="btn btn-warning btn-sm fw-bold px-3 py-2 text-dark rounded-3" style="border:none; background:#D97706; color:#fff !important;">
+            <i class="fa fa-list me-1"></i> Lista de Startups
+        </a>
+    </div>
 </div>
 
-<!-- ABA 1: VISÃO GERAL -->
-<div id="content-geral">
-    <!-- BEAUTIFUL WORKFLOW PIPELINE -->
-    <h5 class="fw-bold mb-3 tooltip-custom" style="color:var(--text-secondary)">
-        <i class="fa fa-arrow-progress me-2"></i> Pipeline de Incubação de Startups
-    </h5>
-    <div class="pipeline-container">
+<!-- BEAUTIFUL WORKFLOW PIPELINE -->
+<h5 class="fw-bold mb-3 text-start" style="color:var(--text-secondary); font-size:0.95rem;">
+    <i class="fa fa-road text-warning me-2"></i> Pipeline de Incubação de Startups
+</h5>
+<div class="pipeline-container">
     <div class="pipeline-line"></div>
     
     <div class="pipeline-node">
@@ -264,9 +273,9 @@ require_once __DIR__ . '/../partials/_layout.php';
             <span class="pipeline-val" style="color:#F59E0B"><?= ($porEstadoP['submetido'] ?? 0) + ($porEstadoP['em_avaliacao'] ?? 0) ?></span>
             <span class="pipeline-lbl">Startups</span>
         </div>
-        <div class="pipeline-title" style="color:#B45309">Triagem / Seleção</div>
+        <div class="pipeline-title" style="color:#B45309; font-size: 0.95rem;">Triagem / Seleção</div>
         <div class="pipeline-desc">
-            <ul style="text-align:left;padding-left:15px;margin:0">
+            <ul style="text-align:left;padding-left:15px;margin:0; font-size:0.75rem;">
                 <li>Nova Submissão</li>
                 <li>Avaliação Técnica</li>
             </ul>
@@ -278,9 +287,9 @@ require_once __DIR__ . '/../partials/_layout.php';
             <span class="pipeline-val" style="color:var(--primary)"><?= $porEstadoP['aprovado'] ?? 0 ?></span>
             <span class="pipeline-lbl">Startups</span>
         </div>
-        <div class="pipeline-title" style="color:var(--primary-dark)">Aprovadas</div>
+        <div class="pipeline-title" style="color:var(--primary-dark); font-size: 0.95rem;">Aprovadas</div>
         <div class="pipeline-desc">
-            <ul style="text-align:left;padding-left:15px;margin:0">
+            <ul style="text-align:left;padding-left:15px;margin:0; font-size:0.75rem;">
                 <li>Acordo de Incubação</li>
                 <li>Ficha de Admissão</li>
             </ul>
@@ -292,9 +301,9 @@ require_once __DIR__ . '/../partials/_layout.php';
             <span class="pipeline-val" style="color:#10B981"><?= $porEstadoP['incubado'] ?? 0 ?></span>
             <span class="pipeline-lbl">Startups</span>
         </div>
-        <div class="pipeline-title" style="color:#065F46">Em Incubação 🚀</div>
+        <div class="pipeline-title" style="color:#065F46; font-size: 0.95rem;">Em Incubação 🚀</div>
         <div class="pipeline-desc">
-            <ul style="text-align:left;padding-left:15px;margin:0">
+            <ul style="text-align:left;padding-left:15px;margin:0; font-size:0.75rem;">
                 <li>Mentoria Activa</li>
                 <li>Apoio Operacional</li>
             </ul>
@@ -306,9 +315,9 @@ require_once __DIR__ . '/../partials/_layout.php';
             <span class="pipeline-val" style="color:#8B5CF6"><?= ($porEstadoP['concluido'] ?? 0) + ($porEstadoP['fundo_investimento'] ?? 0) ?></span>
             <span class="pipeline-lbl">Startups</span>
         </div>
-        <div class="pipeline-title" style="color:#5B21B6">Graduadas / Capital</div>
+        <div class="pipeline-title" style="color:#5B21B6; font-size: 0.95rem;">Graduadas / Capital</div>
         <div class="pipeline-desc">
-            <ul style="text-align:left;padding-left:15px;margin:0">
+            <ul style="text-align:left;padding-left:15px;margin:0; font-size:0.75rem;">
                 <li>Fundo de Investimento</li>
                 <li>Exit / Graduação</li>
             </ul>
@@ -324,7 +333,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
     <?php foreach ($termosPendentes as $tp): ?>
     <div class="d-flex align-items-center justify-content-between p-3 border-bottom" style="border-color:#F1F5F9!important;">
-        <div>
+        <div class="text-start">
             <div style="font-weight:700; font-size:0.88rem;"><?= htmlspecialchars($tp['proj_titulo']) ?></div>
             <div style="font-size:0.72rem; color:#94A3B8;"><span style="font-weight:700; color:#D97706;"><?= $tp['codigo_termo'] ?></span> · <strong style="color:var(--primary);"><?= $tp['tipo_contrato'] === 'pre_incubacao' ? 'Pré-Incubação' : 'Incubação' ?></strong> · <?= htmlspecialchars($tp['autor']) ?> · <?= date('d/m/Y', strtotime($tp['criado_em'])) ?></div>
         </div>
@@ -339,7 +348,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 <?php endif; ?>
 
 <!-- CHARTS AND LISTS (SaaS Grid) -->
-<div class="saas-grid">
+<div class="saas-grid mb-4">
     
     <!-- Esquerda: Distribuição Rápida de Atividades -->
     <div class="saas-card">
@@ -353,9 +362,9 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <canvas id="saasChart" width="200" height="200"></canvas>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6 text-start">
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                    <span class="text-muted"><span style="color:#10B981">■</span> Mentorias Ativas</span>
+                    <span class="text-muted"><span style="color:#8B5CF6">■</span> Mentorias Ativas</span>
                     <strong style="color:var(--text-primary)"><?= $mentTotal ?></strong>
                 </div>
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
@@ -363,11 +372,11 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <strong style="color:var(--text-primary)"><?= number_format($finTotal/1000, 0) ?>K Kz</strong>
                 </div>
                 <div class="d-flex justify-content-between pb-2">
-                    <span class="text-muted"><span style="color:#F59E0B">■</span> Startups Rejeitadas</span>
+                    <span class="text-muted"><span style="color:#FBBF24">■</span> Startups Rejeitadas</span>
                     <strong style="color:var(--text-primary)"><?= $porEstadoP['rejeitado'] ?? 0 ?></strong>
                 </div>
                 <div class="mt-4 text-center">
-                   <a href="/incubadora_ispsn/app/views/funcionario/financiamentos.php" class="btn-saas" style="width:100%"><i class="fa fa-plus me-1"></i> Criar Nova Ficha Financeira</a>
+                   <a href="/incubadora_ispsn/app/views/funcionario/financiamentos.php" class="btn-saas w-100 py-2" style="background:#D97706; text-decoration:none;"><i class="fa fa-plus me-1"></i> Criar Ficha Financeira</a>
                 </div>
             </div>
         </div>
@@ -386,7 +395,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem">
                             <?= strtoupper(substr($u['nome'], 0, 1)) ?>
                         </div>
-                        <div>
+                        <div class="text-start">
                             <div style="font-weight:600;font-size:0.85rem"><?= htmlspecialchars(explode(' ', $u['nome'])[0]) ?></div>
                             <div style="font-size:0.7rem;color:var(--text-muted)"><?= ucfirst($u['tipo_utilizador']) ?></div>
                         </div>
@@ -402,7 +411,62 @@ require_once __DIR__ . '/../partials/_layout.php';
         <a href="/incubadora_ispsn/app/views/admin/usuarios.php" class="btn-ghost w-100 text-center mt-3" style="font-size:0.8rem;justify-content:center">Administrar Contas</a>
     </div>
 </div>
-</div><!-- /content-geral -->
+
+<!-- MÓDULOS DO SISTEMA (ACESSO RÁPIDO) -->
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0 text-start" style="color:var(--text-secondary); font-size:0.95rem;">
+            <i class="fa fa-th-large text-warning me-2"></i> Acesso Rápido aos Módulos
+        </h5>
+        <span class="badge bg-light text-muted border" style="font-size:0.7rem">Tempo real</span>
+    </div>
+
+    <div class="quick-access-grid">
+        <!-- Módulo Estudante -->
+        <div class="quick-card" style="border-top-color: #3B82F6;">
+            <div class="quick-icon" style="background:#3B82F6"><i class="fa fa-user-graduate"></i></div>
+            <div class="quick-label">Módulo Estudante</div>
+            <div class="quick-stats"><?= $porPerfil['utilizador'] ?? 0 ?> Activos</div>
+            <div class="quick-sub mb-3">Gerir Projectos e KPIs</div>
+            <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-saas w-100 py-1.5" style="font-size:0.75rem; text-align:center; text-decoration:none;">Abrir Painel</a>
+        </div>
+
+        <!-- Módulo Recepcionista -->
+        <div class="quick-card" style="border-top-color: #EF4444;">
+            <div class="quick-icon" style="background:#EF4444"><i class="fa fa-bell-concierge"></i></div>
+            <div class="quick-label">Recepcionista</div>
+            <div class="quick-stats">Reservas & Acesso</div>
+            <div class="quick-sub mb-3">Controlo de Espaços</div>
+            <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-saas w-100 py-1.5" style="font-size:0.75rem; background:#EF4444; text-align:center; text-decoration:none;">Abrir Painel</a>
+        </div>
+
+        <!-- Módulo Mentor -->
+        <div class="quick-card" style="border-top-color: #8B5CF6;">
+            <div class="quick-icon" style="background:#8B5CF6"><i class="fa fa-chalkboard-teacher"></i></div>
+            <div class="quick-label">Módulo Mentor</div>
+            <div class="quick-stats"><?= $mentTotal ?> Mentorias</div>
+            <div class="quick-sub mb-3">Acompanhamento e Feedback</div>
+            <a href="/incubadora_ispsn/app/views/dashboard/mentor.php" class="btn-saas w-100 py-1.5" style="font-size:0.75rem; background:#8B5CF6; text-align:center; text-decoration:none;">Abrir Painel</a>
+        </div>
+
+        <!-- Módulo Admin -->
+        <div class="quick-card" style="border-top-color: #10B981;">
+            <div class="quick-icon" style="background:#10B981"><i class="fa fa-user-tie"></i></div>
+            <div class="quick-label">Módulo Admin</div>
+            <div class="quick-stats"><?= $totalStartups ?> Startups</div>
+            <div class="quick-sub mb-3">Gestão Administrativa</div>
+            <a href="/incubadora_ispsn/app/views/dashboard/admin.php" class="btn-saas w-100 py-1.5" style="font-size:0.75rem; background:#10B981; text-align:center; text-decoration:none;">Abrir Painel</a>
+        </div>
+
+        <!-- Módulo Super Admin / Configs -->
+        <a href="/incubadora_ispsn/app/views/admin/usuarios.php" class="quick-card" style="border-top-color: #1E293B;">
+            <div class="quick-icon" style="background:#1E293B"><i class="fa fa-screwdriver-wrench"></i></div>
+            <div class="quick-label">Desenvolvedor</div>
+            <div class="quick-stats">Controlo Total</div>
+            <div class="quick-sub">Acessos e Segurança</div>
+        </a>
+    </div>
+</div>
 
 <!-- MODAL ASSINAR TERMO -->
 <div class="modal fade" id="modalAssinar" tabindex="-1">
@@ -436,62 +500,6 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
-<!-- ABA 2: ACESSO RÁPIDO -->
-<div id="content-acesso" style="display:none">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="fw-bold mb-0" style="color:var(--text-secondary)">
-            <i class="fa fa-th-large me-2"></i> Módulos do Sistema
-        </h5>
-        <span class="badge bg-light text-muted border" style="font-size:0.7rem">Estado em tempo real</span>
-    </div>
-
-    <div class="quick-access-grid">
-        <!-- Módulo Estudante -->
-        <div class="quick-card" style="border-top-color: #3B82F6;">
-            <div class="quick-icon" style="background:#3B82F6"><i class="fa fa-user-graduate"></i></div>
-            <div class="quick-label">Módulo Estudante</div>
-            <div class="quick-stats"><?= $porPerfil['utilizador'] ?? 0 ?> Activos</div>
-            <div class="quick-sub mb-3">Gerir Projectos e KPIs</div>
-            <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-saas w-100" style="font-size:0.75rem; text-align:center;">Abrir Painel</a>
-        </div>
-
-        <!-- Módulo Recepcionista -->
-        <div class="quick-card" style="border-top-color: #EF4444;">
-            <div class="quick-icon" style="background:#EF4444"><i class="fa fa-bell-concierge"></i></div>
-            <div class="quick-label">Recepcionista</div>
-            <div class="quick-stats">Reservas & Acesso</div>
-            <div class="quick-sub mb-3">Controlo de Espaços</div>
-            <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-saas w-100" style="font-size:0.75rem; background:#EF4444; text-align:center;">Abrir Painel</a>
-        </div>
-
-        <!-- Módulo Mentor -->
-        <div class="quick-card" style="border-top-color: #8B5CF6;">
-            <div class="quick-icon" style="background:#8B5CF6"><i class="fa fa-chalkboard-teacher"></i></div>
-            <div class="quick-label">Módulo Mentor</div>
-            <div class="quick-stats"><?= $mentTotal ?> Mentorias</div>
-            <div class="quick-sub mb-3">Acompanhamento e Feedback</div>
-            <a href="/incubadora_ispsn/app/views/dashboard/mentor.php" class="btn-saas w-100" style="font-size:0.75rem; background:#8B5CF6; text-align:center;">Abrir Painel</a>
-        </div>
-
-        <!-- Módulo Admin -->
-        <div class="quick-card" style="border-top-color: #10B981;">
-            <div class="quick-icon" style="background:#10B981"><i class="fa fa-user-tie"></i></div>
-            <div class="quick-label">Módulo Admin</div>
-            <div class="quick-stats"><?= $totalStartups ?> Startups</div>
-            <div class="quick-sub mb-3">Gestão Administrativa</div>
-            <a href="/incubadora_ispsn/app/views/dashboard/admin.php" class="btn-saas w-100" style="font-size:0.75rem; background:#10B981; text-align:center;">Abrir Painel</a>
-        </div>
-
-        <!-- Módulo Super Admin / Configs -->
-        <a href="/incubadora_ispsn/app/views/admin/usuarios.php" class="quick-card" style="border-top-color: #1E293B;">
-            <div class="quick-icon" style="background:#1E293B"><i class="fa fa-screwdriver-wrench"></i></div>
-            <div class="quick-label">Desenvolvedor</div>
-            <div class="quick-stats">Controlo Total</div>
-            <div class="quick-sub">Acessos e Segurança</div>
-        </a>
-    </div>
-</div><!-- /content-acesso -->
-
 <?php ob_start(); ?>
 <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'></script>
 <script>
@@ -515,24 +523,6 @@ require_once __DIR__ . '/../partials/_layout.php';
             },
             options: { cutout: '60%', plugins: { legend: { position: 'bottom', labels:{font:{size:11}} } } }
         });
-    }
-
-    function switchTab(tab) {
-        // Tabs
-        document.getElementById('tab-geral').classList.remove('active');
-        document.getElementById('tab-acesso').classList.remove('active');
-        
-        // Contents
-        document.getElementById('content-geral').style.display = 'none';
-        document.getElementById('content-acesso').style.display = 'none';
-        
-        if (tab === 'geral') {
-            document.getElementById('tab-geral').classList.add('active');
-            document.getElementById('content-geral').style.display = 'block';
-        } else {
-            document.getElementById('tab-acesso').classList.add('active');
-            document.getElementById('content-acesso').style.display = 'block';
-        }
     }
 </script>
 <?php $extraJs = ob_get_clean(); ?>

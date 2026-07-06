@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 
 if (!empty($_SESSION['usuario_id'])) {
-    header('Location: /incubadora_ispsn/public/index.php');
+    header('Location: /incubadora_ispsn/public/index.php');   
     exit;
 }
 

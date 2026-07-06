@@ -49,6 +49,12 @@ class QueueManager {
         global $mysqli;
         
         $lockFile = __DIR__ . '/processar_fila_emails.lock';
+        
+        // Cooldown: evita processar a fila mais do que uma vez a cada 60 segundos
+        if (file_exists($lockFile) && (time() - filemtime($lockFile) < 60)) {
+            return;
+        }
+        
         $fp = fopen($lockFile, 'c');
         if (!$fp) return;
         
@@ -57,6 +63,9 @@ class QueueManager {
             fclose($fp);
             return; 
         }
+        
+        // Atualizar o timestamp para marcar o início do processamento actual
+        touch($lockFile);
         
         try {
             // Obter até 10 e-mails pendentes com menos de 3 tentativas
@@ -104,7 +113,7 @@ class QueueManager {
         
         flock($fp, LOCK_UN);
         fclose($fp);
-        @unlink($lockFile);
+        // Mantemos o lockFile no disco para verificar a data de modificação no próximo ciclo (cooldown)
     }
     
     /**

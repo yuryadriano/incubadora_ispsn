@@ -188,41 +188,10 @@ require_once __DIR__ . '/../partials/_layout.php';
             <i class="fa fa-user-plus"></i> Novo Utilizador
         </button>
     </div>
-
-</div>
-
-<!-- Ranking de Excelência -->
-<div class="card-custom mb-4">
-    <div class="card-header-custom">
-        <div class="card-title-custom">
-            <i class="fa fa-trophy" style="color:#F59E0B"></i>
-            Ranking de Excelência (Top 5)
-        </div>
-    </div>
-    <div class="card-body-custom">
-        <?php if (empty($rankingStartups)): ?>
-            <p class="text-muted text-center py-3">Aguardando as primeiras avaliações para gerar o ranking.</p>
-        <?php else: ?>
-            <div class="row g-3">
-                <?php foreach ($rankingStartups as $index => $s): 
-                    $medalColor = ['#FFD700', '#C0C0C0', '#CD7F32', '#94A3B8', '#94A3B8'][$index];
-                ?>
-                <div class="col-md-4 col-lg">
-                    <div style="padding:15px; background:var(--surface-1); border-radius:var(--radius); border-top: 3px solid <?= $medalColor ?>; text-align:center">
-                        <div style="font-size:1.2rem; font-weight:800; color:<?= $medalColor ?>">#<?= $index+1 ?></div>
-                        <div class="fw-bold text-truncate mt-1" style="font-size:0.9rem"><?= htmlspecialchars($s['titulo']) ?></div>
-                        <div style="font-size:0.75rem; color:var(--text-muted)">Nota Média: <strong><?= number_format($s['media'], 1) ?>/10</strong></div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
 </div>
 
 <!-- ── KPI GRID ──────────────────────────── -->
-<div class="kpi-grid">
-
+<div class="kpi-grid mb-4">
     <div class="kpi-card" style="--kpi-color: var(--primary)">
         <div class="kpi-icon"><i class="fa fa-rocket"></i></div>
         <div class="kpi-value"><?= $stats['total_projectos'] ?></div>
@@ -261,107 +230,10 @@ require_once __DIR__ . '/../partials/_layout.php';
             <i class="fa fa-arrow-trend-up"></i> Acompanhamento activo
         </div>
     </div>
-
 </div>
 
-<!-- ── NOVO: ATIVIDADE E ATALHOS ────────── -->
-<div class="row g-4 mb-4">
-    <!-- Atividade Recente -->
-    <div class="col-lg-4">
-        <div class="card-custom h-100">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa-solid fa-bolt-lightning text-primary"></i> Atividade Recente</div>
-            </div>
-            <div class="card-body-custom">
-                <div class="activity-feed">
-                    <?php if(empty($atividades)): ?>
-                        <p class="text-muted small">Nenhuma atividade registada hoje.</p>
-                    <?php else: ?>
-                        <?php foreach($atividades as $ativ): 
-                            $icon = $ativ['tipo'] == 'sessao' ? 'fa-handshake' : ($ativ['tipo'] == 'projeto' ? 'fa-rocket' : 'fa-file-lines');
-                            $acao = $ativ['tipo'] == 'sessao' ? 'registou uma <b>sessão</b> com' : ($ativ['tipo'] == 'projeto' ? 'submeteu o <b>projeto</b>' : 'enviou o <b>relatório</b>');
-                        ?>
-                        <div class="activity-item">
-                            <div class="activity-time"><?= date('H:i', strtotime($ativ['criado_em'])) ?> • <?= date('d M', strtotime($ativ['criado_em'])) ?></div>
-                            <div class="activity-text">
-                                <b><?= htmlspecialchars($ativ['autor']) ?></b> <?= $acao ?> <b><?= htmlspecialchars($ativ['info']) ?></b>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Atalhos de Operação -->
-    <div class="col-lg-4">
-        <div class="card-custom h-100">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa-solid fa-gears text-secondary"></i> Atalhos de Operação</div>
-            </div>
-            <div class="card-body-custom">
-                <div class="d-grid gap-2">
-                    <a href="/incubadora_ispsn/app/views/admin/usuarios.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
-                        <span><i class="fa fa-users-gear me-2"></i> Gestão de Mentores</span>
-                        <i class="fa fa-chevron-right opacity-50"></i>
-                    </a>
-                    <a href="/incubadora_ispsn/app/views/admin/relatorios.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
-                        <span><i class="fa fa-file-export me-2"></i> Relatórios Globais</span>
-                        <i class="fa fa-chevron-right opacity-50"></i>
-                    </a>
-                    <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
-                        <span><i class="fa fa-building-circle-check me-2"></i> Ocupação de Espaços</span>
-                        <i class="fa fa-chevron-right opacity-50"></i>
-                    </a>
-                    <button class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded text-danger">
-                        <span><i class="fa fa-triangle-exclamation me-2"></i> Alertas de Estagnação</span>
-                        <span class="badge bg-danger rounded-pill">3</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Gráfico de Pizza (Compacto) -->
-    <div class="col-lg-4">
-        <div class="card-custom h-100">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa fa-chart-pie"></i> Funil de Startups</div>
-            </div>
-            <div class="card-body-custom d-flex flex-column align-items-center justify-content-center">
-                <canvas id="chartEstados" style="max-height:160px;max-width:160px"></canvas>
-                <div class="mt-3 w-100">
-                    <?php
-                    $cores = [
-                        'submetido'         => '#94A3B8', 
-                        'em_avaliacao'      => '#F59E0B', 
-                        'aprovado'          => '#3B82F6', 
-                        'incubado'          => '#10B981', 
-                        'fundo_investimento' => '#EC4899',
-                        'concluido'         => '#8B5CF6', 
-                        'rejeitado'         => '#EF4444'
-                    ];
-                    $i = 0;
-                    foreach (array_slice($porEstado, 0, 4) as $est => $qtd):
-                        if($i++ > 3) break;
-                        $cor = $cores[$est] ?? '#94A3B8';
-                    ?>
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <small class="text-muted d-flex align-items-center gap-2">
-                            <span style="width:8px;height:8px;border-radius:2px;background:<?= $cor ?>"></span>
-                            <?= ucfirst(str_replace('_',' ',$est)) ?>
-                        </small>
-                        <small class="fw-bold"><?= $qtd ?></small>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ── ÚLTIMOS PROJECTOS ──────── -->
+<div class="row g-4">
+    <!-- Coluna da Esquerda: Últimas Submissões (8 colunas) -->
     <div class="col-lg-8">
         <div class="card-custom h-100">
             <div class="card-header-custom">
@@ -439,65 +311,63 @@ require_once __DIR__ . '/../partials/_layout.php';
             </div>
         </div>
     </div>
+    
+    <!-- Coluna da Direita: Atividade e Atalhos (4 colunas) -->
+    <div class="col-lg-4">
+        <!-- Atalhos de Operação -->
+        <div class="card-custom mb-4">
+            <div class="card-header-custom">
+                <div class="card-title-custom"><i class="fa-solid fa-gears text-secondary"></i> Atalhos de Operação</div>
+            </div>
+            <div class="card-body-custom">
+                <div class="d-grid gap-2">
+                    <a href="/incubadora_ispsn/app/views/admin/usuarios.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
+                        <span><i class="fa fa-users-gear me-2"></i> Gestão de Mentores</span>
+                        <i class="fa fa-chevron-right opacity-50"></i>
+                    </a>
+                    <a href="/incubadora_ispsn/app/views/admin/relatorios.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
+                        <span><i class="fa fa-file-export me-2"></i> Relatórios Globais</span>
+                        <i class="fa fa-chevron-right opacity-50"></i>
+                    </a>
+                    <a href="/incubadora_ispsn/app/views/admin/gestao_espacos.php" class="btn-ghost d-flex align-items-center justify-content-between p-3 border rounded">
+                        <span><i class="fa fa-building-circle-check me-2"></i> Ocupação de Espaços</span>
+                        <i class="fa fa-chevron-right opacity-50"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
 
+        <!-- Atividade Recente -->
+        <div class="card-custom">
+            <div class="card-header-custom">
+                <div class="card-title-custom"><i class="fa-solid fa-bolt-lightning text-primary"></i> Atividade Recente</div>
+            </div>
+            <div class="card-body-custom">
+                <div class="activity-feed">
+                    <?php if(empty($atividades)): ?>
+                        <p class="text-muted small">Nenhuma atividade registada hoje.</p>
+                    <?php else: ?>
+                        <?php foreach($atividades as $ativ): 
+                            $icon = $ativ['tipo'] == 'sessao' ? 'fa-handshake' : ($ativ['tipo'] == 'projeto' ? 'fa-rocket' : 'fa-file-lines');
+                            $acao = $ativ['tipo'] == 'sessao' ? 'registou uma <b>sessão</b> com' : ($ativ['tipo'] == 'projeto' ? 'submeteu o <b>projeto</b>' : 'enviou o <b>relatório</b>');
+                        ?>
+                        <div class="activity-item">
+                            <div class="activity-time"><?= date('H:i', strtotime($ativ['criado_em'])) ?> • <?= date('d M', strtotime($ativ['criado_em'])) ?></div>
+                            <div class="activity-text">
+                                <b><?= htmlspecialchars($ativ['autor']) ?></b> <?= $acao ?> <b><?= htmlspecialchars($ativ['info']) ?></b>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ── JAVASCRIPT PARA GRÁFICOS ─────────── -->
 <?php ob_start(); ?>
 <script>
-<?php if ($stats['total_projectos'] > 0): ?>
-const ctxE = document.getElementById('chartEstados');
-if (ctxE) {
-    const coresMapeadas = <?= json_encode(array_values(array_intersect_key($cores, $porEstado))) ?>;
-    new Chart(ctxE, {
-        type: 'doughnut',
-        data: {
-            labels: <?= json_encode(array_map(fn($l) => ucfirst(str_replace('_',' ',$l)), $labels_chart)) ?>,
-            datasets: [{
-                data: <?= json_encode($values_chart) ?>,
-                backgroundColor: coresMapeadas,
-                borderWidth: 3,
-                borderColor: '#fff',
-                hoverOffset: 6
-            }]
-        },
-        options: {
-            cutout: '68%',
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => ` ${ctx.label}: ${ctx.parsed} projectos`
-                    }
-                }
-            }
-        }
-    });
-}
-
-const ctxM = document.getElementById('chartMentoria');
-if (ctxM) {
-    new Chart(ctxM, {
-        type: 'bar',
-        data: {
-            labels: <?= json_encode(array_keys($sessoesMes)) ?>,
-            datasets: [{
-                label: 'Sessões',
-                data: <?= json_encode(array_values($sessoesMes)) ?>,
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: '#3B82F6',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, grid: { display : false } }, x: { grid: { display: false } } }
-        }
-    });
-}
-<?php endif; ?>
-
 // Animação de contadores (Técnico e Criativo)
 document.querySelectorAll('.kpi-value').forEach(el => {
     const target = parseFloat(el.innerText.replace(/[^0-9.]/g, ''));
