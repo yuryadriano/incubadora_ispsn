@@ -4,6 +4,9 @@
 require_once __DIR__ . '/../../config/auth.php';
 obrigarLogin();
 
+// ── Verificação CSRF (todas as acções são via POST) ──
+csrf_verificar();
+
 $perfil    = $_SESSION['usuario_perfil'] ?? 'utilizador';
 $idUsuario = (int)$_SESSION['usuario_id'];
 $action    = $_POST['action'] ?? '';

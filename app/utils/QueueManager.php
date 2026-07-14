@@ -116,18 +116,20 @@ class QueueManager {
         // Mantemos o lockFile no disco para verificar a data de modificação no próximo ciclo (cooldown)
     }
     
-    /**
-     * Dispara um processo em segundo plano (background) para processar a fila.
-     */
     public static function dispararAssincrono() {
         $script = __DIR__ . '/processar_fila_emails.php';
         $script = realpath($script);
         if (!$script) return;
         
-        // Obter o binário correto do PHP executado, com fallback seguro para "php"
+        // Detetar corretamente o binário PHP CLI
         $phpPath = 'php';
-        if (defined('PHP_BINARY') && !empty(PHP_BINARY) && strpos(PHP_BINARY, 'fpm') === false && strpos(PHP_BINARY, 'cgi') === false) {
+        if (PHP_SAPI === 'cli' && defined('PHP_BINARY') && !empty(PHP_BINARY)) {
             $phpPath = PHP_BINARY;
+        } elseif (defined('PHP_BINDIR') && !empty(PHP_BINDIR)) {
+            $candidate = PHP_BINDIR . (str_starts_with(strtoupper(PHP_OS), 'WIN') ? '/php.exe' : '/php');
+            if (file_exists($candidate)) {
+                $phpPath = $candidate;
+            }
         }
         
         if (str_starts_with(strtoupper(PHP_OS), 'WIN')) {
@@ -135,7 +137,9 @@ class QueueManager {
             pclose(popen("start /B " . escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > NUL 2>&1", "r"));
         } else {
             // Linux / Unix (Servidor de produção)
-            exec(escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > /dev/null 2>&1 &");
+            // IMPORTANTE: O redirecionamento '< /dev/null' é vital para evitar que o processo pai (Apache)
+            // fique pendente à espera de dados na entrada standard (STDIN) do processo filho, bloqueando a requisição.
+            exec(escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > /dev/null 2>&1 < /dev/null &");
         }
     }
 }

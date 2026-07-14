@@ -1,15 +1,22 @@
 <?php
 require_once __DIR__ . '/../config/auth.php';
 
-// Processa login
+// Processa login — Redirecionar se já logado
+if (!empty($_SESSION['usuario_id'])) {
+    header('Location: /incubadora_ispsn/public/index.php');
+    exit;
+}
 $erro = '';
 
 // Verificar se existem cookies para preenchimento
-$lembrar_email = $_COOKIE['lembrar_email'] ?? '';
-$lembrar_senha = $_COOKIE['lembrar_senha'] ?? '';
+// SEGURANÇA: Apenas o email é guardado em cookie — NUNCA a senha
+$lembrar_email   = $_COOKIE['lembrar_email'] ?? '';
 $lembrar_checked = isset($_COOKIE['lembrar_email']) ? 'checked' : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verificação CSRF
+    csrf_verificar();
+
     $email = limpar($_POST['email'] ?? '');
     $senha = $_POST['senha'] ?? '';
     $lembrar = isset($_POST['lembrar']);
@@ -35,11 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Gerir cookies de "Lembrar-me"
             if ($lembrar) {
-                setcookie('lembrar_email', $email, time() + (30 * 24 * 60 * 60), "/");
-                setcookie('lembrar_senha', $senha, time() + (30 * 24 * 60 * 60), "/");
+                // SEGURANÇA: Guardar APENAS o email — nunca a senha — com flags de segurança
+                setcookie('lembrar_email', $email, [
+                    'expires'  => time() + (30 * 24 * 60 * 60),
+                    'path'     => '/',
+                    'httponly' => true,
+                    'samesite' => 'Strict',
+                ]);
             } else {
-                setcookie('lembrar_email', '', time() - 3600, "/");
-                setcookie('lembrar_senha', '', time() - 3600, "/");
+                setcookie('lembrar_email', '', ['expires' => time() - 3600, 'path' => '/', 'httponly' => true, 'samesite' => 'Strict']);
             }
 
             header('Location: /incubadora_ispsn/public/index.php');
@@ -318,6 +329,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="post" autocomplete="off">
+            <?= csrf_field() ?>
             <div class="mb-4">
                 <label for="email" class="form-label-custom">E-mail Institucional</label>
                 <div class="input-group-custom">
@@ -332,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="input-group-custom">
                     <i class="fa fa-lock"></i>
                     <input type="password" name="senha" id="senha" class="form-control-custom" 
-                           placeholder="••••••••" value="<?= htmlspecialchars($lembrar_senha) ?>" required>
+                           placeholder="••••••••" required autocomplete="current-password">
                 </div>
             </div>
 
