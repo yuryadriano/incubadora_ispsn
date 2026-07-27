@@ -41,6 +41,18 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Otimização Antibloqueio (Prevenção 504): Em requisições GET (leitura de páginas/dashboards),
+// liberta-se o lock exclusivo do ficheiro de sessão imediatamente após o carregamento.
+// Isto permite que requisições simultâneas ou múltiplas abas do mesmo utilizador executem em paralelo.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $script = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    $scriptsComMutacaoSessao = ['login.php', 'logout.php', 'forgot_password.php', 'reset_password.php'];
+    if (!in_array($script, $scriptsComMutacaoSessao) && session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+}
+
+
 // Auto-verificação de Schema: Para evitar bloqueios concorrentes e erro 504 no servidor de produção,
 // as migrações automáticas foram desativadas de cada requisição.
 // Para correr as migrações na base de dados, aceda a qualquer página com o parâmetro '?run_migrations=1' na URL.

@@ -170,7 +170,13 @@ class GeradorPDF {
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
         
+        $context = stream_context_create([
+            'http' => ['timeout' => 5],
+            'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false]
+        ]);
+        
         $dompdf = new Dompdf($options);
+        $dompdf->setHttpContext($context);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
@@ -185,7 +191,13 @@ class GeradorPDF {
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
         
+        $context = stream_context_create([
+            'http' => ['timeout' => 5],
+            'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false]
+        ]);
+        
         $dompdf = new Dompdf($options);
+        $dompdf->setHttpContext($context);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
