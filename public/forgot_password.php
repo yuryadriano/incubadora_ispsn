@@ -36,18 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $expiracao = date('Y-m-d H:i:s', strtotime('+1 hour'));
             $idUser    = $user['id'];
 
-            // Garantir que a tabela existe (criamos aqui para zero downtime)
-            $mysqli->query("CREATE TABLE IF NOT EXISTS password_resets (
-                id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                id_usuario INT NOT NULL,
-                token     VARCHAR(128) NOT NULL,
-                expiracao DATETIME NOT NULL,
-                usado     TINYINT(1) DEFAULT 0,
-                criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-                INDEX (token),
-                INDEX (id_usuario)
-            )");
-
             // Invalidar tokens anteriores do mesmo user
             $del = $mysqli->prepare("DELETE FROM password_resets WHERE id_usuario = ?");
             $del->bind_param('i', $idUser);

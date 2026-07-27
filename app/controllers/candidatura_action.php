@@ -235,23 +235,6 @@ if ($action === 'gerar_convite_seguro') {
         $tel        = $cand['telefone'];
         $perfil     = 'utilizador';
 
-        // Criar tabela convites se não existir (compatibilidade)
-        $mysqli->query("CREATE TABLE IF NOT EXISTS convites (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            email VARCHAR(150) NOT NULL,
-            token VARCHAR(100) NOT NULL,
-            perfil VARCHAR(50) NOT NULL DEFAULT 'utilizador',
-            id_projeto INT UNSIGNED DEFAULT NULL,
-            criado_por INT UNSIGNED NOT NULL,
-            aceite TINYINT(1) DEFAULT 0,
-            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-            data_expiracao DATETIME NULL,
-            id_candidatura INT UNSIGNED NULL,
-            telefone VARCHAR(30) NULL,
-            numero_estudante VARCHAR(50) NULL,
-            usos_maximos TINYINT DEFAULT 1
-        )");
-
         $stmt = $mysqli->prepare("
             INSERT INTO convites (email, token, perfil, criado_por, data_expiracao, id_candidatura, telefone, numero_estudante, usos_maximos)
             VALUES (?,?,?,?,?,?,?,?,1)
@@ -352,23 +335,6 @@ if ($action === 'gerar_convite_ajax') {
         $numEst     = $cand['numero_estudante'];
         $tel        = $cand['telefone'];
         $perfil     = 'utilizador';
-
-        // Garantir que a tabela existe
-        $mysqli->query("CREATE TABLE IF NOT EXISTS convites (
-            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-            email VARCHAR(150) NOT NULL,
-            token VARCHAR(100) NOT NULL,
-            perfil VARCHAR(50) NOT NULL DEFAULT 'utilizador',
-            id_projeto INT UNSIGNED DEFAULT NULL,
-            criado_por INT UNSIGNED NOT NULL,
-            aceite TINYINT(1) DEFAULT 0,
-            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP,
-            data_expiracao DATETIME NULL,
-            id_candidatura INT UNSIGNED NULL,
-            telefone VARCHAR(30) NULL,
-            numero_estudante VARCHAR(50) NULL,
-            usos_maximos TINYINT DEFAULT 1
-        )");
 
         $stmt = $mysqli->prepare("
             INSERT INTO convites (email, token, perfil, criado_por, data_expiracao, id_candidatura, telefone, numero_estudante, usos_maximos)

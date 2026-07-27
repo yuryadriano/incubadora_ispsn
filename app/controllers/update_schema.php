@@ -285,7 +285,38 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `fila_emails` (
 
 adicionarIndiceSeNaoExistir($mysqli, 'fila_emails', '`estado`, `tentativas`', 'idx_estado_tentativas');
 
-echo "Schema updated v2.1 (com fila_emails e idx_estado_tentativas)!";
+// TABELA DE CONVITES
+$mysqli->query("CREATE TABLE IF NOT EXISTS `convites` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `email` VARCHAR(150) NOT NULL,
+  `token` VARCHAR(100) NOT NULL,
+  `perfil` VARCHAR(50) NOT NULL DEFAULT 'utilizador',
+  `id_projeto` INT UNSIGNED DEFAULT NULL,
+  `criado_por` INT UNSIGNED NOT NULL,
+  `aceite` TINYINT(1) DEFAULT 0,
+  `criado_em` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `data_expiracao` DATETIME NULL,
+  `id_candidatura` INT UNSIGNED NULL,
+  `telefone` VARCHAR(30) NULL,
+  `numero_estudante` VARCHAR(50) NULL,
+  `usos_maximos` TINYINT DEFAULT 1,
+  KEY `idx_convite_token` (`token`),
+  KEY `idx_convite_cand` (`id_candidatura`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// TABELA DE RECUPERAÇÃO DE PASSWORD
+$mysqli->query("CREATE TABLE IF NOT EXISTS `password_resets` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `id_usuario` INT NOT NULL,
+  `token` VARCHAR(128) NOT NULL,
+  `expiracao` DATETIME NOT NULL,
+  `usado` TINYINT(1) DEFAULT 0,
+  `criado_em` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_pr_token` (`token`),
+  KEY `idx_pr_user` (`id_usuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+echo "Schema updated v2.2 (com convites, password_resets e fila_emails)!";
 ?>
 
 

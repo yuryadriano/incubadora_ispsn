@@ -21,18 +21,6 @@ if ($action === 'enviar_convite' || $action === 'gerar_link') {
 
     // 1. Gerar token único
     $token = bin2hex(random_bytes(16));
-    
-    // 2. Assegurar que a tabela existe
-    $mysqli->query("CREATE TABLE IF NOT EXISTS convites (
-        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, 
-        email VARCHAR(150) NOT NULL, 
-        token VARCHAR(100) NOT NULL, 
-        perfil VARCHAR(50) NOT NULL DEFAULT 'utilizador', 
-        id_projeto INT UNSIGNED DEFAULT NULL,
-        criado_por INT UNSIGNED NOT NULL, 
-        aceite TINYINT(1) DEFAULT 0, 
-        criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-    )");
 
     $stmt = $mysqli->prepare("INSERT INTO convites (email, token, perfil, criado_por, id_projeto) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param('sssii', $email, $token, $perfil, $idAdmin, $idProjeto);

@@ -41,15 +41,35 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Otimização Antibloqueio (Prevenção 504): Em requisições GET (leitura de páginas/dashboards),
-// liberta-se o lock exclusivo do ficheiro de sessão imediatamente após o carregamento.
-// Isto permite que requisições simultâneas ou múltiplas abas do mesmo utilizador executem em paralelo.
-if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
-    $script = basename($_SERVER['SCRIPT_NAME'] ?? '');
-    $scriptsComMutacaoSessao = ['login.php', 'logout.php', 'forgot_password.php', 'reset_password.php'];
-    if (!in_array($script, $scriptsComMutacaoSessao) && session_status() === PHP_SESSION_ACTIVE) {
-        session_write_close();
+// Inicializar token CSRF imediatamente se não existir
+if (empty($_SESSION['_csrf_token'])) {
+    $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// ARQUITETURA ANTIBLOQUEIO (Prevenção 504 Gateway Timeout):
+// Liberta-se o lock exclusivo do ficheiro de sessão imediatamente após a leitura inicial dos dados.
+// Isto permite que TODAS as requisições paralelas (GET, POST, AJAX) executem concorrentemente sem bloquear o servidor.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
+// Helpers para mutação de sessão segura e pontual (sem manter o lock aberto)
+function reopen_session_for_write(): void {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        @session_start();
     }
+}
+
+function set_session_var(string $chave, $valor): void {
+    reopen_session_for_write();
+    $_SESSION[$chave] = $valor;
+    session_write_close();
+}
+
+function unset_session_var(string $chave): void {
+    reopen_session_for_write();
+    unset($_SESSION[$chave]);
+    session_write_close();
 }
 
 
@@ -77,7 +97,7 @@ if ($runUpdate) {
    ============================================================= */
 function csrf_token(): string {
     if (empty($_SESSION['_csrf_token'])) {
-        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+        set_session_var('_csrf_token', bin2hex(random_bytes(32)));
     }
     return $_SESSION['_csrf_token'];
 }
