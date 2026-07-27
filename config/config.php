@@ -123,25 +123,31 @@ if (!defined('IS_DEV')) {
     define('IS_DEV', $isLocal);
 }
 
+// Helper para libertar lock de sessão PHP antecipadamente
+function close_session_early(): void {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+}
+
 // Autoload do Composer
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }
 
-// Fila de E-mails: tenta processar no final do pedido de forma assíncrona (se usar PHP-FPM)
+// Fila de E-mails: garante fecho de sessão antecipado e apenas processa em shutdown se a resposta HTTP já tiver sido entregue ao cliente (PHP-FPM)
 register_shutdown_function(function() {
+    // 1. Sempre libertar o lock de sessão ao encerrar o script para não bloquear requisições paralelas
+    close_session_early();
+    
+    // 2. Apenas tenta processar a fila síncrona se o PHP-FPM puder encerrar a conexão com o navegador primeiro
     if (function_exists('fastcgi_finish_request')) {
-        // Fechar a sessão PHP explicitamente antes de processar a fila para libertar o lock do ficheiro
-        // de sessão. Isto evita que outros pedidos do utilizador fiquem bloqueados em session_start()
-        // e causem erros de Gateway Timeout (504).
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_write_close();
-        }
-        fastcgi_finish_request();
+        @fastcgi_finish_request();
         if (file_exists(__DIR__ . '/../app/utils/QueueManager.php')) {
             require_once __DIR__ . '/../app/utils/QueueManager.php';
             \App\Utils\QueueManager::processar();
         }
     }
 });
+
 

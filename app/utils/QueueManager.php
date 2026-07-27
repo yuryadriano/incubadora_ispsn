@@ -43,15 +43,17 @@ class QueueManager {
     }
     
     /**
-     * Processa os e-mails pendentes na fila. Utiliza locks para evitar execução concorrente.
+     * Processa os e-mails pendentes na fila. Utiliza locks e limite de tempo estrito para evitar tempo limite.
      */
     public static function processar() {
         global $mysqli;
         
         $lockFile = __DIR__ . '/processar_fila_emails.lock';
+        $isCLI = (PHP_SAPI === 'cli');
         
-        // Cooldown: evita processar a fila mais do que uma vez a cada 60 segundos
-        if (file_exists($lockFile) && (time() - filemtime($lockFile) < 60)) {
+        // Cooldown em requisições Web: evita processar a fila mais do que uma vez a cada 15 segundos no servidor Web.
+        // Se for CLI (cron), permite execução normal.
+        if (!$isCLI && file_exists($lockFile) && (time() - filemtime($lockFile) < 15)) {
             return;
         }
         
@@ -67,12 +69,16 @@ class QueueManager {
         // Atualizar o timestamp para marcar o início do processamento actual
         touch($lockFile);
         
+        $startTime = time();
+        $maxRunSeconds = 10; // Máximo de 10 segundos por ciclo de processamento
+        
         try {
-            // Obter até 10 e-mails pendentes com menos de 3 tentativas
+            // Obter até 5 e-mails pendentes com menos de 3 tentativas por lote
             $res = $mysqli->query("
                 SELECT * FROM fila_emails 
                 WHERE estado = 'pendente' AND tentativas < 3 
-                LIMIT 10
+                ORDER BY id ASC
+                LIMIT 5
             ");
             
             if ($res && $res->num_rows > 0) {
@@ -82,15 +88,17 @@ class QueueManager {
                 }
                 
                 foreach ($emails as $email) {
+                    // Guard de tempo: parar se exceder o tempo limite seguro de execução
+                    if ((time() - $startTime) >= $maxRunSeconds) {
+                        break;
+                    }
+                    
                     $id = (int)$email['id'];
                     $tentativaAtual = (int)$email['tentativas'] + 1;
                     
-                    // Apenas incrementa as tentativas no banco para evitar que e-mails fiquem presos como "enviados"
-                    // se o script for interrompido a meio do envio. O lock de arquivo garante que não há concorrência.
                     $mysqli->query("UPDATE fila_emails SET tentativas = $tentativaAtual WHERE id = $id");
                     
                     $errorInfo = "";
-                    // Usamos o método direto (síncrono/real) do Mailer
                     $sucesso = Mailer::sendImmediate($email['destinatario'], $email['assunto'], $email['corpo'], $errorInfo, $email['anexo']);
                     
                     if ($sucesso) {
@@ -113,7 +121,6 @@ class QueueManager {
         
         flock($fp, LOCK_UN);
         fclose($fp);
-        // Mantemos o lockFile no disco para verificar a data de modificação no próximo ciclo (cooldown)
     }
     
     public static function dispararAssincrono() {
@@ -121,7 +128,7 @@ class QueueManager {
         $script = realpath($script);
         if (!$script) return;
         
-        // Detetar corretamente o binário PHP CLI
+        // Detetar corretamente o binário PHP CLI em ambientes Windows ou Linux (cPanel / Docker)
         $phpPath = 'php';
         if (PHP_SAPI === 'cli' && defined('PHP_BINARY') && !empty(PHP_BINARY)) {
             $phpPath = PHP_BINARY;
@@ -132,14 +139,34 @@ class QueueManager {
             }
         }
         
+        // Se ainda for apenas 'php', procurar em caminhos padrão de servidores cPanel/Linux
+        if ($phpPath === 'php' && !str_starts_with(strtoupper(PHP_OS), 'WIN')) {
+            $commonPaths = [
+                '/usr/bin/php',
+                '/usr/local/bin/php',
+                '/opt/cpanel/ea-php82/root/usr/bin/php',
+                '/opt/cpanel/ea-php81/root/usr/bin/php',
+                '/opt/cpanel/ea-php80/root/usr/bin/php',
+                '/opt/cpanel/ea-php74/root/usr/bin/php'
+            ];
+            foreach ($commonPaths as $p) {
+                if (file_exists($p) && is_executable($p)) {
+                    $phpPath = $p;
+                    break;
+                }
+            }
+        }
+        
         if (str_starts_with(strtoupper(PHP_OS), 'WIN')) {
-            // Windows (XAMPP local)
-            pclose(popen("start /B " . escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > NUL 2>&1", "r"));
+            if (function_exists('popen')) {
+                @pclose(popen("start /B " . escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > NUL 2>&1", "r"));
+            }
         } else {
-            // Linux / Unix (Servidor de produção)
-            // IMPORTANTE: O redirecionamento '< /dev/null' é vital para evitar que o processo pai (Apache)
-            // fique pendente à espera de dados na entrada standard (STDIN) do processo filho, bloqueando a requisição.
-            exec(escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > /dev/null 2>&1 < /dev/null &");
+            // Linux / Unix
+            if (function_exists('exec')) {
+                @exec(escapeshellarg($phpPath) . " " . escapeshellarg($script) . " > /dev/null 2>&1 < /dev/null &");
+            }
         }
     }
 }
+

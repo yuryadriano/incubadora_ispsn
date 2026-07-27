@@ -23,7 +23,10 @@ class Mailer {
             $mail->SMTPAuth   = true;
             $mail->Username   = MAIL_USER;
             $mail->Password   = MAIL_PASS;
-            $mail->Timeout    = 8;
+            $mail->Timeout    = 5; // Timeout estrito de conexão (5s)
+            $mail->Timelimit  = 10; // Timeout máximo total do comando SMTP (10s)
+            $mail->SMTPKeepAlive = false;
+
             
             if (MAIL_PORT == 465) {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;

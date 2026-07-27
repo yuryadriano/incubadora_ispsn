@@ -279,10 +279,14 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `fila_emails` (
   `criado_em`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `processado_em`   DATETIME        NULL,
   PRIMARY KEY (`id`),
-  KEY `idx_estado` (`estado`)
+  KEY `idx_estado` (`estado`),
+  KEY `idx_estado_tentativas` (`estado`, `tentativas`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-echo "Schema updated v2.1 (com fila_emails)!";
+adicionarIndiceSeNaoExistir($mysqli, 'fila_emails', '`estado`, `tentativas`', 'idx_estado_tentativas');
+
+echo "Schema updated v2.1 (com fila_emails e idx_estado_tentativas)!";
 ?>
+
 
 
