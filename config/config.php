@@ -46,30 +46,11 @@ if (empty($_SESSION['_csrf_token'])) {
     $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// ARQUITETURA ANTIBLOQUEIO (Prevenção 504 Gateway Timeout):
-// Liberta-se o lock exclusivo do ficheiro de sessão imediatamente após a leitura inicial dos dados.
-// Isto permite que TODAS as requisições paralelas (GET, POST, AJAX) executem concorrentemente sem bloquear o servidor.
-if (session_status() === PHP_SESSION_ACTIVE) {
-    session_write_close();
-}
-
-// Helpers para mutação de sessão segura e pontual (sem manter o lock aberto)
-function reopen_session_for_write(): void {
-    if (session_status() !== PHP_SESSION_ACTIVE) {
-        @session_start();
+// Helper para fecho antecipado manual em endpoints pesados
+function close_session_early(): void {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
     }
-}
-
-function set_session_var(string $chave, $valor): void {
-    reopen_session_for_write();
-    $_SESSION[$chave] = $valor;
-    session_write_close();
-}
-
-function unset_session_var(string $chave): void {
-    reopen_session_for_write();
-    unset($_SESSION[$chave]);
-    session_write_close();
 }
 
 
@@ -155,24 +136,17 @@ if (!defined('IS_DEV')) {
     define('IS_DEV', $isLocal);
 }
 
-// Helper para libertar lock de sessão PHP antecipadamente
-function close_session_early(): void {
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        session_write_close();
-    }
-}
+
 
 // Autoload do Composer
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     require_once __DIR__ . '/../vendor/autoload.php';
 }
 
-// Fila de E-mails: garante fecho de sessão antecipado e apenas processa em shutdown se a resposta HTTP já tiver sido entregue ao cliente (PHP-FPM)
+// Fila de E-mails: garante persistência de sessão e apenas processa em shutdown se a resposta HTTP já tiver sido entregue ao cliente (PHP-FPM)
 register_shutdown_function(function() {
-    // 1. Sempre libertar o lock de sessão ao encerrar o script para não bloquear requisições paralelas
     close_session_early();
     
-    // 2. Apenas tenta processar a fila síncrona se o PHP-FPM puder encerrar a conexão com o navegador primeiro
     if (function_exists('fastcgi_finish_request')) {
         @fastcgi_finish_request();
         if (file_exists(__DIR__ . '/../app/utils/QueueManager.php')) {
