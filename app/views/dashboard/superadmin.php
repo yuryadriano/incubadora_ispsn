@@ -9,24 +9,34 @@ $paginaActiva = 'dashboard';
 // ── Colectar TODOS os dados do sistema ────
 $r = $mysqli->query("SELECT perfil, COUNT(*) n FROM usuarios GROUP BY perfil");
 $porPerfil = [];
-while ($row = $r->fetch_assoc()) $porPerfil[$row['perfil']] = (int)$row['n'];
+if ($r) {
+    while ($row = $r->fetch_assoc()) $porPerfil[$row['perfil']] = (int)$row['n'];
+}
 $totalUsers = array_sum($porPerfil);
 
 $r = $mysqli->query("SELECT estado, COUNT(*) n FROM projetos GROUP BY estado");
 $porEstadoP = [];
-while ($row = $r->fetch_assoc()) $porEstadoP[$row['estado']] = (int)$row['n'];
+if ($r) {
+    while ($row = $r->fetch_assoc()) $porEstadoP[$row['estado']] = (int)$row['n'];
+}
 $totalStartups = array_sum($porEstadoP);
 
 $finTotal = 0;
-if ($mysqli->query("SHOW TABLES LIKE 'financiamentos'")->num_rows) {
+$checkFin = $mysqli->query("SHOW TABLES LIKE 'financiamentos'");
+if ($checkFin && $checkFin->num_rows) {
     $r = $mysqli->query("SELECT COALESCE(SUM(montante_aprovado),0) s FROM financiamentos");
-    $finTotal = (float)$r->fetch_assoc()['s'];
+    if ($r && $row = $r->fetch_assoc()) {
+        $finTotal = (float)$row['s'];
+    }
 }
 
 $mentTotal = 0;
-if ($mysqli->query("SHOW TABLES LIKE 'mentorias'")->num_rows) {
+$checkMent = $mysqli->query("SHOW TABLES LIKE 'mentorias'");
+if ($checkMent && $checkMent->num_rows) {
     $r = $mysqli->query("SELECT COUNT(*) n FROM mentorias");
-    $mentTotal = (int)$r->fetch_assoc()['n'];
+    if ($r && $row = $r->fetch_assoc()) {
+        $mentTotal = (int)$row['n'];
+    }
 }
 
 $ultimosUsers = [];

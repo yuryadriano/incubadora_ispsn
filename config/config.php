@@ -10,32 +10,65 @@ define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
 define('ASSET_VERSION', '2026062403');
 
-$mysqli = mysqli_init();
-$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 3);
+// Configuração resiliente de conexão MySQL (Inspirada na Clínica ISPSN com 10 retries e auto-recovery)
+$maxTries = 10;
+$connected = false;
+$mysqli = null;
 
-// Timeout de leitura — evita queries suspensas indefinidamente
-// Definido tanto no driver mysqlnd global quanto na opção da conexão (11 = MYSQLI_OPT_READ_TIMEOUT)
-ini_set('mysqlnd.net_read_timeout', '5');
-$mysqli->options(11, 5);
+for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
+    if (function_exists('mysqli_init')) {
+        $mysqli = mysqli_init();
+        if ($mysqli) {
+            $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+            $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        }
+    }
+    
+    // Fallback para mysqli_connect padrão se real_connect oscilar
+    if (!$connected || !$mysqli || $mysqli->connect_errno) {
+        $mysqli = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if ($mysqli && !mysqli_connect_errno()) {
+            $connected = true;
+        }
+    }
+    
+    if ($connected && $mysqli && !$mysqli->connect_errno) {
+        break;
+    }
+    
+    if ($attempt < $maxTries) {
+        sleep(2); // Aguarda 2 segundos antes de tentar novamente (janela total de resiliência ~20s)
+    }
+}
 
-
-$connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-if (!$connected || $mysqli->connect_errno) {
+if (!$connected || !$mysqli || $mysqli->connect_errno) {
+    $errMessage = ($mysqli && $mysqli->connect_error) ? $mysqli->connect_error : mysqli_connect_error();
+    error_log("DB connection failed after {$maxTries} attempts: " . $errMessage);
     http_response_code(503);
-    header('Retry-After: 30');
-    // Permitir que o Cloudflare sirva uma cópia antiga (stale) se existir
-    header('Cache-Control: public, max-age=0, stale-if-error=86400');
-    // SEM auto-refresh — evita loop de requests que sobrecarrega o servidor
+    header('Retry-After: 8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
     die('<div style="font-family: sans-serif; text-align: center; padding: 50px; color: #333;">
-        <h2>⚠️ Serviço Temporariamente Indisponível</h2>
-        <p>O servidor de base de dados não está acessível neste momento.</p>
-        <p style="color:#888;font-size:0.9rem;">Por favor, tente novamente dentro de 30 segundos.</p>
-        <a href="javascript:location.reload()" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#D97706;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Tentar Novamente</a>
+        <h2 style="color:#d97706;">⏳ A Conectar ao Servidor...</h2>
+        <p>O servidor de base de dados está temporariamente a inicializar ou indisponível.</p>
+        <p style="color:#888;font-size:0.9rem;">O sistema tentará reconectar automaticamente em 8 segundos.</p>
+        <meta http-equiv="refresh" content="8">
+        <a href="javascript:location.reload()" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#D97706;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Recarregar Agora</a>
     </div>');
 }
 
 $mysqli->set_charset('utf8mb4');
+
+// Guarda para reconectar automaticamente se a conexão oscilar no meio do script
+function ensure_db_connection() {
+    global $mysqli;
+    if (!$mysqli || !@$mysqli->ping()) {
+        $mysqli = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        if ($mysqli) {
+            $mysqli->set_charset('utf8mb4');
+        }
+    }
+    return $mysqli;
+}
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -78,7 +111,7 @@ if ($runUpdate) {
    ============================================================= */
 function csrf_token(): string {
     if (empty($_SESSION['_csrf_token'])) {
-        set_session_var('_csrf_token', bin2hex(random_bytes(32)));
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
     }
     return $_SESSION['_csrf_token'];
 }

@@ -11,13 +11,13 @@ if ($isAdminOrSuper) {
     // Admin can choose which student to view
     $idUsuario = (int)($_GET['id_usuario'] ?? 0);
     if ($idUsuario <= 0) {
-        // Fallback to first student project creator
-        $fallback = $mysqli->query("
+        $resFallback = $mysqli->query("
             SELECT u.id, u.nome 
             FROM usuarios u 
             JOIN projetos p ON p.criado_por = u.id 
             ORDER BY p.criado_em DESC LIMIT 1
-        ")->fetch_assoc();
+        ");
+        $fallback = $resFallback ? $resFallback->fetch_assoc() : null;
         $idUsuario = $fallback ? (int)$fallback['id'] : 0;
     }
     
