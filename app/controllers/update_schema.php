@@ -316,7 +316,25 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `password_resets` (
   KEY `idx_pr_user` (`id_usuario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-echo "Schema updated v2.2 (com convites, password_resets e fila_emails)!";
+// TABELA DE ATRIBUIÇÃO DE AVALIADORES (3 VAGAS POR PROJETO - AVALIAÇÃO CEGA)
+$mysqli->query("CREATE TABLE IF NOT EXISTS `avaliacoes_atribuicao` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `projeto_id` INT NOT NULL,
+  `avaliador_id` INT NOT NULL,
+  `estado` ENUM('atribuido','concluido') DEFAULT 'atribuido',
+  `data_atribuicao` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `data_conclusao` DATETIME NULL,
+  UNIQUE KEY `uniq_projeto_avaliador` (`projeto_id`, `avaliador_id`),
+  KEY `fk_atrib_projeto` (`projeto_id`),
+  KEY `fk_atrib_avaliador` (`avaliador_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+// COLUNAS ADICIONAIS EM PROJETOS E AVALIAÇÕES
+adicionarColunaSeNaoExistir($mysqli, 'projetos', 'estado_avaliacao', "ENUM('pendente','em_avaliacao','avaliado') DEFAULT 'pendente'");
+adicionarColunaSeNaoExistir($mysqli, 'projetos', 'media_final', "DECIMAL(4,2) DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'atribuicao_id', "INT DEFAULT NULL");
+
+echo "Schema updated v2.3 (com avaliacoes_atribuicao, estado_avaliacao e media_final)!";
 ?>
 
 

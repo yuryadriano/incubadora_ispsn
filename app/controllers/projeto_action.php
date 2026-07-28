@@ -235,10 +235,184 @@ if ($action === 'adicionar_comentario') {
 }
 
 /* ════════════════════════════════════════════════
-   ACÇÃO: avaliar_projeto
-   Salva avaliação formal (admin/superadmin)
+   ACÇÃO: atribuir_avaliador
+   Avaliador pega autonomamente no caso (máximo 3 avaliadores por projeto)
 ════════════════════════════════════════════════ */
-if ($action === 'avaliar_projeto' && in_array($perfil, ['admin','superadmin'])) {
+if ($action === 'atribuir_avaliador') {
+    obrigarPerfil(['admin', 'superadmin', 'mentor']);
+    $idProjeto = (int)($_POST['id_projeto'] ?? 0);
+
+    if ($idProjeto <= 0) {
+        $_SESSION['flash_erro'] = 'Projecto inválido.';
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    // Verificar se o utilizador é o autor do próprio projecto (conflito de interesses)
+    $stmtChk = $mysqli->prepare("SELECT criado_por FROM projetos WHERE id = ?");
+    $stmtChk->bind_param('i', $idProjeto);
+    $stmtChk->execute();
+    $pData = $stmtChk->get_result()->fetch_assoc();
+    $stmtChk->close();
+
+    if ($pData && (int)$pData['criado_por'] === $idUsuario) {
+        $_SESSION['flash_erro'] = 'Não pode avaliar o seu próprio projecto (conflito de interesses).';
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    // Transação e Lock de Linha (FOR UPDATE) contra Concorrência
+    $mysqli->begin_transaction();
+    try {
+        $stmtCount = $mysqli->prepare("SELECT COUNT(*) n FROM avaliacoes_atribuicao WHERE projeto_id = ? FOR UPDATE");
+        $stmtCount->bind_param('i', $idProjeto);
+        $stmtCount->execute();
+        $count = (int)$stmtCount->get_result()->fetch_assoc()['n'];
+        $stmtCount->close();
+
+        if ($count >= 3) {
+            $mysqli->rollback();
+            $_SESSION['flash_erro'] = 'Este projecto já atingiu o limite de 3 avaliadores atribuídos.';
+        } else {
+            $stmtIns = $mysqli->prepare("INSERT IGNORE INTO avaliacoes_atribuicao (projeto_id, avaliador_id, estado) VALUES (?, ?, 'atribuido')");
+            $stmtIns->bind_param('ii', $idProjeto, $idUsuario);
+            $stmtIns->execute();
+            $inserted = $stmtIns->affected_rows;
+            $stmtIns->close();
+
+            if ($inserted > 0) {
+                $novoCount = $count + 1;
+                $novoEstadoAval = ($novoCount == 3) ? 'em_avaliacao' : 'em_avaliacao';
+                $stmtUp = $mysqli->prepare("UPDATE projetos SET estado_avaliacao = ?, estado = IF(estado = 'submetido', 'em_avaliacao', estado) WHERE id = ?");
+                $stmtUp->bind_param('si', $novoEstadoAval, $idProjeto);
+                $stmtUp->execute();
+                $stmtUp->close();
+
+                $mysqli->commit();
+                $_SESSION['flash_ok'] = 'Projecto atribuído com sucesso à sua fila de avaliação!';
+            } else {
+                $mysqli->rollback();
+                $_SESSION['flash_aviso'] = 'Já se encontra atribuído a este projecto.';
+            }
+        }
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        $_SESSION['flash_erro'] = 'Erro ao atribuir projecto: ' . $e->getMessage();
+    }
+
+    header('Location: ' . $redirect);
+    exit;
+}
+
+/* ════════════════════════════════════════════════
+   ACÇÃO: libertar_atribuicao
+   Admin/Superadmin cancela atribuição inativa
+════════════════════════════════════════════════ */
+if ($action === 'libertar_atribuicao') {
+    obrigarPerfil(['admin', 'superadmin']);
+    $idAtribuicao = (int)($_POST['id_atribuicao'] ?? 0);
+
+    if ($idAtribuicao > 0) {
+        $stmtDel = $mysqli->prepare("DELETE FROM avaliacoes_atribuicao WHERE id = ? AND estado = 'atribuido'");
+        $stmtDel->bind_param('i', $idAtribuicao);
+        $stmtDel->execute();
+        $stmtDel->close();
+        $_SESSION['flash_ok'] = 'Atribuição libertada com sucesso. A vaga voltou à fila aberta.';
+    }
+
+    header('Location: ' . $redirect);
+    exit;
+}
+
+/* ════════════════════════════════════════════════
+   FUNÇÃO: consolidarAvaliacao
+   Consolida automaticamente a decisão do projeto após as 3 avaliações concluídas
+════════════════════════════════════════════════ */
+function consolidarAvaliacao($idProjeto, $mysqli) {
+    // Buscar todas as avaliações concluídas
+    $stmt = $mysqli->prepare("
+        SELECT a.* 
+        FROM avaliacoes a
+        JOIN avaliacoes_atribuicao aa ON (aa.id = a.atribuicao_id OR (aa.projeto_id = a.id_projeto AND aa.avaliador_id = a.id_avaliador))
+        WHERE a.id_projeto = ? AND aa.estado = 'concluido'
+    ");
+    $stmt->bind_param('i', $idProjeto);
+    $stmt->execute();
+    $avaliacoes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+
+    if (count($avaliacoes) < 3) {
+        return false; // Ainda não se atingiram as 3 avaliações completas
+    }
+
+    $notasFinais = [];
+    $vetos = 0;
+
+    foreach ($avaliacoes as $av) {
+        $mediaIndiv = (
+            (int)$av['nota_inovacao'] + (int)$av['nota_viabilidade'] + (int)$av['nota_impacto'] + (int)$av['nota_equipa'] +
+            (int)$av['nota_sustentabilidade'] + (int)$av['nota_escalabilidade'] + (int)$av['nota_mercado'] + (int)$av['nota_proposta']
+        ) / 8.0;
+        $notasFinais[] = $mediaIndiv;
+
+        if ((int)$av['nota_inovacao'] < 5 || (int)$av['nota_sustentabilidade'] < 4) {
+            $vetos++;
+        }
+    }
+
+    $mediaConsolidada = round(array_sum($notasFinais) / count($notasFinais), 2);
+
+    if ($vetos >= 2) {
+        $decisao = 'rejeitado'; // Maioria vetou
+    } elseif ($mediaConsolidada >= 7.0 && $vetos == 0) {
+        $decisao = 'aprovado';
+    } elseif ($mediaConsolidada >= 4.0) {
+        $decisao = 'em_revisao';
+    } else {
+        $decisao = 'rejeitado';
+    }
+
+    // Buscar estado anterior e autor do projeto
+    $stmtEst = $mysqli->prepare("SELECT estado, criado_por, titulo FROM projetos WHERE id = ?");
+    $stmtEst->bind_param('i', $idProjeto);
+    $stmtEst->execute();
+    $projData = $stmtEst->get_result()->fetch_assoc();
+    $stmtEst->close();
+
+    $estadoAnterior = $projData ? $projData['estado'] : '';
+    $idAutor = $projData ? (int)$projData['criado_por'] : 0;
+    $tituloProj = $projData ? $projData['titulo'] : 'Projecto';
+
+    // Atualizar o projeto com o estado final e a nota consolidada
+    $stmtUp = $mysqli->prepare("UPDATE projetos SET estado = ?, media_final = ?, estado_avaliacao = 'avaliado' WHERE id = ?");
+    $stmtUp->bind_param('sdi', $decisao, $mediaConsolidada, $idProjeto);
+    $stmtUp->execute();
+    $stmtUp->close();
+
+    // Registar no histórico
+    $stmtLog = $mysqli->prepare("INSERT INTO historico_estados (id_projeto, estado_anterior, estado_novo, id_usuario, motivo) VALUES (?, ?, ?, 1, ?)");
+    $motivoLog = "Consolidação automática de 3 avaliações. Média Consolidada: " . number_format($mediaConsolidada, 2) . "/10. Vetos: $vetos. Decisão: " . strtoupper($decisao);
+    $stmtLog->bind_param('isss', $idProjeto, $estadoAnterior, $decisao, $motivoLog);
+    $stmtLog->execute();
+    $stmtLog->close();
+
+    // Notificar o estudante por e-mail e sistema
+    if ($idAutor > 0) {
+        $msgNotif = "A avaliação do seu projecto '{$tituloProj}' foi concluída e consolidada.\n\nResultado Final: " . strtoupper(str_replace('_', ' ', $decisao)) . "\nMédia Consolidada: " . number_format($mediaConsolidada, 2) . "/10.\n\nAceda ao painel para consultar a evolução do seu projecto.";
+        $tipoNotif = ($decisao === 'aprovado') ? 'sucesso' : (($decisao === 'em_revisao') ? 'warning' : 'erro');
+        enviarNotificacao($idAutor, "Avaliação Concluída: " . ucfirst($decisao), $msgNotif, $tipoNotif);
+    }
+
+    return true;
+}
+
+/* ════════════════════════════════════════════════
+   ACÇÃO: avaliar
+   Grava a avaliação individual e desencadeia consolidação ao atingir 3 submissões
+════════════════════════════════════════════════ */
+if ($action === 'avaliar') {
+    obrigarPerfil(['admin','superadmin','mentor']);
+    
     $idProjeto            = (int)($_POST['id_projeto'] ?? 0);
     $notaInovacao         = min(10, max(0, (int)($_POST['nota_inovacao']         ?? 0)));
     $notaViabilidade      = min(10, max(0, (int)($_POST['nota_viabilidade']      ?? 0)));
@@ -249,133 +423,117 @@ if ($action === 'avaliar_projeto' && in_array($perfil, ['admin','superadmin'])) 
     $notaMercado          = min(10, max(0, (int)($_POST['nota_mercado']          ?? 0)));
     $notaProposta         = min(10, max(0, (int)($_POST['nota_proposta']         ?? 0)));
     $observacoes          = trim($_POST['observacoes'] ?? '');
-    
-    // Pesos dos 8 critérios
+
+    if ($idProjeto <= 0) {
+        $_SESSION['flash_erro'] = 'Projecto inválido.';
+        header('Location: ' . $redirect);
+        exit;
+    }
+
+    // Buscar atribuição do avaliador
+    $stmtAtrib = $mysqli->prepare("SELECT id FROM avaliacoes_atribuicao WHERE projeto_id = ? AND avaliador_id = ?");
+    $stmtAtrib->bind_param('ii', $idProjeto, $idUsuario);
+    $stmtAtrib->execute();
+    $atribRow = $stmtAtrib->get_result()->fetch_assoc();
+    $stmtAtrib->close();
+
+    $atribuicaoId = $atribRow ? (int)$atribRow['id'] : null;
+
+    // Se ainda não estava atribuído mas há vaga (<3), atribuir automaticamente ao submeter
+    if (!$atribuicaoId) {
+        $stmtC = $mysqli->prepare("SELECT COUNT(*) n FROM avaliacoes_atribuicao WHERE projeto_id = ?");
+        $stmtC->bind_param('i', $idProjeto);
+        $stmtC->execute();
+        $cntAtrib = (int)$stmtC->get_result()->fetch_assoc()['n'];
+        $stmtC->close();
+
+        if ($cntAtrib >= 3) {
+            $_SESSION['flash_erro'] = 'Este projecto já possui 3 avaliadores atribuídos.';
+            header('Location: ' . $redirect);
+            exit;
+        }
+
+        $stmtInsA = $mysqli->prepare("INSERT INTO avaliacoes_atribuicao (projeto_id, avaliador_id, estado) VALUES (?, ?, 'atribuido')");
+        $stmtInsA->bind_param('ii', $idProjeto, $idUsuario);
+        $stmtInsA->execute();
+        $atribuicaoId = $stmtInsA->insert_id;
+        $stmtInsA->close();
+    }
+
+    // Média individual
     $totalFloat = (
-        $notaInovacao * 0.20 + 
-        $notaSustentabilidade * 0.15 +
-        $notaEscalabilidade * 0.10 + 
-        $notaImpacto * 0.15 +
-        $notaViabilidade * 0.10 + 
-        $notaEquipa * 0.10 +
-        $notaMercado * 0.10 + 
-        $notaProposta * 0.10
-    );
+        $notaInovacao + $notaViabilidade + $notaImpacto + $notaEquipa +
+        $notaSustentabilidade + $notaEscalabilidade + $notaMercado + $notaProposta
+    ) / 8.0;
     $total = (int)round($totalFloat);
 
-    // Lógica de decisão recomendada
-    $notas = [$notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta];
-    $minNota = min($notas);
+    $decisaoIndiv = ($notaInovacao < 5 || $notaSustentabilidade < 4) ? 'em_revisao' : (($totalFloat >= 7.0) ? 'aprovado' : 'rejeitado');
 
-    if ($notaInovacao < 5 || $notaSustentabilidade < 4) {
-        $decisaoSugerida = 'em_revisao'; // Veto automático
-    } elseif ($totalFloat >= 7.0 && $minNota >= 4) {
-        $decisaoSugerida = 'aprovado';
-    } elseif ($totalFloat < 5.5) {
-        $decisaoSugerida = 'rejeitado';
+    // Verificar se já tem registo na tabela avaliacoes
+    $check = $mysqli->prepare("SELECT id FROM avaliacoes WHERE id_projeto=? AND id_avaliador=?");
+    $check->bind_param('ii', $idProjeto, $idUsuario);
+    $check->execute();
+    $jaExiste = $check->get_result()->fetch_assoc();
+    $check->close();
+
+    if ($jaExiste) {
+        $stmt = $mysqli->prepare("
+            UPDATE avaliacoes SET
+                atribuicao_id=?, nota_inovacao=?, nota_viabilidade=?, nota_impacto=?, nota_equipa=?,
+                nota_sustentabilidade=?, nota_escalabilidade=?, nota_mercado=?, nota_proposta=?,
+                pontuacao_total=?, observacoes=?, decisao=?, avaliado_em=NOW()
+            WHERE id_projeto=? AND id_avaliador=?
+        ");
+        $stmt->bind_param('iiiiiiiiissii',
+            $atribuicaoId, $notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa,
+            $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta,
+            $total, $observacoes, $decisaoIndiv, $idProjeto, $idUsuario
+        );
     } else {
-        $decisaoSugerida = 'em_revisao';
+        $stmt = $mysqli->prepare("
+            INSERT INTO avaliacoes
+                (atribuicao_id, id_projeto, id_avaliador, nota_inovacao, nota_viabilidade, nota_impacto,
+                 nota_equipa, nota_sustentabilidade, nota_escalabilidade, nota_mercado, nota_proposta,
+                 pontuacao_total, observacoes, decisao)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        ");
+        $stmt->bind_param('iiiiiiiiiiicss',
+            $atribuicaoId, $idProjeto, $idUsuario, $notaInovacao, $notaViabilidade,
+            $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade,
+            $notaMercado, $notaProposta, $total, $observacoes, $decisaoIndiv
+        );
+    }
+    $stmt->execute();
+    $stmt->close();
+
+    // Marcar a atribuição como concluída
+    if ($atribuicaoId) {
+        $stmtConcl = $mysqli->prepare("UPDATE avaliacoes_atribuicao SET estado = 'concluido', data_conclusao = NOW() WHERE id = ?");
+        $stmtConcl->bind_param('i', $atribuicaoId);
+        $stmtConcl->execute();
+        $stmtConcl->close();
     }
 
-    $decisao = $_POST['decisao'] ?? $decisaoSugerida;
-    // Forçar em_revisao se veto estiver ativo mas admin tentou aprovar
-    if ($decisao === 'aprovado' && ($notaInovacao < 5 || $notaSustentabilidade < 4)) {
-        $decisao = 'em_revisao';
-        $_SESSION['flash_aviso'] = 'Aprovado impedido devido a critérios eliminatórios (Inovação < 5 ou Autossustentabilidade < 4). Definido como Em Revisão.';
+    // Verificar se as 3 avaliações foram concluídas para acionar o motor de consolidação
+    $stmtComp = $mysqli->prepare("SELECT COUNT(*) n FROM avaliacoes_atribuicao WHERE projeto_id = ? AND estado = 'concluido'");
+    $stmtComp->bind_param('i', $idProjeto);
+    $stmtComp->execute();
+    $numConcluidas = (int)$stmtComp->get_result()->fetch_assoc()['n'];
+    $stmtComp->close();
+
+    if ($numConcluidas >= 3) {
+        consolidarAvaliacao($idProjeto, $mysqli);
+        $_SESSION['flash_ok'] = 'A sua avaliação foi registada! Como foi a 3.ª avaliação concluída, o projecto foi automaticamente consolidado e a decisão final foi emitida.';
+    } else {
+        $faltam = 3 - $numConcluidas;
+        $_SESSION['flash_ok'] = "A sua avaliação foi registada com sucesso! Faltam {$faltam} avaliação(ões) para o sistema consolidar a decisão final.";
     }
 
-    $decisoesValidas = ['pendente','aprovado','rejeitado','em_revisao'];
-    if (!in_array($decisao, $decisoesValidas)) $decisao = 'pendente';
-
-    if ($idProjeto) {
-        // Verificar se já avaliou
-        $check = $mysqli->prepare("SELECT id FROM avaliacoes WHERE id_projeto=? AND id_avaliador=?");
-        $check->bind_param('ii', $idProjeto, $idUsuario);
-        $check->execute();
-        $jaExiste = $check->get_result()->fetch_assoc();
-        $check->close();
-
-        if ($jaExiste) {
-            $stmt = $mysqli->prepare("
-                UPDATE avaliacoes SET
-                    nota_inovacao=?, nota_viabilidade=?, nota_impacto=?, nota_equipa=?,
-                    nota_sustentabilidade=?, nota_escalabilidade=?, nota_mercado=?, nota_proposta=?,
-                    pontuacao_total=?, observacoes=?, decisao=?, avaliado_em=NOW()
-                WHERE id_projeto=? AND id_avaliador=?
-            ");
-            $stmt->bind_param('iiiiiiiiissii',
-                $notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa,
-                $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta,
-                $total, $observacoes, $decisao, $idProjeto, $idUsuario
-            );
-        } else {
-            $stmt = $mysqli->prepare("
-                INSERT INTO avaliacoes
-                    (id_projeto, id_avaliador, nota_inovacao, nota_viabilidade, nota_impacto,
-                     nota_equipa, nota_sustentabilidade, nota_escalabilidade, nota_mercado, nota_proposta,
-                     pontuacao_total, observacoes, decisao)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ");
-            $stmt->bind_param('iiiiiiiiiiiss',
-                $idProjeto, $idUsuario, $notaInovacao, $notaViabilidade,
-                $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade,
-                $notaMercado, $notaProposta, $total, $observacoes, $decisao
-            );
-        }
-        $stmt->execute();
-        $stmt->close();
-
-        // Se decisão = aprovado/rejeitado, actualizar estado do projecto
-        $novoEstadoProj = null;
-        if ($decisao === 'aprovado') {
-            $novoEstadoProj = 'aprovado';
-        } elseif ($decisao === 'rejeitado') {
-            $novoEstadoProj = 'rejeitado';
-        } elseif ($decisao === 'em_revisao') {
-            $novoEstadoProj = 'em_avaliacao'; // Volta para avaliação se for devolvido para revisão
-        }
-
-        if ($novoEstadoProj) {
-            // Buscar estado anterior para o histórico
-            $stmtEst = $mysqli->prepare("SELECT estado FROM projetos WHERE id = ?");
-            $stmtEst->bind_param('i', $idProjeto);
-            $stmtEst->execute();
-            $projData = $stmtEst->get_result()->fetch_assoc();
-            $stmtEst->close();
-            $estadoAnterior = $projData ? $projData['estado'] : '';
-
-            if ($estadoAnterior !== $novoEstadoProj) {
-                $stmtUp = $mysqli->prepare("UPDATE projetos SET estado=? WHERE id=?");
-                $stmtUp->bind_param('si', $novoEstadoProj, $idProjeto);
-                $stmtUp->execute();
-                $stmtUp->close();
-
-                $stmtLog = $mysqli->prepare("INSERT INTO historico_estados (id_projeto, estado_anterior, estado_novo, id_usuario, motivo) VALUES (?, ?, ?, ?, ?)");
-                $motivoLog = "Actualizado via avaliação formal. Decisão: " . strtoupper($decisao);
-                $stmtLog->bind_param('issis', $idProjeto, $estadoAnterior, $novoEstadoProj, $idUsuario, $motivoLog);
-                $stmtLog->execute();
-                $stmtLog->close();
-            }
-        }
-
-        $_SESSION['flash_ok'] = 'Avaliação guardada com sucesso.';
-
-        // Notificar o dono do projeto
-        $sqlDono = "SELECT criado_por FROM projetos WHERE id = ?";
-        $stD = $mysqli->prepare($sqlDono);
-        $stD->bind_param('i', $idProjeto);
-        $stD->execute();
-        $dono = $stD->get_result()->fetch_assoc();
-        $stD->close();
-
-        if ($dono) {
-            $msgAval = "O teu projeto foi avaliado. Decisão: " . strtoupper($decisao);
-            enviarNotificacao($dono['criado_por'], "Resultado da Avaliação", $msgAval, $decisao === 'aprovado' ? 'sucesso' : 'info');
-        }
-    }
-    header("Location: $redirect");
+    header('Location: ' . $redirect);
     exit;
 }
+
+        $_SESSION['flash_ok'] = 'Avaliação guardada com sucesso.';
 
 /* ════════════════════════════════════════════════
    ACÇÃO: gerir_equipa (Adicionar/Remover)

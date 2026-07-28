@@ -207,6 +207,39 @@ if ($stmtTermo) {
     $stmtTermo->close();
 }
 
+// ── Buscar Atribuições de Avaliação (3 Vagas) ──
+$atribuicoes = [];
+$rAtrib = $mysqli->prepare("
+    SELECT aa.*, u.nome as avaliador_nome, u.email as avaliador_email,
+           a.pontuacao_total, a.avaliado_em
+    FROM avaliacoes_atribuicao aa
+    JOIN usuarios u ON u.id = aa.avaliador_id
+    LEFT JOIN avaliacoes a ON (a.atribuicao_id = aa.id OR (a.id_projeto = aa.projeto_id AND a.id_avaliador = aa.avaliador_id))
+    WHERE aa.projeto_id = ?
+    ORDER BY aa.data_atribuicao ASC
+");
+if ($rAtrib) {
+    $rAtrib->bind_param('i', $idProjeto);
+    $rAtrib->execute();
+    $atribuicoes = $rAtrib->get_result()->fetch_all(MYSQLI_ASSOC);
+    $rAtrib->close();
+}
+
+$numAtrib = count($atribuicoes);
+$numConcl = 0;
+$jaSouAvaliador = false;
+$idMinhaAtribuicao = null;
+$jaConclui = false;
+
+foreach ($atribuicoes as $at) {
+    if ($at['estado'] === 'concluido') $numConcl++;
+    if ((int)$at['avaliador_id'] === $idUsuario) {
+        $jaSouAvaliador = true;
+        $idMinhaAtribuicao = (int)$at['id'];
+        if ($at['estado'] === 'concluido' || !is_null($at['pontuacao_total'])) $jaConclui = true;
+    }
+}
+
 $isDono = ($idUsuario === (int)$projeto['criado_por']);
 $podeGerirMembros = $isDono || in_array($perfil, ['admin','superadmin']);
 
@@ -299,11 +332,35 @@ require_once __DIR__ . '/../partials/_layout.php';
         </div>
     </div>
     <?php if (in_array($perfil, ['admin','superadmin','mentor','funcionario'])): ?>
-    <div class="d-flex gap-2 flex-wrap">
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <?php if ($jaSouAvaliador): ?>
+            <button type="button" class="btn-primary-custom" onclick="abrirModalAvaliar(<?= $idProjeto ?>, '<?= htmlspecialchars(addslashes($projeto['titulo'])) ?>')">
+                <i class="fa <?= $jaConclui ? 'fa-pen' : 'fa-star' ?> me-1"></i>
+                <?= $jaConclui ? 'Editar a Minha Avaliação' : 'Preencher Avaliação Cega' ?>
+            </button>
+        <?php elseif ($numAtrib < 3 && !$isDono && in_array($perfil, ['admin','superadmin','mentor'])): ?>
+            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="display:inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="atribuir_avaliador">
+                <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                <button type="submit" class="btn-primary-custom" style="background:#10B981;border-color:#10B981">
+                    <i class="fa fa-hand-pointer me-1"></i> Pegar Caso para Avaliar (<?= $numAtrib ?>/3 Vagas)
+                </button>
+            </form>
+        <?php endif; ?>
+
+        <?php if ($projeto['estado'] === 'aprovado' && in_array($perfil, ['admin','superadmin'])): ?>
+            <a href="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id_projeto=<?= $idProjeto ?>" class="btn-primary-custom" style="background:#0F172A;border-color:#0F172A">
+                <i class="fa fa-file-contract me-1"></i> Gerar Termo de Incubação
+            </a>
+        <?php endif; ?>
+
         <a href="/incubadora_ispsn/app/views/admin/relatorio_projeto.php?id=<?= $idProjeto ?>" target="_blank" class="btn-ghost" title="Gerar Relatório PDF">
             <i class="fa fa-file-pdf"></i> Relatório
         </a>
         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="display:inline" id="formIA">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="gerar_analise_ia">
             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
             <button type="submit" class="btn-ghost" style="color:var(--primary)" onclick="this.innerHTML='<i class=\'fa fa-spinner fa-spin\'></i> Analisando...';">
@@ -1525,6 +1582,132 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
     <?php endif; ?>
+});
+<!-- MODAL INTERATIVO DE AVALIAÇÃO MULTICRITÉRIO -->
+<div class="modal fade" id="modalAvaliar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;border:none;box-shadow:0 20px 40px rgba(0,0,0,0.2)">
+            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="avaliar">
+                <input type="hidden" name="id_projeto" id="modal_id_projeto" value="<?= $idProjeto ?>">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+
+                <div class="modal-header" style="background:#0F172A;color:#fff;border-top-left-radius:16px;border-top-right-radius:16px;padding:20px 24px">
+                    <div>
+                        <h5 class="modal-title font-weight-bold" id="modal_titulo_projeto">Avaliar Projecto: <?= htmlspecialchars($projeto['titulo']) ?></h5>
+                        <small style="color:#94A3B8">Pontuação cega nos 8 critérios oficiais da Incubadora ISPSN</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body" style="padding:24px;max-height:70vh;overflow-y:auto">
+                    <!-- PAINEL DE CÁLCULO EM TEMPO REAL -->
+                    <div style="background:var(--surface-2);border-radius:12px;padding:16px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+                        <div>
+                            <span style="font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:700">Média Calculada</span>
+                            <div style="font-size:2rem;font-weight:900;color:var(--primary)" id="live_media">0.0 / 10</div>
+                        </div>
+                        <div id="live_badge">
+                            <span class="badge bg-secondary" style="font-size:0.9rem;padding:8px 16px">Pendente de Notas</span>
+                        </div>
+                    </div>
+
+                    <!-- OS 8 CRITÉRIOS DE AVALIAÇÃO -->
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-custom">1. Inovação & Diferenciação (0-10) <span class="text-danger">*</span></label>
+                            <input type="number" name="nota_inovacao" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_inovacao'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                            <small class="text-muted">Veto se &lt; 5</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">2. Viabilidade Técnica & Operacional (0-10)</label>
+                            <input type="number" name="nota_viabilidade" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_viabilidade'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">3. Impacto Socioeconómico (0-10)</label>
+                            <input type="number" name="nota_impacto" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_impacto'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">4. Qualificação da Equipa (0-10)</label>
+                            <input type="number" name="nota_equipa" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_equipa'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">5. Autossustentabilidade Financeira (0-10) <span class="text-danger">*</span></label>
+                            <input type="number" name="nota_sustentabilidade" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_sustentabilidade'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                            <small class="text-muted">Veto se &lt; 4</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">6. Escalabilidade do Negócio (0-10)</label>
+                            <input type="number" name="nota_escalabilidade" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_escalabilidade'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">7. Mercado & Potencial Comercial (0-10)</label>
+                            <input type="number" name="nota_mercado" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_mercado'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">8. Qualidade da Proposta / Pitch (0-10)</label>
+                            <input type="number" name="nota_proposta" class="form-control-custom input-crit" min="0" max="10" value="<?= $avaliacao['nota_proposta'] ?? 0 ?>" required onchange="calcularLiveScore()">
+                        </div>
+                    </div>
+
+                    <!-- PARECER TÉCNICO -->
+                    <div class="mt-4">
+                        <label class="form-label-custom">Observações & Parecer Técnico Fundamentado</label>
+                        <textarea name="observacoes" class="form-control-custom" rows="4" placeholder="Escreva os pontos fortes, fragilidades e recomendações para o candidato…"><?= htmlspecialchars($avaliacao['observacoes'] ?? '') ?></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="background:var(--surface-2);border-bottom-left-radius:16px;border-bottom-right-radius:16px;padding:16px 24px">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom" style="padding:10px 24px">
+                        <i class="fa fa-paper-plane me-1"></i> Submeter Avaliação Cega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalAvaliar(id, titulo) {
+    if (id) document.getElementById('modal_id_projeto').value = id;
+    if (titulo) document.getElementById('modal_titulo_projeto').innerText = 'Avaliar Projecto: ' + titulo;
+    var modalEl = document.getElementById('modalAvaliar');
+    var modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    calcularLiveScore();
+}
+
+function calcularLiveScore() {
+    var inputs = document.querySelectorAll('.input-crit');
+    var soma = 0;
+    inputs.forEach(function(inp) {
+        soma += parseFloat(inp.value) || 0;
+    });
+    var media = (soma / 8.0).toFixed(2);
+    document.getElementById('live_media').innerText = media + ' / 10';
+
+    var valInov = parseFloat(document.querySelector('input[name="nota_inovacao"]').value) || 0;
+    var valSust = parseFloat(document.querySelector('input[name="nota_sustentabilidade"]').value) || 0;
+
+    var badgeEl = document.getElementById('live_badge');
+    if (valInov < 5 || valSust < 4) {
+        badgeEl.innerHTML = '<span class="badge bg-danger" style="font-size:0.9rem;padding:8px 16px"><i class="fa fa-ban me-1"></i> Veto Ativo (Em Revisão / Rejeição)</span>';
+    } else if (media >= 7.0) {
+        badgeEl.innerHTML = '<span class="badge bg-success" style="font-size:0.9rem;padding:8px 16px"><i class="fa fa-check me-1"></i> Aprovação Recomendada</span>';
+    } else if (media >= 4.0) {
+        badgeEl.innerHTML = '<span class="badge bg-warning text-dark" style="font-size:0.9rem;padding:8px 16px"><i class="fa fa-rotate-left me-1"></i> Em Revisão Recomendada</span>';
+    } else {
+        badgeEl.innerHTML = '<span class="badge bg-danger" style="font-size:0.9rem;padding:8px 16px"><i class="fa fa-times me-1"></i> Rejeição Recomendada</span>';
+    }
+}
+
+// Abrir modal automaticamente se houver hash #modalAvaliar na URL
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.hash === '#modalAvaliar') {
+        abrirModalAvaliar();
+    }
 });
 </script>
 
