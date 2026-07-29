@@ -329,12 +329,16 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `avaliacoes_atribuicao` (
   KEY `fk_atrib_avaliador` (`avaliador_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-// COLUNAS ADICIONAIS EM PROJETOS E AVALIAÇÕES
+// COLUNAS ADICIONAIS EM PROJETOS E AVALIAÇÕES (ESTÚDIO ENTERPRISE)
 adicionarColunaSeNaoExistir($mysqli, 'projetos', 'estado_avaliacao', "ENUM('pendente','em_avaliacao','avaliado') DEFAULT 'pendente'");
 adicionarColunaSeNaoExistir($mysqli, 'projetos', 'media_final', "DECIMAL(4,2) DEFAULT NULL");
 adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'atribuicao_id', "INT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_inovacao', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_mercado', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_equipa', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_sustentabilidade', "TEXT DEFAULT NULL");
 
-echo "Schema updated v2.3 (com avaliacoes_atribuicao, estado_avaliacao e media_final)!";
+echo "Schema updated v2.4 (com Estúdio Enterprise de Avaliação Lado-a-Lado)!";
 ?>
 
 

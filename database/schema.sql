@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS `projetos` (
   `destaque_publico` tinyint(1) DEFAULT 0,
   `pontos` int(11) DEFAULT 0,
   `pitch_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `estado_avaliacao` enum('pendente','em_avaliacao','avaliado') COLLATE utf8mb4_unicode_ci DEFAULT 'pendente',
+  `media_final` decimal(4,2) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `id_responsavel` (`id_responsavel`),
   KEY `criado_por` (`criado_por`),
@@ -230,10 +232,31 @@ CREATE TABLE IF NOT EXISTS `avaliacoes` (
   `nota_escalabilidade` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0-10',
   `nota_mercado` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0-10',
   `nota_proposta` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0-10',
+  `atribuicao_id` int(11) DEFAULT NULL,
+  `parecer_inovacao` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `parecer_mercado` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `parecer_equipa` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `parecer_sustentabilidade` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_aval_projeto` (`id_projeto`),
   KEY `fk_aval_avaliador` (`id_avaliador`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: avaliacoes_atribuicao
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `avaliacoes_atribuicao` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `projeto_id` int(11) NOT NULL,
+  `avaliador_id` int(11) NOT NULL,
+  `estado` enum('atribuido','concluido') COLLATE utf8mb4_unicode_ci DEFAULT 'atribuido',
+  `data_atribuicao` datetime DEFAULT current_timestamp(),
+  `data_conclusao` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_projeto_avaliador` (`projeto_id`, `avaliador_id`),
+  KEY `fk_atrib_projeto` (`projeto_id`),
+  KEY `fk_atrib_avaliador` (`avaliador_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: avaliacoes_mentor

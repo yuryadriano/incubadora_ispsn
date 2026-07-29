@@ -10,16 +10,16 @@ define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
 define('ASSET_VERSION', '2026062403');
 
-// Configuração resiliente de conexão MySQL (Inspirada na Clínica ISPSN com 10 retries e auto-recovery)
-$maxTries = 10;
+// Configuração resiliente ultra-rápida (compatível com Cloudflare, evita 504 Gateway Timeout)
+$maxTries = 4;
 $connected = false;
 $mysqli = null;
 
 for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
     if (function_exists('mysqli_init')) {
-        $mysqli = mysqli_init();
+        $mysqli = @mysqli_init();
         if ($mysqli) {
-            $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
+            @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
             $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
         }
     }
@@ -37,7 +37,7 @@ for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
     }
     
     if ($attempt < $maxTries) {
-        sleep(2); // Aguarda 2 segundos antes de tentar novamente (janela total de resiliência ~20s)
+        usleep(250000); // 0.25 segundos de micro-espera (máximo 1s total)
     }
 }
 
