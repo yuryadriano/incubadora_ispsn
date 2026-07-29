@@ -484,7 +484,7 @@ if ($action === 'avaliar') {
                 pontuacao_total=?, observacoes=?, decisao=?, avaliado_em=NOW()
             WHERE id_projeto=? AND id_avaliador=?
         ");
-        $stmt->bind_param('iiiiiiiiissii',
+        $stmt->bind_param('iiiiiiiiiissii',
             $atribuicaoId, $notaInovacao, $notaViabilidade, $notaImpacto, $notaEquipa,
             $notaSustentabilidade, $notaEscalabilidade, $notaMercado, $notaProposta,
             $total, $observacoes, $decisaoIndiv, $idProjeto, $idUsuario
@@ -497,7 +497,7 @@ if ($action === 'avaliar') {
                  pontuacao_total, observacoes, decisao)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ");
-        $stmt->bind_param('iiiiiiiiiiicss',
+        $stmt->bind_param('iiiiiiiiiiiiss',
             $atribuicaoId, $idProjeto, $idUsuario, $notaInovacao, $notaViabilidade,
             $notaImpacto, $notaEquipa, $notaSustentabilidade, $notaEscalabilidade,
             $notaMercado, $notaProposta, $total, $observacoes, $decisaoIndiv
