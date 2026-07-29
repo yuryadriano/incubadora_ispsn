@@ -3,6 +3,17 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['admin','superadmin','mentor']);
 
+// Auto-healing: se a tabela de atribuição não existir no BD, executa o schema silenciosamente
+$checkAtrib = @$mysqli->query("SHOW TABLES LIKE 'avaliacoes_atribuicao'");
+if (!$checkAtrib || $checkAtrib->num_rows === 0) {
+    $schemaFile = __DIR__ . '/../../controllers/update_schema.php';
+    if (file_exists($schemaFile)) {
+        ob_start();
+        include $schemaFile;
+        ob_end_clean();
+    }
+}
+
 $tituloPagina = 'Painel de Avaliação Multicritério';
 $paginaActiva = 'avaliacoes';
 
