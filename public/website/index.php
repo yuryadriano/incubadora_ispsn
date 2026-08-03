@@ -37,28 +37,11 @@ $noticias = [];
 $res = $mysqli->query("SELECT * FROM publicacoes_website WHERE status='publicado' ORDER BY criado_em DESC LIMIT 4");
 if ($res) while ($row = $res->fetch_assoc()) $noticias[] = $row;
 
-if (empty($noticias)) {
-    // Dados Dummy para preencher a página
-    $noticias = [
-        ['id'=>1, 'titulo'=>'Lançamento da Incubadora ISPSN', 'resumo'=>'Um novo marco para os estudantes do Huambo. Trazemos inovação e empreendedorismo!', 'imagem'=>'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80', 'criado_em'=>date('Y-m-d')],
-        ['id'=>2, 'titulo'=>'Workshop de Marketing Digital', 'resumo'=>'Aprende a usar o poder da internet para alcançar milhares de clientes com o teu MVP.', 'imagem'=>'https://images.unsplash.com/photo-1432888498266-38ffec3eaf0a?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-5 days'))],
-        ['id'=>4, 'titulo'=>'Parceria com Bancos Locais', 'resumo'=>'Novas linhas de crédito aprovadas para financiar as melhores ideias da nossa academia.', 'imagem'=>'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-10 days'))]
-    ];
-}
-
 // Buscar galeria
 $galeria = [];
 $resG = $mysqli->query("SELECT * FROM galeria_website WHERE ativo=1 ORDER BY ordem ASC, criado_em DESC LIMIT 8");
 if ($resG) while ($row = $resG->fetch_assoc()) $galeria[] = $row;
 
-if (empty($galeria)) {
-    $galeria = [
-        ['titulo'=>'Mentorias', 'descricao'=>'Sessões de partilha', 'imagem'=>'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?w=800&q=80'],
-        ['titulo'=>'Trabalho em Equipa', 'descricao'=>'Colaboração criativa', 'imagem'=>'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80'],
-        ['titulo'=>'Apresentações', 'descricao'=>'Pitch final para investidores', 'imagem'=>'https://images.unsplash.com/photo-1559223607-b4d0555ae227?w=800&q=80'],
-        ['titulo'=>'Laboratórios', 'descricao'=>'Espaço maker ISPSN', 'imagem'=>'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=800&q=80']
-    ];
-}
 
 // Stats mantidos em 0 até ao lançamento oficial da incubadora
 ?>
@@ -340,7 +323,7 @@ if (empty($galeria)) {
         
         <div class="gallery-modern-grid">
             <?php if (empty($galeria)): ?>
-                <div class="col-12 text-center py-5 opacity-20"><i class="fa fa-images fa-4x mb-3"></i><p>A carregar momentos...</p></div>
+                <div class="col-12 text-center py-5 text-muted"><i class="fa fa-images fa-3x mb-3 opacity-50 d-block"></i><p>Fique atento às fotos dos nossos eventos e momentos em breve.</p></div>
             <?php else: ?>
                 <?php foreach ($galeria as $i => $g): 
                     // Lógica para variação Bento
