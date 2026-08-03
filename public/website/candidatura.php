@@ -234,11 +234,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 
         <?php elseif (!$processo): ?>
         <div class="closed-box">
-            <i class="fa fa-lock"></i>
-            <h2>Inscrições Encerradas</h2>
-            <p>O processo de candidatura está actualmente fechado. Fique atento às próximas edições — siga-nos para ser notificado quando abrir nova edição.</p>
+            <i class="fa fa-calendar-check" style="color: var(--primary);"></i>
+            <h2 style="font-size: 1.8rem; margin-top: 15px;">Candidaturas a partir do dia 5 de Agosto</h2>
+            <p style="font-size: 1.1rem; max-width: 500px; margin: 15px auto 25px; line-height: 1.6;">O processo de candidatura está actualmente fechado. As inscrições estarão abertas oficialmente a partir do dia <strong>5 de Agosto</strong>. Prepare o seu projecto!</p>
             <br>
-            <a href="/incubadora_ispsn/public/website/" style="color:var(--primary);text-decoration:none;font-weight:600;">← Voltar ao site</a>
+            <a href="/incubadora_ispsn/public/website/" style="color:var(--primary);text-decoration:none;font-weight:600;"><i class="fa fa-arrow-left me-2"></i> Voltar ao site</a>
         </div>
 
         <?php else: ?>
