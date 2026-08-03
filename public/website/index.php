@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
-// Headers de cache — permite Cloudflare e browsers cachear a página pública
-header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=3600');
-header('CDN-Cache-Control: public, max-age=600, stale-while-revalidate=600, stale-if-error=86400');
-header('Vary: Accept-Encoding');
+// Headers para evitar cache antigo no navegador durante actualizações
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
+if (function_exists('opcache_reset')) { @opcache_reset(); }
+
 
 // Cache busting (versão fixa definida no config, muda apenas no deploy)
 $css_version = ASSET_VERSION;
@@ -43,15 +45,6 @@ if (empty($noticias)) {
         ['id'=>4, 'titulo'=>'Parceria com Bancos Locais', 'resumo'=>'Novas linhas de crédito aprovadas para financiar as melhores ideias da nossa academia.', 'imagem'=>'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&q=80', 'criado_em'=>date('Y-m-d', strtotime('-10 days'))]
     ];
 }
-
-// Forçar item de "Candidaturas Brevemente" no topo
-array_unshift($noticias, [
-    'id'=>99, 
-    'titulo'=>'Candidaturas Abertas Brevemente - ISPSN 2026', 
-    'resumo'=>'Prepare o seu projecto! O ecossistema de inovação do ISPSN está prestes a abrir portas para novas ideias transformadoras.', 
-    'imagem'=>'/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png', 
-    'criado_em'=>date('Y-m-d')
-]);
 
 // Buscar galeria
 $galeria = [];
