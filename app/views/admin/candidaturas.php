@@ -2,6 +2,22 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['admin', 'superadmin', 'mentor']);
 
+// Auto-migração resiliente de esquema para colunas do Pitch
+try {
+    $chkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'tipo_projeto'");
+    if ($chkCol && $chkCol->num_rows === 0) {
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `tipo_projeto` ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
+    }
+    $chkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'publico_alvo'");
+    if ($chkCol2 && $chkCol2->num_rows === 0) {
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `publico_alvo` TEXT NULL");
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `modelo_negocio` TEXT NULL");
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `diferencial` TEXT NULL");
+    }
+} catch (Throwable $e) {
+    // Silencioso se MariaDB/MySQL já tiver criado ou sem permissão direta
+}
+
 $tituloPagina = 'Candidaturas';
 $paginaActiva = 'candidaturas';
 
@@ -78,14 +94,18 @@ $contTiposProjeto = [
     'impacto_social' => 0
 ];
 if ($id_processo_sel) {
-    $resTipos = $mysqli->query("SELECT tipo_projeto, COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel GROUP BY tipo_projeto");
-    if ($resTipos) {
-        while ($rt = $resTipos->fetch_assoc()) {
-            $tp = $rt['tipo_projeto'] ?? 'startup_tecnologica';
-            if (isset($contTiposProjeto[$tp])) {
-                $contTiposProjeto[$tp] = (int)$rt['n'];
+    try {
+        $resTipos = $mysqli->query("SELECT tipo_projeto, COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel GROUP BY tipo_projeto");
+        if ($resTipos) {
+            while ($rt = $resTipos->fetch_assoc()) {
+                $tp = $rt['tipo_projeto'] ?? 'startup_tecnologica';
+                if (isset($contTiposProjeto[$tp])) {
+                    $contTiposProjeto[$tp] = (int)$rt['n'];
+                }
             }
         }
+    } catch (Throwable $e) {
+        // Proteção se a coluna tipo_projeto ainda não estiver sincronizada
     }
 }
 
