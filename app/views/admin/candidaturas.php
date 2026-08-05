@@ -627,7 +627,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="modal-body-v2 p-4">
                 <div class="row g-4">
                     <!-- ESQUERDA: DOSSIER E PITCH CANVAS DA STARTUP (60%) -->
-                    <div class="col-lg-7 border-end pe-lg-4">
+                    <div class="col-lg-7 border-end pe-lg-4" style="max-height: 520px; overflow-y: auto;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1" id="avaliarArea">Área Temática</span>
                             <span class="badge bg-warning-subtle text-warning-dark fw-bold px-2.5 py-1" id="avaliarTipoProj">Startup Tech</span>
@@ -636,40 +636,46 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <div class="small text-muted mb-3"><i class="fa fa-user me-1"></i> <span id="avaliarCandidatoNome">Candidato</span></div>
 
                         <div class="p-3 bg-light rounded-3 border mb-3">
-                            <strong class="small text-uppercase text-secondary d-block mb-1">Descrição Geral da Ideia:</strong>
-                            <p class="small text-dark mb-0" id="avaliarDescricao" style="line-height:1.6; max-height:100px; overflow-y:auto;"></p>
+                            <strong class="small text-uppercase text-secondary d-block mb-1"><i class="fa fa-align-left me-1"></i> Descrição Geral da Ideia:</strong>
+                            <p class="small text-dark mb-0" id="avaliarDescricao" style="line-height:1.6"></p>
                         </div>
 
-                        <div class="row g-2">
+                        <div class="row g-2 mb-3">
                             <div class="col-md-6">
-                                <div class="p-2.5 bg-white rounded-3 border">
-                                    <strong class="small text-danger text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-circle-exclamation me-1"></i> Problema:</strong>
-                                    <span class="small text-secondary" id="avaliarProblema">—</span>
+                                <div class="p-3 bg-white rounded-3 border h-100">
+                                    <strong class="small text-danger text-uppercase d-block mb-1" style="font-size:0.7rem;"><i class="fa fa-circle-exclamation me-1"></i> Problema:</strong>
+                                    <div class="small text-secondary" id="avaliarProblema" style="line-height:1.5">—</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="p-2.5 bg-white rounded-3 border">
-                                    <strong class="small text-success text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-lightbulb me-1"></i> Solução:</strong>
-                                    <span class="small text-secondary" id="avaliarSolucao">—</span>
+                                <div class="p-3 bg-white rounded-3 border h-100">
+                                    <strong class="small text-success text-uppercase d-block mb-1" style="font-size:0.7rem;"><i class="fa fa-lightbulb me-1"></i> Solução:</strong>
+                                    <div class="small text-secondary" id="avaliarSolucao" style="line-height:1.5">—</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="p-2.5 bg-white rounded-3 border">
-                                    <strong class="small text-primary text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-users me-1"></i> Público-Alvo:</strong>
-                                    <span class="small text-secondary" id="avaliarPublicoAlvo">—</span>
+                            <div class="col-md-6 mt-2">
+                                <div class="p-3 bg-white rounded-3 border h-100">
+                                    <strong class="small text-primary text-uppercase d-block mb-1" style="font-size:0.7rem;"><i class="fa fa-users me-1"></i> Público-Alvo:</strong>
+                                    <div class="small text-secondary" id="avaliarPublicoAlvo" style="line-height:1.5">—</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="p-2.5 bg-white rounded-3 border">
-                                    <strong class="small text-warning text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-coins me-1"></i> Modelo de Negócio:</strong>
-                                    <span class="small text-secondary" id="avaliarModeloNegocio">—</span>
+                            <div class="col-md-6 mt-2">
+                                <div class="p-3 bg-white rounded-3 border h-100">
+                                    <strong class="small text-warning text-uppercase d-block mb-1" style="font-size:0.7rem;"><i class="fa fa-coins me-1"></i> Modelo de Negócio:</strong>
+                                    <div class="small text-secondary" id="avaliarModeloNegocio" style="line-height:1.5">—</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-2.5 p-2.5 bg-white rounded-3 border" id="avaliarDiferencialWrapper">
-                            <strong class="small text-info text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-shield-halved me-1"></i> Diferencial Competitivo:</strong>
-                            <span class="small text-secondary" id="avaliarDiferencial">—</span>
+                        <div class="p-3 bg-white rounded-3 border mb-3" id="avaliarDiferencialWrapper">
+                            <strong class="small text-info text-uppercase d-block mb-1" style="font-size:0.7rem;"><i class="fa fa-shield-halved me-1"></i> Diferencial Competitivo:</strong>
+                            <div class="small text-secondary" id="avaliarDiferencial" style="line-height:1.5">—</div>
+                        </div>
+
+                        <div id="avaliarPitchFileContainer" style="display:none;" class="mt-2">
+                            <a href="#" id="avaliarPitchFileLink" target="_blank" class="btn btn-sm btn-outline-warning fw-bold py-2 px-3 rounded-3" style="font-size:0.8rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
+                                <i class="fa fa-file-pdf me-2"></i> Abrir Anexo do Pitch Deck (PDF/PPT)
+                            </a>
                         </div>
                     </div>
 
@@ -1003,6 +1009,17 @@ function abrirModalAvaliar(c) {
     document.getElementById('avaliarPublicoAlvo').textContent = c.publico_alvo || '—';
     document.getElementById('avaliarModeloNegocio').textContent = c.modelo_negocio || '—';
     document.getElementById('avaliarDiferencial').textContent = c.diferencial || '—';
+
+    const fileContainer = document.getElementById('avaliarPitchFileContainer');
+    const fileLink = document.getElementById('avaliarPitchFileLink');
+    if (fileContainer && fileLink) {
+        if (c.pitch_path) {
+            fileLink.href = `/incubadora_ispsn/${c.pitch_path}`;
+            fileContainer.style.display = 'block';
+        } else {
+            fileContainer.style.display = 'none';
+        }
+    }
     
     calcMediaAvaliacao();
     document.getElementById('modalAvaliarPitch').classList.add('open');
