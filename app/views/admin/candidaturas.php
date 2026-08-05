@@ -69,6 +69,26 @@ if ($id_processo_sel) {
 }
 $totalCand = array_sum($contFases);
 
+// Contagens por Tipo de Projeto / Entidade (estilo Coordenações)
+$contTiposProjeto = [
+    'startup_tecnologica' => 0,
+    'negocio_tradicional' => 0,
+    'individual' => 0,
+    'equipa' => 0,
+    'impacto_social' => 0
+];
+if ($id_processo_sel) {
+    $resTipos = $mysqli->query("SELECT tipo_projeto, COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel GROUP BY tipo_projeto");
+    if ($resTipos) {
+        while ($rt = $resTipos->fetch_assoc()) {
+            $tp = $rt['tipo_projeto'] ?? 'startup_tecnologica';
+            if (isset($contTiposProjeto[$tp])) {
+                $contTiposProjeto[$tp] = (int)$rt['n'];
+            }
+        }
+    }
+}
+
 // Flash messages
 $flash_ok   = $_SESSION['flash_ok'] ?? '';
 $flash_erro = $_SESSION['flash_erro'] ?? '';
@@ -229,6 +249,41 @@ require_once __DIR__ . '/../partials/_layout.php';
 
 .label-mini { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: var(--slate-400); letter-spacing: 0.05em; margin-bottom: 2px; }
 .val-mini { font-size: 0.8rem; font-weight: 600; color: var(--slate-700); }
+
+/* Cartões Estilo Coordenações */
+.tipo-cand-card {
+    background: #ffffff;
+    border: 1px solid var(--slate-200);
+    border-radius: 16px;
+    padding: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    cursor: pointer;
+    height: 100%;
+}
+.tipo-cand-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08);
+    border-color: var(--primary);
+}
+.tipo-cand-card.active-card {
+    border-width: 2px;
+    border-color: var(--primary);
+    background: linear-gradient(135deg, rgba(217,119,6,0.05) 0%, rgba(255,255,255,1) 100%);
+    box-shadow: 0 8px 16px -4px rgba(217,119,6,0.15);
+}
+.cat-badge-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+}
 </style>
 
 <div class="page-header mt-0" style="padding-top: 0; margin-bottom: 25px;">
@@ -314,6 +369,91 @@ require_once __DIR__ . '/../partials/_layout.php';
         <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=admitidos'" style="cursor:pointer;">
             <div class="kpi-icon-v2" style="background:#DBEAFE; color:#1E40AF;"><i class="fa fa-user-plus"></i></div>
             <div><div class="h4 fw-900 mb-0"><?= $contFases['admitidos'] ?></div><div class="label-mini">Admitidos</div></div>
+        </div>
+    </div>
+
+    <!-- CATEGORIAS & TIPOS DE PROJETO (ESTILO COORDENAÇÕES) -->
+    <div class="section-header-custom mb-2">
+        <div class="section-title-label"><i class="fa fa-sitemap text-primary"></i> Categorias & Tipos de Projeto</div>
+    </div>
+    <div class="row g-3 mb-4" id="gridCategoriasProjeto">
+        <div class="col-md">
+            <div class="tipo-cand-card active-card" onclick="filtrarPorTipoProjeto('todos', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #4F46E5, #3730A3)">
+                        <i class="fa fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Todos Projetos</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= array_sum($contTiposProjeto) ?> submissões</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('startup_tecnologica', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #3B82F6, #1D4ED8)">
+                        🚀
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Startup Tech</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['startup_tecnologica'] ?> submissões</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('negocio_tradicional', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #10B981, #047857)">
+                        🏢
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Empresas</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['negocio_tradicional'] ?> submissões</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('individual', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #F59E0B, #B45309)">
+                        👤
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Individual</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['individual'] ?> submissões</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('equipa', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #8B5CF6, #6D28D9)">
+                        👥
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Equipas</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['equipa'] ?> submissões</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('impacto_social', this)">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #EC4899, #BE185D)">
+                        🌍
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Impacto Social</div>
+                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['impacto_social'] ?> submissões</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -429,7 +569,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             ];
                             $projText = $tiposProjMap[$c['tipo_projeto'] ?? ''] ?? ($c['tipo_projeto'] ?? '🚀 Startup Tech');
                         ?>
-                        <tr class="cand-table-row">
+                        <tr class="cand-table-row" data-tipo-projeto="<?= htmlspecialchars($c['tipo_projeto'] ?? 'startup_tecnologica') ?>">
                             <td style="padding: 14px 20px;">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="cand-avatar-v2" style="background:<?= $color ?>; flex-shrink:0;"><?= strtoupper($iniciais) ?></div>
@@ -1027,6 +1167,21 @@ function filtrarCandidaturasTabela() {
     rows.forEach(row => {
         const text = row.innerText.toLowerCase();
         row.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
+function filtrarPorTipoProjeto(tipo, el) {
+    document.querySelectorAll('.tipo-cand-card').forEach(c => c.classList.remove('active-card'));
+    if (el) el.classList.add('active-card');
+    
+    const rows = document.querySelectorAll('.cand-table-row');
+    rows.forEach(row => {
+        if (tipo === 'todos') {
+            row.style.display = '';
+        } else {
+            const dataTipo = row.getAttribute('data-tipo-projeto') || '';
+            row.style.display = (dataTipo === tipo) ? '' : 'none';
+        }
     });
 }
 </script>
