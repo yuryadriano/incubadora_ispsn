@@ -371,130 +371,163 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
     <?php endif; ?>
 
-    <div class="cand-list-v2">
+    <div class="card-custom p-0 overflow-hidden shadow-sm border mt-3 mb-4" style="background:#fff; border-radius:18px;">
+        <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa fa-list-check text-primary fs-5"></i>
+                <div>
+                    <h6 class="fw-bold mb-0" style="font-size:0.95rem;">Funil de Candidaturas & Fichas de Pitch</h6>
+                    <small class="text-muted" style="font-size:0.75rem;">Acompanhamento por fase e decisão de admissão</small>
+                </div>
+            </div>
+            <div style="min-width: 300px;">
+                <input type="text" class="form-control form-control-sm px-3 py-2 rounded-3 border" id="candSearchInput" placeholder="🔍 Pesquisar candidato, email, curso ou ideia..." onkeyup="filtrarCandidaturasTabela()">
+            </div>
+        </div>
+
         <?php if (empty($candidaturas)): ?>
-            <div class="text-center p-5 bg-white rounded-4 border border-dashed">
+            <div class="text-center p-5 bg-white">
                 <i class="fa fa-inbox fa-3x text-muted opacity-25 mb-3"></i>
-                <h6 class="fw-bold">Sem dados para exibir</h6>
+                <h6 class="fw-bold">Sem candidaturas registradas</h6>
                 <p class="text-muted small">Não foram encontradas candidaturas com este filtro.</p>
             </div>
         <?php else: ?>
-            <?php foreach ($candidaturas as $c): 
-                $words = explode(' ', $c['nome']);
-                $iniciais = mb_substr($words[0],0,1) . (isset($words[1]) ? mb_substr($words[1],0,1) : '');
-                $colors = ['#6366F1','#EC4899','#F59E0B','#10B981','#3B82F6'];
-                $color = $colors[ord($c['nome'][0]) % count($colors)];
-                
-                $st = $c['estado'];
-                $stBadge = [
-                    'pendente' => ['bg'=>'#F1F5F9', 'color'=>'#475569'],
-                    'em_analise' => ['bg'=>'#FEF3C7', 'color'=>'#92400E'],
-                    'selecionado' => ['bg'=>'#DCFCE7', 'color'=>'#166534'],
-                    'rejeitado' => ['bg'=>'#FEE2E2', 'color'=>'#991B1B'],
-                    'convite_enviado' => ['bg'=>'#DBEAFE', 'color'=>'#1E40AF'],
-                    'registado' => ['bg'=>'#F5F3FF', 'color'=>'#5B21B6']
-                ][$st] ?? ['bg'=>'#eee', 'color'=>'#333'];
-            ?>
-            <div class="cand-item-v2" style="border-left: 4px solid <?= $filtro_fase==='rastreio_pitch'?'#F59E0B':($filtro_fase==='selecao_admissao'?'#10B981':'#3B82F6') ?>">
-                <div class="d-flex align-items-center gap-3" style="flex: 2; min-width: 250px;">
-                    <div class="cand-avatar-v2" style="background:<?= $color ?>"><?= strtoupper($iniciais) ?></div>
-                    <div class="cand-info-v2">
-                        <span class="name"><?= htmlspecialchars($c['nome']) ?></span>
-                        <span class="idea"><i class="fa fa-lightbulb text-warning me-1"></i> <?= htmlspecialchars(mb_substr($c['titulo_ideia'],0,50)) ?>...</span>
-                    </div>
-                </div>
-                
-                <div style="flex: 1; min-width: 140px;">
-                    <div class="label-mini">Contacto</div>
-                    <div class="val-mini text-truncate" style="max-width: 130px;" title="<?= htmlspecialchars($c['email']) ?>"><?= htmlspecialchars($c['email']) ?></div>
-                </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tabelaCandidaturas">
+                    <thead class="table-light small text-uppercase fw-bold text-secondary border-bottom">
+                        <tr>
+                            <th style="padding: 14px 20px;">Candidato & Ideia</th>
+                            <th style="padding: 14px 15px;">Contacto & Perfil</th>
+                            <th style="padding: 14px 15px;">Entidade / Projeto</th>
+                            <th style="padding: 14px 15px;">Estado / Pitch</th>
+                            <th style="padding: 14px 20px;" class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($candidaturas as $c): 
+                            $words = explode(' ', $c['nome']);
+                            $iniciais = mb_substr($words[0],0,1) . (isset($words[1]) ? mb_substr($words[1],0,1) : '');
+                            $colors = ['#6366F1','#EC4899','#F59E0B','#10B981','#3B82F6'];
+                            $color = $colors[ord($c['nome'][0]) % count($colors)];
+                            
+                            $st = $c['estado'];
+                            $stBadge = [
+                                'pendente' => ['bg'=>'#F1F5F9', 'color'=>'#475569'],
+                                'em_analise' => ['bg'=>'#FEF3C7', 'color'=>'#92400E'],
+                                'selecionado' => ['bg'=>'#DCFCE7', 'color'=>'#166534'],
+                                'rejeitado' => ['bg'=>'#FEE2E2', 'color'=>'#991B1B'],
+                                'convite_enviado' => ['bg'=>'#DBEAFE', 'color'=>'#1E40AF'],
+                                'registado' => ['bg'=>'#F5F3FF', 'color'=>'#5B21B6']
+                            ][$st] ?? ['bg'=>'#eee', 'color'=>'#333'];
 
-                <div style="flex: 1; min-width: 120px;">
-                    <div class="label-mini">Tipo / Inst.</div>
-                    <div class="val-mini">
-                        <?php if ($c['tipo_candidato'] === 'pre_licenciado'): ?>
-                            <span class="badge bg-info-subtle text-info small px-2 py-0.5 rounded-2" style="font-size: 0.65rem;">Pré-licenciado</span>
-                        <?php else: ?>
-                            Nº <?= htmlspecialchars($c['numero_estudante']) ?>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                            $tiposProjMap = [
+                                'startup_tecnologica' => '🚀 Startup Tech',
+                                'negocio_tradicional' => '🏢 Negócio / Empresa',
+                                'individual' => '👤 Individual',
+                                'equipa' => '👥 Equipa / Grupo',
+                                'impacto_social' => '🌍 Impacto Social'
+                            ];
+                            $projText = $tiposProjMap[$c['tipo_projeto'] ?? ''] ?? ($c['tipo_projeto'] ?? '🚀 Startup Tech');
+                        ?>
+                        <tr class="cand-table-row">
+                            <td style="padding: 14px 20px;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="cand-avatar-v2" style="background:<?= $color ?>; flex-shrink:0;"><?= strtoupper($iniciais) ?></div>
+                                    <div>
+                                        <strong class="d-block text-dark" style="font-size:0.9rem;"><?= htmlspecialchars($c['nome']) ?></strong>
+                                        <span class="small text-muted d-block mt-0.5"><i class="fa fa-lightbulb text-warning me-1"></i><?= htmlspecialchars(mb_substr($c['titulo_ideia'],0,45)) ?>...</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="padding: 14px 15px;">
+                                <div class="small fw-bold text-dark"><?= htmlspecialchars($c['email']) ?></div>
+                                <div class="small text-muted mt-0.5">
+                                    <i class="fa fa-phone text-success me-1"></i><?= htmlspecialchars($c['telefone']) ?>
+                                    · <?php if ($c['tipo_candidato'] === 'pre_licenciado'): ?>
+                                        <span class="badge bg-info-subtle text-info px-2 py-0.5" style="font-size:0.65rem;">Pré-licenciado</span>
+                                    <?php else: ?>
+                                        Nº <?= htmlspecialchars($c['numero_estudante']) ?>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td style="padding: 14px 15px;">
+                                <span class="badge bg-light text-dark border px-2 py-1 rounded-2" style="font-size:0.75rem; font-weight:700;">
+                                    <?= $projText ?>
+                                </span>
+                                <div class="small text-muted mt-1"><i class="fa fa-tag me-1 text-secondary"></i><?= htmlspecialchars($c['area_tematica'] ?? 'Geral') ?></div>
+                            </td>
+                            <td style="padding: 14px 15px;">
+                                <?php if ($filtro_fase === 'rastreio_pitch'): ?>
+                                    <span class="badge bg-warning-subtle text-warning-dark fw-bold px-2 py-1 rounded-2" style="font-size:0.72rem;"><i class="fa fa-clock me-1"></i>Aguardando Notas</span>
+                                <?php elseif ($filtro_fase === 'selecao_admissao'): ?>
+                                    <div class="fw-bold text-dark" style="font-size:0.85rem">Média: <?= number_format($c['pitch_nota_final'], 1) ?>/10</div>
+                                    <div class="small text-muted" style="font-size:0.7rem">Ino: <?= $c['pitch_inovacao'] ?> · Aut: <?= $c['pitch_sustentabilidade'] ?> · Emp: <?= $c['pitch_empreendedorismo'] ?></div>
+                                <?php elseif ($filtro_fase === 'admitidos'): ?>
+                                    <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
+                                        <?= $st === 'registado' ? 'Conta Aberta' : ($st === 'convite_enviado' ? 'Convite Enviado' : 'Aprovado') ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
+                                        <?= ucfirst(str_replace('_',' ',$st)) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="padding: 14px 20px;" class="text-end">
+                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                    <button class="btn-action-v2" title="Dossier Completo" onclick='abrirModal(<?= json_encode($c) ?>)'><i class="fa fa-id-card"></i></button>
+                                    
+                                    <?php if ($filtro_fase === 'rastreio_pitch'): ?>
+                                        <button class="btn-action-v2 btn-warning" title="Avaliar Pitch" onclick='abrirModalAvaliar(<?= json_encode($c) ?>)'><i class="fa fa-star"></i></button>
+                                    <?php endif; ?>
 
-                <!-- Painel Central de Informações de acordo com a Fase -->
-                <div style="flex: 1.5; min-width: 180px;">
-                    <?php if ($filtro_fase === 'rastreio_pitch'): ?>
-                        <div class="label-mini">Primeiro Rastreio</div>
-                        <span class="badge bg-warning-subtle text-warning-dark fw-bold px-2 py-1 rounded" style="font-size:0.7rem;"><i class="fa fa-clock me-1"></i>Aguardando Notas</span>
-                    <?php elseif ($filtro_fase === 'selecao_admissao'): ?>
-                        <div class="label-mini">Notas do Pitch (Média: <strong><?= number_format($c['pitch_nota_final'], 1) ?>/10</strong>)</div>
-                        <div class="val-mini" style="font-size:0.7rem; color:var(--text-secondary)">
-                            Ino: <?= $c['pitch_inovacao'] ?> · Aut: <?= $c['pitch_sustentabilidade'] ?> · Emp: <?= $c['pitch_empreendedorismo'] ?>
-                        </div>
-                    <?php elseif ($filtro_fase === 'admitidos'): ?>
-                        <div class="label-mini">Estado Admissão</div>
-                        <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
-                            <?= $st === 'registado' ? 'Conta Aberta' : ($st === 'convite_enviado' ? 'Convite Enviado' : 'Aprovado') ?>
-                        </span>
-                    <?php else: ?>
-                        <div class="label-mini">Estado</div>
-                        <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
-                            <?= ucfirst(str_replace('_',' ',$st)) ?>
-                        </span>
-                    <?php endif; ?>
-                </div>
+                                    <?php if ($filtro_fase === 'selecao_admissao'): ?>
+                                        <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
+                                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar Admissão"><i class="fa fa-check"></i></button>
+                                        </form>
+                                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
+                                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                                            <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar Candidatura" onclick="return confirm('Tem a certeza que deseja rejeitar esta candidatura?')"><i class="fa fa-ban"></i></button>
+                                        </form>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-2" style="font-size:0.65rem;" title="Apenas Super Admin (DG/PR) pode aprovar a admissão"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
 
-                <div class="d-flex align-items-center gap-2" style="flex: 1; min-width: 120px; justify-content: flex-end;">
-                    <button class="btn-action-v2" title="Dossier" onclick='abrirModal(<?= json_encode($c) ?>)'><i class="fa fa-id-card"></i></button>
-                    
-                    <?php if ($filtro_fase === 'rastreio_pitch'): ?>
-                        <!-- Qualquer admin/superadmin/mentor pode avaliar pitch -->
-                        <button class="btn-action-v2 btn-warning" title="Avaliar Pitch" onclick='abrirModalAvaliar(<?= json_encode($c) ?>)'><i class="fa fa-star"></i></button>
-                    <?php endif; ?>
+                                    <?php if ($filtro_fase === 'admitidos'): ?>
+                                        <?php if ($st === 'selecionado'): ?>
+                                            <button class="btn-action-v2" style="color:#25D366; border-color:#25D366; background:#F0FDF4" title="Enviar Convite WhatsApp" onclick='gerarConvite(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
+                                        <?php endif; ?>
 
-                    <?php if ($filtro_fase === 'selecao_admissao'): ?>
-                        <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
-                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
-                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar Admissão"><i class="fa fa-check"></i></button>
-                        </form>
-                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                            <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar Candidatura" onclick="return confirm('Tem a certeza que deseja rejeitar esta candidatura?')"><i class="fa fa-ban"></i></button>
-                        </form>
-                        <?php else: ?>
-                            <span class="badge bg-secondary-subtle text-secondary small px-2 py-1 rounded-2" style="font-size:0.65rem;" title="Apenas Super Admin (DG/PR) pode aprovar a admissão"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
-                        <?php endif; ?>
-                    <?php endif; ?>
+                                        <?php if ($st !== 'registado' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
+                                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                                            <button type="submit" class="btn-action-v2 btn-danger" title="Cancelar Admissão / Rejeitar" onclick="return confirm('Cancelar admissão e rejeitar?')"><i class="fa fa-ban"></i></button>
+                                        </form>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
 
-                    <?php if ($filtro_fase === 'admitidos'): ?>
-                        <?php if ($st === 'selecionado'): ?>
-                            <button class="btn-action-v2" style="color:#25D366; border-color:#25D366; background:#F0FDF4" title="Enviar Convite WhatsApp" onclick='gerarConvite(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
-                        <?php endif; ?>
-
-                        <?php if ($st !== 'registado' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
-                        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                            <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                            <button type="submit" class="btn-action-v2 btn-danger" title="Cancelar Admissão / Rejeitar" onclick="return confirm('Cancelar admissão e rejeitar?')"><i class="fa fa-ban"></i></button>
-                        </form>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <?php if (in_array($_SESSION['usuario_perfil'], ['admin', 'superadmin'])): ?>
-                    <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;" onsubmit="return confirm('Tem a certeza que deseja eliminar DEFINITIVAMENTE esta candidatura? Esta acção não pode ser desfeita.')">
-                        <input type="hidden" name="action" value="remover_candidatura">
-                        <input type="hidden" name="id_cand" value="<?= $c['id'] ?>">
-                        <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                        <button type="submit" class="btn-action-v2 text-danger" style="border-color:#FEE2E2; background:#FEF2F2;" title="Eliminar Candidatura">
-                            <i class="fa fa-trash-can"></i>
-                        </button>
-                    </form>
-                    <?php endif; ?>
-                </div>
+                                    <?php if (in_array($_SESSION['usuario_perfil'], ['admin', 'superadmin'])): ?>
+                                    <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;" onsubmit="return confirm('Tem a certeza que deseja eliminar DEFINITIVAMENTE esta candidatura? Esta acção não pode ser desfeita.')">
+                                        <input type="hidden" name="action" value="remover_candidatura">
+                                        <input type="hidden" name="id_cand" value="<?= $c['id'] ?>">
+                                        <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                                        <button type="submit" class="btn-action-v2 text-danger" style="border-color:#FEE2E2; background:#FEF2F2;" title="Eliminar Candidatura">
+                                            <i class="fa fa-trash-can"></i>
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-            <?php endforeach; ?>
         <?php endif; ?>
     </div>
 </div>
@@ -985,6 +1018,15 @@ function processarMassa() {
             btn.style.background = '#D97706';
             btn.disabled = false;
         }, 3000);
+    });
+}
+
+function filtrarCandidaturasTabela() {
+    const query = (document.getElementById('candSearchInput')?.value || '').toLowerCase();
+    const rows = document.querySelectorAll('.cand-table-row');
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
     });
 }
 </script>
