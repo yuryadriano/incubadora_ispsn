@@ -2,35 +2,33 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['admin', 'superadmin', 'mentor']);
 
-// Auto-migração resiliente de esquema para colunas do Pitch
-try {
-    $chkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'tipo_projeto'");
-    if ($chkCol && $chkCol->num_rows === 0) {
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `tipo_projeto` ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
+// Auto-migração resiliente de esquema para colunas do Pitch (executa 1 vez por sessão para evitar locks de BD)
+if (empty($_SESSION['auto_migrated_pitch_cols'])) {
+    try {
+        $chkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_problema'");
+        if ($chkCol && $chkCol->num_rows === 0) {
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `tipo_projeto` ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `publico_alvo` TEXT NULL");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `modelo_negocio` TEXT NULL");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `diferencial` TEXT NULL");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_problema` DECIMAL(4,2) DEFAULT 0");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_solucao` DECIMAL(4,2) DEFAULT 0");
+            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_modelo_negocio` DECIMAL(4,2) DEFAULT 0");
+        }
+    } catch (Throwable $e) {
+        // Silencioso se MariaDB/MySQL já tiver criado
     }
-    $chkCol2 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'publico_alvo'");
-    if ($chkCol2 && $chkCol2->num_rows === 0) {
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `publico_alvo` TEXT NULL");
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `modelo_negocio` TEXT NULL");
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `diferencial` TEXT NULL");
-    }
-    $chkCol3 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_problema'");
-    if ($chkCol3 && $chkCol3->num_rows === 0) {
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_problema` DECIMAL(4,2) DEFAULT 0");
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_solucao` DECIMAL(4,2) DEFAULT 0");
-        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_modelo_negocio` DECIMAL(4,2) DEFAULT 0");
-    }
-} catch (Throwable $e) {
-    // Silencioso se MariaDB/MySQL já tiver criado ou sem permissão direta
+    $_SESSION['auto_migrated_pitch_cols'] = true;
 }
 
 $tituloPagina = 'Candidaturas';
 $paginaActiva = 'candidaturas';
 
-// Pré-carregar contagens de candidaturas por processo (elimina N+1)
+// Pré-carregar contagens de candidaturas por processo
 $contProc = [];
 $resProc = $mysqli->query("SELECT id_processo, COUNT(*) n FROM candidaturas GROUP BY id_processo");
 if ($resProc) while ($rp = $resProc->fetch_assoc()) $contProc[$rp['id_processo']] = $rp['n'];
+
 // Processos existentes
 $processos = [];
 $res = $mysqli->query("SELECT * FROM processos_candidatura ORDER BY criado_em DESC");
@@ -44,9 +42,9 @@ $filtro_fase     = $_GET['fase'] ?? 'rastreio_pitch';
 $candidaturas = [];
 if ($id_processo_sel) {
     if ($filtro_fase === 'rastreio_pitch') {
-        $where = "WHERE c.id_processo = $id_processo_sel AND (c.estado = 'pendente' OR c.estado = 'em_analise') AND c.pitch_inovacao IS NULL";
+        $where = "WHERE c.id_processo = $id_processo_sel AND (c.estado = 'pendente' OR (c.estado = 'em_analise' AND (c.pitch_nota_final IS NULL OR c.pitch_nota_final = 0)))";
     } elseif ($filtro_fase === 'selecao_admissao') {
-        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'em_analise' AND c.pitch_inovacao IS NOT NULL";
+        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'em_analise' AND c.pitch_nota_final > 0";
     } elseif ($filtro_fase === 'admitidos') {
         $where = "WHERE c.id_processo = $id_processo_sel AND c.estado IN ('selecionado', 'convite_enviado', 'registado')";
     } elseif ($filtro_fase === 'rejeitados') {
@@ -65,30 +63,26 @@ if ($id_processo_sel) {
     if ($res) while ($r = $res->fetch_assoc()) $candidaturas[] = $r;
 }
 
-// Contagens por fase operacional
-$contFases = [
-    'rastreio_pitch' => 0,
-    'selecao_admissao' => 0,
-    'admitidos' => 0,
-    'rejeitados' => 0
-];
+// Contagens operacionais unificadas numa única consulta ultra-rápida
+$contFases = ['rastreio_pitch' => 0, 'selecao_admissao' => 0, 'admitidos' => 0, 'rejeitados' => 0];
 if ($id_processo_sel) {
-    // 1. Rastreio Pitch
-    $r1 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND (estado = 'pendente' OR estado = 'em_analise') AND pitch_inovacao IS NULL");
-    if ($r1) $contFases['rastreio_pitch'] = (int)$r1->fetch_assoc()['n'];
-
-    // 2. Seleção Admissão
-    $r2 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado = 'em_analise' AND pitch_inovacao IS NOT NULL");
-    if ($r2) $contFases['selecao_admissao'] = (int)$r2->fetch_assoc()['n'];
-
-    // 3. Admitidos
-    $r3 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado IN ('selecionado', 'convite_enviado', 'registado')");
-    if ($r3) $contFases['admitidos'] = (int)$r3->fetch_assoc()['n'];
-
-    // 4. Rejeitados
-    $r4 = $mysqli->query("SELECT COUNT(*) n FROM candidaturas WHERE id_processo = $id_processo_sel AND estado = 'rejeitado'");
-    if ($r4) $contFases['rejeitados'] = (int)$r4->fetch_assoc()['n'];
+    $resStats = $mysqli->query("
+        SELECT 
+            SUM(CASE WHEN (estado = 'pendente' OR (estado = 'em_analise' AND (pitch_nota_final IS NULL OR pitch_nota_final = 0))) THEN 1 ELSE 0 END) as rastreio_pitch,
+            SUM(CASE WHEN estado = 'em_analise' AND pitch_nota_final > 0 THEN 1 ELSE 0 END) as selecao_admissao,
+            SUM(CASE WHEN estado IN ('selecionado', 'convite_enviado', 'registado') THEN 1 ELSE 0 END) as admitidos,
+            SUM(CASE WHEN estado = 'rejeitado' THEN 1 ELSE 0 END) as rejeitados
+        FROM candidaturas 
+        WHERE id_processo = $id_processo_sel
+    ");
+    if ($resStats && $st = $resStats->fetch_assoc()) {
+        $contFases['rastreio_pitch'] = (int)($st['rastreio_pitch'] ?? 0);
+        $contFases['selecao_admissao'] = (int)($st['selecao_admissao'] ?? 0);
+        $contFases['admitidos'] = (int)($st['admitidos'] ?? 0);
+        $contFases['rejeitados'] = (int)($st['rejeitados'] ?? 0);
+    }
 }
+$totalCand = array_sum($contFases);
 $totalCand = array_sum($contFases);
 
 // Contagens por Tipo de Projeto / Entidade (estilo Coordenações)
