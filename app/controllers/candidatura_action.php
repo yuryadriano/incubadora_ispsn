@@ -443,29 +443,25 @@ if ($action === 'avaliar_pitch_candidatura') {
 
 /* ── REMOVER CANDIDATURA ─────────────────── */
 if ($action === 'remover_candidatura') {
-    obrigarPerfil(['admin', 'superadmin']); // Permite Admin ou SuperAdmin eliminar candidaturas por facilidade de gestão
+    obrigarPerfil(['admin', 'superadmin']);
     $idCand = (int)($_POST['id_cand'] ?? 0);
 
     if ($idCand > 0) {
-        // Verificar se existem convites associados a esta candidatura
-        $stmtChk = $mysqli->prepare("SELECT id FROM convites WHERE id_candidatura = ?");
-        $stmtChk->bind_param('i', $idCand);
-        $stmtChk->execute();
-        $hasConvite = $stmtChk->get_result()->num_rows > 0;
-        $stmtChk->close();
+        // Remover convites de conta associados em cascata (permite limpeza de candidaturas de teste)
+        $stmtDelConv = $mysqli->prepare("DELETE FROM convites WHERE id_candidatura = ?");
+        $stmtDelConv->bind_param('i', $idCand);
+        $stmtDelConv->execute();
+        $stmtDelConv->close();
 
-        if ($hasConvite) {
-            $_SESSION['flash_erro'] = 'Não é possível remover esta candidatura pois já existe um convite de conta associado a ela.';
+        // Remover a candidatura
+        $stmt = $mysqli->prepare("DELETE FROM candidaturas WHERE id = ?");
+        $stmt->bind_param('i', $idCand);
+        if ($stmt->execute()) {
+            $_SESSION['flash_ok'] = '🗑️ Candidatura e convites de teste eliminados com sucesso!';
         } else {
-            $stmt = $mysqli->prepare("DELETE FROM candidaturas WHERE id = ?");
-            $stmt->bind_param('i', $idCand);
-            if ($stmt->execute()) {
-                $_SESSION['flash_ok'] = 'Candidatura removida com sucesso!';
-            } else {
-                $_SESSION['flash_erro'] = 'Erro ao remover a candidatura: ' . $mysqli->error;
-            }
-            $stmt->close();
+            $_SESSION['flash_erro'] = 'Erro ao remover a candidatura: ' . $mysqli->error;
         }
+        $stmt->close();
     }
     header("Location: $redirect");
     exit;
