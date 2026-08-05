@@ -14,6 +14,12 @@ try {
         $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `modelo_negocio` TEXT NULL");
         $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `diferencial` TEXT NULL");
     }
+    $chkCol3 = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_problema'");
+    if ($chkCol3 && $chkCol3->num_rows === 0) {
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_problema` DECIMAL(4,2) DEFAULT 0");
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_solucao` DECIMAL(4,2) DEFAULT 0");
+        $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_modelo_negocio` DECIMAL(4,2) DEFAULT 0");
+    }
 } catch (Throwable $e) {
     // Silencioso se MariaDB/MySQL já tiver criado ou sem permissão direta
 }
@@ -681,43 +687,66 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <small class="text-muted" style="font-size:0.7rem;">Pontuação de precisão de 0.0 a 10.0</small>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
-                                <span>Inovação & Originalidade</span>
+                        <div class="mb-2">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                                <span>1. Clareza do Problema</span>
+                                <span class="badge bg-danger text-white fw-bold" id="valProb">5</span>
+                            </label>
+                            <input type="range" name="pitch_problema" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                                <span>2. Eficácia da Solução</span>
+                                <span class="badge bg-success text-white fw-bold" id="valSol">5</span>
+                            </label>
+                            <input type="range" name="pitch_solucao" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                                <span>3. Modelo de Negócio</span>
+                                <span class="badge bg-warning text-white fw-bold" id="valMod">5</span>
+                            </label>
+                            <input type="range" name="pitch_modelo_negocio" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                                <span>4. Inovação & Diferencial</span>
                                 <span class="badge bg-primary text-white fw-bold" id="valIno">5</span>
                             </label>
                             <input type="range" name="pitch_inovacao" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
-                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Grau de novidade e diferenciação no mercado.</small>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
-                                <span>Autossustentabilidade</span>
-                                <span class="badge bg-success text-white fw-bold" id="valSust">5</span>
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1" style="font-size:0.8rem;">
+                                <span>5. Autossustentabilidade</span>
+                                <span class="badge bg-info text-white fw-bold" id="valSust">5</span>
                             </label>
                             <input type="range" name="pitch_sustentabilidade" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
-                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Viabilidade financeira e modelo de negócio.</small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
-                                <span>Equipa & Execução</span>
-                                <span class="badge bg-warning text-white fw-bold" id="valEmp">5</span>
-                            </label>
-                            <input type="range" name="pitch_empreendedorismo" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
-                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Capacidade de execução da equipa e ambição.</small>
                         </div>
 
                         <div class="mb-0">
-                            <label class="form-label-custom fw-bold mb-1">Parecer Técnico / Observações</label>
-                            <textarea name="pitch_observacoes" class="form-control-custom" rows="3" placeholder="Insira o seu parecer qualificado sobre a ideia..."></textarea>
+                            <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Parecer Técnico / Observações</label>
+                            <textarea name="pitch_observacoes" class="form-control-custom" rows="2" placeholder="Insira o seu parecer qualificado sobre a ideia..."></textarea>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer-v2 bg-light">
-                <button type="button" class="btn btn-light border fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
-                <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3 text-white" style="background:var(--primary); border:none;"><i class="fa fa-paper-plane me-1.5"></i> Gravar & Enviar para Fila de Seleção</button>
+            <div class="modal-footer-v2 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="form-check text-start mb-0 ms-2">
+                    <input class="form-check-input" type="checkbox" id="chkConfirmarAvaliacao" required checked>
+                    <label class="form-check-label small fw-bold text-secondary" for="chkConfirmarAvaliacao" style="font-size:0.78rem;">
+                        Confirmo o parecer e as notas atribuídas a este Pitch
+                    </label>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-light border fw-bold px-3.5 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
+                    <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3 text-white shadow-sm" id="btnConfirmarAvaliacaoSubmit" style="background:var(--primary); border:none; font-size:0.85rem;">
+                        <i class="fa fa-check-circle me-1.5"></i> Confirmar Avaliação (<span id="btnMediaText">5.0</span>)
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -986,16 +1015,21 @@ function abrirModalAvaliar(c) {
 function calcMediaAvaliacao() {
     const f = document.getElementById('formAvaliarPitch');
     if (!f) return;
+    const prob = parseFloat(f.querySelector('[name="pitch_problema"]').value) || 0;
+    const sol = parseFloat(f.querySelector('[name="pitch_solucao"]').value) || 0;
+    const mod = parseFloat(f.querySelector('[name="pitch_modelo_negocio"]').value) || 0;
     const ino = parseFloat(f.querySelector('[name="pitch_inovacao"]').value) || 0;
     const sust = parseFloat(f.querySelector('[name="pitch_sustentabilidade"]').value) || 0;
-    const emp = parseFloat(f.querySelector('[name="pitch_empreendedorismo"]').value) || 0;
     
-    document.getElementById('valIno').textContent = ino;
-    document.getElementById('valSust').textContent = sust;
-    document.getElementById('valEmp').textContent = emp;
+    if (document.getElementById('valProb')) document.getElementById('valProb').textContent = prob;
+    if (document.getElementById('valSol')) document.getElementById('valSol').textContent = sol;
+    if (document.getElementById('valMod')) document.getElementById('valMod').textContent = mod;
+    if (document.getElementById('valIno')) document.getElementById('valIno').textContent = ino;
+    if (document.getElementById('valSust')) document.getElementById('valSust').textContent = sust;
     
-    const media = ((ino + sust + emp) / 3).toFixed(1);
-    document.getElementById('avaliarMediaCalc').textContent = media;
+    const media = ((prob + sol + mod + ino + sust) / 5).toFixed(1);
+    if (document.getElementById('avaliarMediaCalc')) document.getElementById('avaliarMediaCalc').textContent = media;
+    if (document.getElementById('btnMediaText')) document.getElementById('btnMediaText').textContent = media;
 }
 
 function gerarConvite(c) {

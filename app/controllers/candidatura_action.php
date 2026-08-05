@@ -401,19 +401,23 @@ if ($action === 'gerar_convite_ajax') {
 /* ── AVALIAR PITCH DE CANDIDATURA ────────── */
 if ($action === 'avaliar_pitch_candidatura') {
     $idCand                 = (int)($_POST['id_cand'] ?? 0);
-    $pitchInovacao          = min(10, max(0, (int)($_POST['pitch_inovacao'] ?? 0)));
-    $pitchSustentabilidade  = min(10, max(0, (int)($_POST['pitch_sustentabilidade'] ?? 0)));
-    $pitchEmpreendedorismo  = min(10, max(0, (int)($_POST['pitch_empreendedorismo'] ?? 0)));
+    $pitchProblema          = min(10, max(0, (float)($_POST['pitch_problema'] ?? 0)));
+    $pitchSolucao           = min(10, max(0, (float)($_POST['pitch_solucao'] ?? 0)));
+    $pitchModeloNegocio     = min(10, max(0, (float)($_POST['pitch_modelo_negocio'] ?? 0)));
+    $pitchInovacao          = min(10, max(0, (float)($_POST['pitch_inovacao'] ?? 0)));
+    $pitchSustentabilidade  = min(10, max(0, (float)($_POST['pitch_sustentabilidade'] ?? 0)));
     $pitchObservacoes       = trim($_POST['pitch_observacoes'] ?? '');
 
     if ($idCand > 0) {
-        $pitchNotaFinal = ($pitchInovacao + $pitchSustentabilidade + $pitchEmpreendedorismo) / 3;
+        $pitchNotaFinal = ($pitchProblema + $pitchSolucao + $pitchModeloNegocio + $pitchInovacao + $pitchSustentabilidade) / 5;
 
         $stmt = $mysqli->prepare("
             UPDATE candidaturas SET 
+                pitch_problema = ?,
+                pitch_solucao = ?,
+                pitch_modelo_negocio = ?,
                 pitch_inovacao = ?, 
                 pitch_sustentabilidade = ?, 
-                pitch_empreendedorismo = ?, 
                 pitch_nota_final = ?, 
                 pitch_observacoes = ?, 
                 pitch_avaliado_por = ?, 
@@ -421,10 +425,12 @@ if ($action === 'avaliar_pitch_candidatura') {
                 estado = 'em_analise'
             WHERE id = ?
         ");
-        $stmt->bind_param('ddddsii', 
+        $stmt->bind_param('ddddddsii', 
+            $pitchProblema,
+            $pitchSolucao,
+            $pitchModeloNegocio,
             $pitchInovacao, 
             $pitchSustentabilidade, 
-            $pitchEmpreendedorismo, 
             $pitchNotaFinal, 
             $pitchObservacoes, 
             $idAdmin, 
