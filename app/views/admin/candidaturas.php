@@ -344,204 +344,127 @@ require_once __DIR__ . '/../partials/_layout.php';
 <?php endif; ?>
 
 <div class="candidaturas-wrapper">
-    <div class="section-header-custom">
-        <div class="section-title-label"><i class="fa fa-folder-tree"></i> Processos de Candidatura</div>
-    </div>
-    
-    <div class="proc-grid-v2">
-        <?php foreach ($processos as $proc): 
-            $statusClass = $proc['estado'] === 'aberto' ? 'status-aberto' : ($proc['estado'] === 'fechado' ? 'status-fechado' : 'status-preparacao');
-            $statusLabel = $proc['estado'] === 'aberto' ? 'Aberto' : ($proc['estado'] === 'fechado' ? 'Fechado' : 'Preparação');
-        ?>
-        <div class="proc-card-v2 <?= $proc['id']==$id_processo_sel?'active':'' ?>" onclick="location.href='?processo=<?= $proc['id'] ?>'">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="proc-status-pill <?= $statusClass ?>"><?= $statusLabel ?></span>
-                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" onclick="event.stopPropagation();">
-                    <input type="hidden" name="action" value="toggle_processo">
-                    <input type="hidden" name="id_processo" value="<?= $proc['id'] ?>">
-                    <button type="submit" class="btn-action-v2" style="border:none; background:transparent" title="Alternar Estado"><i class="fa <?= $proc['estado']==='aberto'?'fa-lock-open':'fa-lock' ?>"></i></button>
-                </form>
-            </div>
-            <div class="fw-bold mb-1" style="font-size: 0.95rem;"><?= htmlspecialchars($proc['nome']) ?></div>
-            <div class="text-muted" style="font-size: 0.75rem;">
-                <?php
-                $cnt = $contProc[(int)$proc['id']] ?? 0;
-                echo "<strong>$cnt</strong> submissões · <strong>{$proc['vagas']}</strong> vagas";
-                ?>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
 
-    <div class="kpi-row-v2">
-        <div class="kpi-card-v2">
-            <div class="kpi-icon-v2" style="background:#F1F5F9; color:#475569;"><i class="fa fa-inbox"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $totalCand ?></div><div class="label-mini">Total Filtro</div></div>
+    <!-- CABEÇALHO UNIFICADO E COMPACTO -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4 pb-2 border-bottom">
+        <div>
+            <div class="h4 fw-bold mb-1" style="color:var(--slate-900);">
+                <i class="fa fa-inbox me-2" style="color:var(--primary)"></i>Gestão de Candidaturas
+            </div>
+            <div class="text-muted small">Pipeline de triagem e admissão de startups</div>
         </div>
-        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=rastreio_pitch'" style="cursor:pointer;">
-            <div class="kpi-icon-v2" style="background:#FEF3C7; color:#B45309;"><i class="fa fa-magnifying-glass"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contFases['rastreio_pitch'] ?></div><div class="label-mini">Rastreio Pitch</div></div>
-        </div>
-        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=selecao_admissao'" style="cursor:pointer;">
-            <div class="kpi-icon-v2" style="background:#DCFCE7; color:#166534;"><i class="fa fa-circle-check"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contFases['selecao_admissao'] ?></div><div class="label-mini">Para Seleção</div></div>
-        </div>
-        <div class="kpi-card-v2" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=admitidos'" style="cursor:pointer;">
-            <div class="kpi-icon-v2" style="background:#DBEAFE; color:#1E40AF;"><i class="fa fa-user-plus"></i></div>
-            <div><div class="h4 fw-900 mb-0"><?= $contFases['admitidos'] ?></div><div class="label-mini">Admitidos</div></div>
-        </div>
-    </div>
+        
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Seletor de Processo Ativo -->
+            <div class="d-flex align-items-center gap-2 bg-white border rounded-3 px-3 py-1.5 shadow-sm">
+                <i class="fa fa-folder-open text-warning"></i>
+                <span class="small fw-bold text-secondary">Edição:</span>
+                <select class="form-select form-select-sm border-0 fw-bold bg-transparent text-dark p-0" style="cursor:pointer; font-size:0.85rem;" onchange="location.href='?processo='+this.value">
+                    <?php foreach ($processos as $proc): 
+                        $cnt = $contProc[(int)$proc['id']] ?? 0;
+                    ?>
+                        <option value="<?= $proc['id'] ?>" <?= $proc['id'] == $id_processo_sel ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($proc['nome']) ?> (<?= $cnt ?> submissões · <?= $proc['vagas'] ?> vagas)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-    <!-- CATEGORIAS & TIPOS DE PROJETO (ESTILO COORDENAÇÕES) -->
-    <div class="section-header-custom mb-2">
-        <div class="section-title-label"><i class="fa fa-sitemap text-primary"></i> Categorias & Tipos de Projeto</div>
-    </div>
-    <div class="row g-3 mb-4" id="gridCategoriasProjeto">
-        <div class="col-md">
-            <div class="tipo-cand-card active-card" onclick="filtrarPorTipoProjeto('todos', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #4F46E5, #3730A3)">
-                        <i class="fa fa-layer-group"></i>
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Todos Projetos</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= array_sum($contTiposProjeto) ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('startup_tecnologica', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #3B82F6, #1D4ED8)">
-                        🚀
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Startup Tech</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['startup_tecnologica'] ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('negocio_tradicional', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #10B981, #047857)">
-                        🏢
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Empresas</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['negocio_tradicional'] ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('individual', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #F59E0B, #B45309)">
-                        👤
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Individual</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['individual'] ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('equipa', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #8B5CF6, #6D28D9)">
-                        👥
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Equipas</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['equipa'] ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md">
-            <div class="tipo-cand-card" onclick="filtrarPorTipoProjeto('impacto_social', this)">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="cat-badge-icon" style="background:linear-gradient(135deg, #EC4899, #BE185D)">
-                        🌍
-                    </div>
-                    <div>
-                        <div class="fw-bold text-dark" style="font-size:0.85rem;">Impacto Social</div>
-                        <div class="small text-muted" style="font-size:0.75rem;"><?= $contTiposProjeto['impacto_social'] ?> submissões</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+            <?php if ($id_processo_sel && ($contFases['rastreio_pitch'] ?? 0) > 0): ?>
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin: 0;">
+                <input type="hidden" name="action" value="triagem_automatica">
+                <input type="hidden" name="id_processo" value="<?= $id_processo_sel ?>">
+                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                <button type="submit" class="btn btn-warning fw-bold text-white px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#D97706; border:none; font-size:0.82rem;">
+                    <i class="fa fa-bolt"></i> Triagem Automática
+                </button>
+            </form>
+            <?php endif; ?>
 
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#94A3B8;">Funil de Triagem</div>
-        <div class="dropdown">
-            <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="fa fa-file-csv me-1"></i> Exportar CSV
+            <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProcesso" style="font-size:0.82rem; padding:8px 16px;">
+                <i class="fa fa-plus me-1.5"></i> Novo Processo
             </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow">
-                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>"><i class="fa fa-list me-2 text-primary"></i>Todas as candidaturas</a></li>
-                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=selecionado"><i class="fa fa-check-circle me-2 text-success"></i>Só aprovados</a></li>
-                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=rejeitado"><i class="fa fa-times-circle me-2 text-danger"></i>Só recusados</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=projetos"><i class="fa fa-rocket me-2 text-warning"></i>Exportar Startups</a></li>
-            </ul>
         </div>
     </div>
 
-    <div class="filter-tabs-v2">
-        <?php
-        $fases = [
-            'rastreio_pitch' => '1. Rastreio de Pitch 🔬',
-            'selecao_admissao' => '2. Fila de Seleção 🗳️',
-            'admitidos' => '3. Admitidos (Convites) ✉️',
-            'rejeitados' => 'Recusados ✗'
-        ];
-        foreach ($fases as $k=>$v):
-            $count = $contFases[$k] ?? 0;
-        ?>
-        <a href="?processo=<?= $id_processo_sel ?>&fase=<?= $k ?>" class="filter-tab-v2 <?= $filtro_fase===$k?'active':'' ?>">
-            <?= $v ?> <span class="tab-count"><?= $count ?></span>
-        </a>
-        <?php endforeach; ?>
-    </div>
-
-    <?php if ($filtro_fase === 'admitidos' && !empty($candidaturas)): ?>
-    <div class="card border-0 shadow-sm mb-4 rounded-4" style="background: linear-gradient(to right, #FFFBEB, #fff); border-left: 5px solid var(--primary) !important; border-radius: 16px;">
-        <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div>
-                    <h5 class="fw-bold mb-1"><i class="fa-brands fa-whatsapp text-success me-2"></i>Fila de Envio de Convites</h5>
-                    <p class="text-muted small mb-0">Envie convites via WhatsApp de forma dinâmica ou exporte links em massa para disparos.</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-success fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" style="background:#25D366; border:none;" onclick="iniciarWizardEnvio()">
-                        <i class="fa fa-play-circle"></i> Iniciar Assistente
-                    </button>
-                    <button class="btn btn-outline-secondary fw-bold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" onclick="abrirModalMassa()">
-                        <i class="fa fa-copy"></i> Copiar Links em Massa
-                    </button>
-                </div>
+    <!-- TIRA DE MÉTRICAS COMPACTAS -->
+    <div class="row g-2 mb-4">
+        <div class="col-md-3">
+            <div class="bg-white border rounded-3 p-3 d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-v2" style="background:#F1F5F9; color:#475569; width:38px; height:38px;"><i class="fa fa-inbox"></i></div>
+                <div><div class="h5 fw-bold mb-0"><?= $totalCand ?></div><div class="label-mini">Total no Filtro</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="bg-white border rounded-3 p-3 d-flex align-items-center gap-3 shadow-sm" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=rastreio_pitch'" style="cursor:pointer;">
+                <div class="kpi-icon-v2" style="background:#FEF3C7; color:#B45309; width:38px; height:38px;"><i class="fa fa-magnifying-glass"></i></div>
+                <div><div class="h5 fw-bold mb-0"><?= $contFases['rastreio_pitch'] ?></div><div class="label-mini">Rastreio Pitch</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="bg-white border rounded-3 p-3 d-flex align-items-center gap-3 shadow-sm" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=selecao_admissao'" style="cursor:pointer;">
+                <div class="kpi-icon-v2" style="background:#DCFCE7; color:#166534; width:38px; height:38px;"><i class="fa fa-circle-check"></i></div>
+                <div><div class="h5 fw-bold mb-0"><?= $contFases['selecao_admissao'] ?></div><div class="label-mini">Para Seleção</div></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="bg-white border rounded-3 p-3 d-flex align-items-center gap-3 shadow-sm" onclick="window.location.href='?processo=<?= $id_processo_sel ?>&fase=admitidos'" style="cursor:pointer;">
+                <div class="kpi-icon-v2" style="background:#DBEAFE; color:#1E40AF; width:38px; height:38px;"><i class="fa fa-user-plus"></i></div>
+                <div><div class="h5 fw-bold mb-0"><?= $contFases['admitidos'] ?></div><div class="label-mini">Admitidos</div></div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
     <div class="card-custom p-0 overflow-hidden shadow-sm border mt-3 mb-4" style="background:#fff; border-radius:18px;">
+        <!-- CONTROLES UNIFICADOS DA TABELA -->
         <div class="p-3 bg-light border-bottom d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fa fa-list-check text-primary fs-5"></i>
-                <div>
-                    <h6 class="fw-bold mb-0" style="font-size:0.95rem;">Funil de Candidaturas & Fichas de Pitch</h6>
-                    <small class="text-muted" style="font-size:0.75rem;">Acompanhamento por fase e decisão de admissão</small>
-                </div>
+            
+            <!-- ABAS DO FUNIL DE TRIAGEM -->
+            <div class="filter-tabs-v2 mb-0" style="margin-bottom:0 !important;">
+                <?php
+                $fases = [
+                    'rastreio_pitch' => '1. Rastreio Pitch 🔬',
+                    'selecao_admissao' => '2. Fila de Seleção 🗳️',
+                    'admitidos' => '3. Admitidos ✉️',
+                    'rejeitados' => 'Recusados ✗'
+                ];
+                foreach ($fases as $k=>$v):
+                    $count = $contFases[$k] ?? 0;
+                ?>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=<?= $k ?>" class="filter-tab-v2 <?= $filtro_fase===$k?'active':'' ?>">
+                    <?= $v ?> <span class="tab-count"><?= $count ?></span>
+                </a>
+                <?php endforeach; ?>
             </div>
-            <div style="min-width: 300px;">
-                <input type="text" class="form-control form-control-sm px-3 py-2 rounded-3 border" id="candSearchInput" placeholder="🔍 Pesquisar candidato, email, curso ou ideia..." onkeyup="filtrarCandidaturasTabela()">
+
+            <!-- FILTRO DE CATEGORIA + CAMPO DE BUSCA + EXPORTAR -->
+            <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1; justify-content:flex-end; min-width:300px;">
+                <!-- Filtro de Tipo de Projeto / Entidade -->
+                <select class="form-select form-select-sm rounded-3 border bg-white fw-semibold text-secondary" style="width: auto; font-size: 0.8rem; cursor:pointer;" onchange="filtrarPorTipoProjeto(this.value)">
+                    <option value="todos">⚡ Todas as Categorias (<?= array_sum($contTiposProjeto) ?>)</option>
+                    <option value="startup_tecnologica">🚀 Startup Tech (<?= $contTiposProjeto['startup_tecnologica'] ?>)</option>
+                    <option value="negocio_tradicional">🏢 Empresa / Negócio (<?= $contTiposProjeto['negocio_tradicional'] ?>)</option>
+                    <option value="individual">👤 Individual (<?= $contTiposProjeto['individual'] ?>)</option>
+                    <option value="equipa">👥 Equipa / Grupo (<?= $contTiposProjeto['equipa'] ?>)</option>
+                    <option value="impacto_social">🌍 Impacto Social (<?= $contTiposProjeto['impacto_social'] ?>)</option>
+                </select>
+
+                <!-- Input de Pesquisa Direta -->
+                <div style="min-width: 220px;">
+                    <input type="text" class="form-control form-control-sm px-3 py-1.5 rounded-3 border bg-white" id="candSearchInput" placeholder="🔍 Pesquisar candidato, email ou ideia..." onkeyup="filtrarCandidaturasTabela()" style="font-size:0.8rem;">
+                </div>
+
+                <!-- Exportar CSV -->
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-3 px-2.5 py-1.5" type="button" data-bs-toggle="dropdown" style="font-size:0.8rem;">
+                        <i class="fa fa-file-csv me-1 text-success"></i> Exportar
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius:12px; font-size:0.82rem;">
+                        <li><a class="dropdown-item py-2" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>"><i class="fa fa-list me-2 text-primary"></i>Todas as candidaturas</a></li>
+                        <li><a class="dropdown-item py-2" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=selecionado"><i class="fa fa-check-circle me-2 text-success"></i>Só aprovados</a></li>
+                        <li><a class="dropdown-item py-2" href="/incubadora_ispsn/app/controllers/exportar_action.php?tipo=candidaturas&processo=<?= $id_processo_sel ?>&estado=rejeitado"><i class="fa fa-times-circle me-2 text-danger"></i>Só recusados</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
 
