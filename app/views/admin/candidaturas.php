@@ -306,28 +306,6 @@ require_once __DIR__ . '/../partials/_layout.php';
 }
 </style>
 
-<div class="page-header mt-0" style="padding-top: 0; margin-bottom: 25px;">
-    <div>
-        <div class="page-header-title" style="font-size: 1.4rem;"><i class="fa fa-inbox me-2" style="color:var(--primary)"></i>Gestão de Candidaturas</div>
-        <div class="page-header-sub">Pipeline de triagem e admissão de startups</div>
-    </div>
-    <div class="d-flex align-items-center gap-2">
-        <?php if ($id_processo_sel && ($contagens['pendente'] ?? 0) > 0): ?>
-        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin: 0;">
-            <input type="hidden" name="action" value="triagem_automatica">
-            <input type="hidden" name="id_processo" value="<?= $id_processo_sel ?>">
-            <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
-            <button type="submit" class="btn btn-warning fw-bold text-white px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" style="background:#D97706; border:none; font-size:0.85rem;">
-                <i class="fa fa-bolt"></i> Triagem Automática
-            </button>
-        </form>
-        <?php endif; ?>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProcesso">
-            <i class="fa fa-plus me-2"></i> Novo Processo
-        </button>
-    </div>
-</div>
-
 <?php if ($flash_ok): ?><div class="alert alert-success border-0 shadow-sm mb-4"><?= htmlspecialchars($flash_ok) ?></div><?php endif; ?>
 <?php if ($flash_erro): ?><div class="alert alert-danger border-0 shadow-sm mb-4"><?= htmlspecialchars($flash_erro) ?></div><?php endif; ?>
 
@@ -355,11 +333,17 @@ require_once __DIR__ . '/../partials/_layout.php';
         </div>
         
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <!-- Seletor de Processo Ativo -->
+            <!-- Seletor de Processo Ativo & Botão de Abertura/Fecho -->
+            <?php 
+            $procSelObj = null;
+            foreach ($processos as $pr) {
+                if ($pr['id'] == $id_processo_sel) { $procSelObj = $pr; break; }
+            }
+            ?>
             <div class="d-flex align-items-center gap-2 bg-white border rounded-3 px-3 py-1.5 shadow-sm">
                 <i class="fa fa-folder-open text-warning"></i>
                 <span class="small fw-bold text-secondary">Edição:</span>
-                <select class="form-select form-select-sm border-0 fw-bold bg-transparent text-dark p-0" style="cursor:pointer; font-size:0.85rem;" onchange="location.href='?processo='+this.value">
+                <select class="form-select form-select-sm border-0 fw-bold bg-transparent text-dark p-0 me-2" style="cursor:pointer; font-size:0.85rem;" onchange="location.href='?processo='+this.value">
                     <?php foreach ($processos as $proc): 
                         $cnt = $contProc[(int)$proc['id']] ?? 0;
                     ?>
@@ -368,6 +352,19 @@ require_once __DIR__ . '/../partials/_layout.php';
                         </option>
                     <?php endforeach; ?>
                 </select>
+
+                <?php if ($procSelObj): 
+                    $isAberto = ($procSelObj['estado'] === 'aberto');
+                ?>
+                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin: 0;">
+                    <input type="hidden" name="action" value="toggle_processo">
+                    <input type="hidden" name="id_processo" value="<?= $procSelObj['id'] ?>">
+                    <button type="submit" class="btn btn-sm <?= $isAberto ? 'btn-success' : 'btn-danger' ?> rounded-2 fw-bold d-inline-flex align-items-center gap-1 px-2 py-0.5" style="font-size:0.75rem;" title="<?= $isAberto ? 'Processo Aberto (clique para Fechar)' : 'Processo Fechado (clique para Abrir)' ?>">
+                        <i class="fa <?= $isAberto ? 'fa-lock-open' : 'fa-lock' ?>"></i>
+                        <?= $isAberto ? 'Aberto' : 'Fechado' ?>
+                    </button>
+                </form>
+                <?php endif; ?>
             </div>
 
             <?php if ($id_processo_sel && ($contFases['rastreio_pitch'] ?? 0) > 0): ?>
