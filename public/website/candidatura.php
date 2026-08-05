@@ -24,10 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     $numero_estudante = $tipo_candidato === 'estudante' ? limpar($_POST['numero_estudante'] ?? '') : '';
     $curso            = limpar($_POST['curso'] ?? '');
     $ano_estudo       = limpar($_POST['ano_estudo'] ?? '');
+    $tipo_projeto     = limpar($_POST['tipo_projeto'] ?? 'startup_tecnologica');
     $titulo_ideia     = limpar($_POST['titulo_ideia'] ?? '');
     $descricao_ideia  = limpar($_POST['descricao_ideia'] ?? '');
     $problema         = limpar($_POST['problema'] ?? '');
     $solucao          = limpar($_POST['solucao'] ?? '');
+    $publico_alvo     = limpar($_POST['publico_alvo'] ?? '');
+    $modelo_negocio  = limpar($_POST['modelo_negocio'] ?? '');
+    $diferencial     = limpar($_POST['diferencial'] ?? '');
     $area_tematica    = limpar($_POST['area_tematica'] ?? 'tecnologia');
     $id_processo      = (int)$processo['id'];
     $ip               = $_SERVER['REMOTE_ADDR'] ?? '';
@@ -95,16 +99,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
             if ($chk->get_result()->fetch_assoc()) {
                 $erro = 'Já existe uma candidatura registada com este email ou número de estudante para este processo.';
             } else {
+                // Assegurar colunas na BD
+                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS tipo_projeto ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
+                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS publico_alvo TEXT DEFAULT NULL");
+                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS modelo_negocio TEXT DEFAULT NULL");
+                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS diferencial TEXT DEFAULT NULL");
+
                 $stmt = $mysqli->prepare("
                     INSERT INTO candidaturas 
                     (id_processo, nome, email, telefone, numero_estudante, curso, ano_estudo,
-                     titulo_ideia, descricao_ideia, problema, solucao, area_tematica, pitch_path, ip_submissao, tipo_candidato)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                     titulo_ideia, descricao_ideia, problema, solucao, area_tematica, pitch_path, ip_submissao, tipo_candidato,
+                     tipo_projeto, publico_alvo, modelo_negocio, diferencial)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 ");
-                $stmt->bind_param('issssssssssssss',
+                $stmt->bind_param('issssssssssssssssss',
                     $id_processo, $nome, $email, $telefone, $numero_estudante,
                     $curso, $ano_estudo, $titulo_ideia, $descricao_ideia,
-                    $problema, $solucao, $area_tematica, $pitch_path, $ip, $tipo_candidato
+                    $problema, $solucao, $area_tematica, $pitch_path, $ip, $tipo_candidato,
+                    $tipo_projeto, $publico_alvo, $modelo_negocio, $diferencial
                 );
                 if ($stmt->execute()) {
                     // Notificar admins internamente
@@ -322,14 +334,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                 </div>
             </div>
 
-            <!-- PASSO 2: A Ideia -->
+            <!-- PASSO 2: O Teu Pitch / A Tua Ideia -->
             <div class="form-section" id="section2">
                 <div class="cand-card">
-                    <h3><i class="fa fa-lightbulb"></i> A Tua Ideia</h3>
+                    <h3><i class="fa fa-rocket me-2" style="color:var(--primary)"></i> O Teu Pitch / A Tua Ideia</h3>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin-bottom:20px;">
+                        Preenche a ficha abaixo para estruturar a apresentação da tua ideia. Quanto mais claro fores, melhor a comissão avaliará a tua candidatura.
+                    </p>
+
+                    <div class="form-group">
+                        <label>Tipo de Projeto / Entidade *</label>
+                        <select name="tipo_projeto" required>
+                            <option value="startup_tecnologica">🚀 Startup Tecnológica (Software, App, Plataforma Digital)</option>
+                            <option value="negocio_tradicional">🏢 Empresa Registada / Negócio Tradicional (Comércio, Serviços, Indústria)</option>
+                            <option value="individual">👤 Projeto Individual / Empreendedor Autónomo</option>
+                            <option value="equipa">👥 Equipa / Grupo de Estudantes</option>
+                            <option value="impacto_social">🌍 Projeto de Impacto Social / Comunitário</option>
+                        </select>
+                    </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>Título da Ideia / Startup *</label>
-                            <input type="text" name="titulo_ideia" placeholder="Nome do teu projeto" required>
+                            <input type="text" name="titulo_ideia" placeholder="Nome do teu projeto" required minlength="5">
                         </div>
                         <div class="form-group">
                             <label>Área Temática *</label>
@@ -343,20 +370,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                             </select>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label>Descrição Geral da Ideia * (mín. 30 caracteres)</label>
-                        <textarea name="descricao_ideia" id="desc" placeholder="Descreve a tua ideia de forma clara e objetiva..." required oninput="updateCount('desc','descCount',30)"></textarea>
+                        <textarea name="descricao_ideia" id="desc" placeholder="Resumo executivo do que é o teu projeto..." required oninput="updateCount('desc','descCount',30)"></textarea>
                         <div class="char-count"><span id="descCount">0</span> caracteres</div>
                     </div>
-                    <!-- O Pitch foi removido do ato de inscrição por agora (será pedido na pré-incubação) -->
-                    <div class="form-group">
-                        <label>Que Problema Resolve?</label>
-                        <textarea name="problema" placeholder="Qual é o problema que a tua solução endereça?"></textarea>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Que Problema Resolve?</label>
+                            <textarea name="problema" placeholder="Qual é a dor ou necessidade real no mercado que a tua ideia endereça?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Qual é a Solução Proposta?</label>
+                            <textarea name="solucao" placeholder="Como o teu produto/serviço resolve este problema de forma eficaz?"></textarea>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Qual é a Solução Proposta?</label>
-                        <textarea name="solucao" placeholder="Como a tua ideia resolve este problema?"></textarea>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Público-Alvo / Clientes</label>
+                            <textarea name="publico_alvo" placeholder="Quem são os clientes diretos, utilizadores ou beneficiários do projeto?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Modelo de Negócio / Receita</label>
+                            <textarea name="modelo_negocio" placeholder="Como o projeto pretende gerar sustentabilidade financeira ou vendas?"></textarea>
+                        </div>
                     </div>
+
+                    <div class="form-group">
+                        <label>Diferencial Competitivo</label>
+                        <textarea name="diferencial" placeholder="O que torna a tua solução única ou diferente das alternativas existentes?"></textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label><i class="fa fa-paperclip"></i> Ficheiro do Pitch / Apresentação (Opcional)</label>
+                        <input type="file" name="pitch_ficheiro" accept=".pdf,.ppt,.pptx,.zip" style="background:rgba(255,255,255,0.05);color:#fff;border-color:rgba(255,255,255,0.15)">
+                        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:4px;">Aceita PDF, PPT, PPTX ou ZIP até 15MB. Se já tiveres um Pitch Deck pronto, podes anexá-lo aqui.</span>
+                    </div>
+
                 </div>
                 <div class="form-nav">
                     <button type="button" class="btn-prev" onclick="prevStep(2)">
@@ -491,6 +544,16 @@ function buildResumo() {
         return el ? el.value || '—' : '—';
     };
     const tipoText = g('tipo_candidato') === 'pre_licenciado' ? 'Pré-licenciado' : 'Estudante ISPSN';
+    
+    const tiposProjMap = {
+        'startup_tecnologica': '🚀 Startup Tecnológica',
+        'negocio_tradicional': '🏢 Empresa Registada / Negócio Tradicional',
+        'individual': '👤 Projeto Individual',
+        'equipa': '👥 Equipa / Grupo de Estudantes',
+        'impacto_social': '🌍 Projeto de Impacto Social'
+    };
+    const projText = tiposProjMap[g('tipo_projeto')] || g('tipo_projeto');
+
     document.getElementById('resumo').innerHTML = `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Tipo Candidato</strong><br>${tipoText}</div>
@@ -498,11 +561,20 @@ function buildResumo() {
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Nº Estudante</strong><br>${g('numero_estudante')}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Email</strong><br>${g('email')}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Telefone</strong><br>${g('telefone')}</div>
-            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Curso</strong><br>${g('curso') || '—'}</div>
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Tipo Projeto</strong><br>${projText}</div>
             <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Área</strong><br>${g('area_tematica')}</div>
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Curso</strong><br>${g('curso') || '—'}</div>
         </div>
-        <div style="margin-top:16px;"><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Ideia</strong><br>${g('titulo_ideia')}</div>
-        <div style="margin-top:10px;"><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Descrição</strong><br>${g('descricao_ideia').substring(0,200)}...</div>
+        <div style="margin-top:16px;"><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Título da Ideia / Startup</strong><br><strong>${g('titulo_ideia')}</strong></div>
+        <div style="margin-top:10px;"><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Descrição Geral</strong><br>${g('descricao_ideia')}</div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Problema</strong><br>${g('problema') || '—'}</div>
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Solução</strong><br>${g('solucao') || '—'}</div>
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Público-Alvo</strong><br>${g('publico_alvo') || '—'}</div>
+            <div><strong style="color:rgba(255,255,255,0.4);font-size:0.72rem;text-transform:uppercase">Modelo de Negócio</strong><br>${g('modelo_negocio') || '—'}</div>
+        </div>
     `;
 }
 

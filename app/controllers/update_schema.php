@@ -262,6 +262,12 @@ adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_observacoes', "TEXT 
 adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_avaliado_por', "INT UNSIGNED DEFAULT NULL");
 adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'pitch_avaliado_em', "DATETIME DEFAULT NULL");
 
+// NOVAS COLUNAS PARA O PREENCHIMENTO ESTRUTURADO DO PITCH
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'tipo_projeto', "ENUM('startup_tecnologica', 'negocio_tradicional', 'individual', 'equipa', 'impacto_social') DEFAULT 'startup_tecnologica'");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'publico_alvo', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'modelo_negocio', "TEXT DEFAULT NULL");
+adicionarColunaSeNaoExistir($mysqli, 'candidaturas', 'diferencial', "TEXT DEFAULT NULL");
+
 // NOVAS COLUNAS PARA CONTRATO NOS TERMOS DE INCUBAÇÃO
 adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'tipo_contrato', "ENUM('pre_incubacao', 'incubacao') NOT NULL DEFAULT 'incubacao'");
 adicionarColunaSeNaoExistir($mysqli, 'termos_incubacao', 'duracao_meses', "TINYINT NOT NULL DEFAULT 12");

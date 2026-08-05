@@ -39,6 +39,7 @@ $menus = [
     ],
     'admin' => [
         ['icon'=>'fa-house',           'label'=>'Comando Central',  'href'=>'/incubadora_ispsn/public/index.php',             'id'=>'dashboard'],
+        ['icon'=>'fa-sitemap',         'label'=>'Coordenações',     'href'=>'/incubadora_ispsn/app/views/admin/coordenacoes.php','id'=>'coordenacoes'],
         ['icon'=>'fa-inbox',           'label'=>'Candidaturas',     'href'=>'/incubadora_ispsn/app/views/admin/candidaturas.php','id'=>'candidaturas'],
         ['icon'=>'fa-rocket',          'label'=>'Startups',         'href'=>'/incubadora_ispsn/app/views/admin/projetos.php', 'id'=>'projetos'],
         ['icon'=>'fa-bookmark',        'label'=>'Gestão de Espaços','href'=>'/incubadora_ispsn/app/views/admin/gestao_espacos.php','id'=>'gestao_espacos'],
@@ -65,6 +66,7 @@ $menus = [
     'superadmin' => [
         // ── Geral ──────────────────────────
         ['icon'=>'fa-house',           'label'=>'Comando Central',  'href'=>'/incubadora_ispsn/public/index.php',                      'id'=>'dashboard'],
+        ['icon'=>'fa-sitemap',         'label'=>'Coordenações',     'href'=>'/incubadora_ispsn/app/views/admin/coordenacoes.php',      'id'=>'coordenacoes'],
         // ── Candidaturas ───────────────────
         ['icon'=>'fa-inbox',           'label'=>'Candidaturas',     'href'=>'/incubadora_ispsn/app/views/admin/candidaturas.php',      'id'=>'candidaturas'],
         // ── Funil Startups ─────────────────

@@ -665,8 +665,17 @@ function abrirModal(c) {
     const numEstudanteText = isPre ? 'N/A (Pré-licenciado)' : (c.numero_estudante || '—');
     const tipoBadge = isPre ? '<span class="badge bg-info text-white ms-2" style="font-size:0.7rem;">Pré-licenciado</span>' : '<span class="badge bg-primary text-white ms-2" style="font-size:0.7rem;">Estudante ISPSN</span>';
 
+    const tiposProjMap = {
+        'startup_tecnologica': '🚀 Startup Tecnológica',
+        'negocio_tradicional': '🏢 Negócio Tradicional / Empresa',
+        'individual': '👤 Projeto Individual',
+        'equipa': '👥 Equipa / Grupo de Estudantes',
+        'impacto_social': '🌍 Projeto de Impacto Social'
+    };
+    const projText = tiposProjMap[c.tipo_projeto] || c.tipo_projeto || '—';
+
     document.getElementById('modalConteudo').innerHTML = `
-        <div class="row g-4">
+        <div class="row g-3">
             <div class="col-md-6">
                 <div class="label-mini">Nome Completo</div>
                 <div class="fw-bold border-bottom pb-2">${c.nome} ${tipoBadge}</div>
@@ -675,23 +684,71 @@ function abrirModal(c) {
                 <div class="label-mini">${emailLabel}</div>
                 <div class="fw-bold border-bottom pb-2">${c.email}</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="label-mini">Nº Estudante</div>
                 <div class="fw-bold border-bottom pb-2">${numEstudanteText}</div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="label-mini">Telefone</div>
                 <div class="fw-bold border-bottom pb-2">${c.telefone}</div>
             </div>
-            <div class="col-12 mt-4">
+            <div class="col-md-4">
+                <div class="label-mini">Formato / Entidade</div>
+                <div class="fw-bold border-bottom pb-2 text-warning">${projText}</div>
+            </div>
+
+            <!-- FICHA DE PITCH DA CANDIDATURA -->
+            <div class="col-12 mt-3">
                 <div class="p-4 bg-light rounded-4 border">
-                    <div class="label-mini text-primary mb-2">Ideia de Negócio</div>
-                    <h5 class="fw-bold mb-3">${c.titulo_ideia}</h5>
-                    <p class="text-muted mb-0 small" style="line-height:1.7">${c.descricao_ideia}</p>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="label-mini text-primary"><i class="fa fa-rocket me-1"></i> Ficha de Pitch da Ideia</div>
+                        <span class="badge bg-warning-subtle text-warning-dark">${c.area_tematica || 'Geral'}</span>
+                    </div>
+                    <h5 class="fw-bold mb-3" style="color:var(--slate-800);">${c.titulo_ideia}</h5>
+                    
+                    <div class="mb-3">
+                        <strong class="small text-uppercase text-muted d-block mb-1">Descrição Geral:</strong>
+                        <p class="text-secondary small mb-0" style="line-height:1.6">${c.descricao_ideia}</p>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <strong class="small text-danger text-uppercase d-block mb-1"><i class="fa fa-circle-exclamation me-1"></i> Problema:</strong>
+                                <span class="small text-muted">${c.problema || '—'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <strong class="small text-success text-uppercase d-block mb-1"><i class="fa fa-lightbulb me-1"></i> Solução:</strong>
+                                <span class="small text-muted">${c.solucao || '—'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <strong class="small text-primary text-uppercase d-block mb-1"><i class="fa fa-users me-1"></i> Público-Alvo:</strong>
+                                <span class="small text-muted">${c.publico_alvo || '—'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-white rounded-3 border">
+                                <strong class="small text-warning text-uppercase d-block mb-1"><i class="fa fa-coins me-1"></i> Modelo de Negócio:</strong>
+                                <span class="small text-muted">${c.modelo_negocio || '—'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${c.diferencial ? `
+                        <div class="mt-3 p-3 bg-white rounded-3 border">
+                            <strong class="small text-info text-uppercase d-block mb-1"><i class="fa fa-shield-halved me-1"></i> Diferencial Competitivo:</strong>
+                            <span class="small text-muted">${c.diferencial}</span>
+                        </div>
+                    ` : ''}
+
                     ${c.pitch_path ? `
                         <div class="mt-3">
                             <a href="/incubadora_ispsn/${c.pitch_path}" target="_blank" class="btn btn-sm btn-outline-warning fw-bold py-2 px-3 rounded-3" style="font-size:0.8rem; border-color:var(--primary); color:var(--primary); text-decoration:none;">
-                                <i class="fa fa-file-pdf me-2"></i> Ver Pitch da Ideia
+                                <i class="fa fa-file-pdf me-2"></i> Abrir Anexo do Pitch Deck (PDF/PPT)
                             </a>
                         </div>
                     ` : ''}
