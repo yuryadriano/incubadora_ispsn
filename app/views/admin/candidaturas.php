@@ -612,51 +612,112 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 <!-- MODAIS -->
-<!-- MODAL AVALIAÇÃO DE PITCH -->
+<!-- MODAL AVALIAÇÃO DE PITCH (LADO A LADO) -->
 <div class="modal-overlay" id="modalAvaliarPitch">
-    <div class="modal-box-v2" style="max-width: 500px;">
-        <div class="modal-header-v2" style="background: linear-gradient(135deg, #f5f3ff 0%, var(--primary) 100%);">
-            <h6 class="mb-0 fw-bold"><i class="fa fa-star me-2"></i> Avaliar Pitch da Startup</h6>
+    <div class="modal-box-v2" style="max-width: 960px; width: 95vw; border-radius: 20px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #0F172A 0%, var(--primary) 100%); padding: 18px 24px;">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-star me-2 text-warning"></i> Avaliação Qualitativa do Pitch & Dossier da Startup</h6>
             <button class="btn-close btn-close-white" onclick="fecharModal('modalAvaliarPitch')"></button>
         </div>
-        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+        <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formAvaliarPitch">
             <input type="hidden" name="action" value="avaliar_pitch_candidatura">
             <input type="hidden" name="id_cand" id="avaliarIdCand">
             <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
             
-            <div class="modal-body-v2">
-                <div class="p-3 bg-light rounded-3 mb-3 border">
-                    <div class="label-mini">Candidato</div>
-                    <div class="fw-bold" id="avaliarNome" style="font-size: 1rem;"></div>
-                    <div class="text-muted small" id="avaliarIdeia" style="font-style: italic; margin-top:4px;"></div>
-                </div>
+            <div class="modal-body-v2 p-4">
+                <div class="row g-4">
+                    <!-- ESQUERDA: DOSSIER E PITCH CANVAS DA STARTUP (60%) -->
+                    <div class="col-lg-7 border-end pe-lg-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary-subtle text-primary fw-bold px-2.5 py-1" id="avaliarArea">Área Temática</span>
+                            <span class="badge bg-warning-subtle text-warning-dark fw-bold px-2.5 py-1" id="avaliarTipoProj">Startup Tech</span>
+                        </div>
+                        <h4 class="fw-bold text-dark mb-1" id="avaliarTituloIdeia">Título da Ideia</h4>
+                        <div class="small text-muted mb-3"><i class="fa fa-user me-1"></i> <span id="avaliarCandidatoNome">Candidato</span></div>
 
-                <div class="mb-3">
-                    <label class="form-label-custom fw-bold">Inovação (0 a 10)</label>
-                    <input type="number" name="pitch_inovacao" class="form-control-custom" min="0" max="10" required placeholder="Ex: 8">
-                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Grau de novidade e diferenciação no mercado.</small>
-                </div>
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <strong class="small text-uppercase text-secondary d-block mb-1">Descrição Geral da Ideia:</strong>
+                            <p class="small text-dark mb-0" id="avaliarDescricao" style="line-height:1.6; max-height:100px; overflow-y:auto;"></p>
+                        </div>
 
-                <div class="mb-3">
-                    <label class="form-label-custom fw-bold">Autossustentabilidade (0 a 10)</label>
-                    <input type="number" name="pitch_sustentabilidade" class="form-control-custom" min="0" max="10" required placeholder="Ex: 7">
-                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Viabilidade financeira e modelo de negócio sustentável.</small>
-                </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="p-2.5 bg-white rounded-3 border">
+                                    <strong class="small text-danger text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-circle-exclamation me-1"></i> Problema:</strong>
+                                    <span class="small text-secondary" id="avaliarProblema">—</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2.5 bg-white rounded-3 border">
+                                    <strong class="small text-success text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-lightbulb me-1"></i> Solução:</strong>
+                                    <span class="small text-secondary" id="avaliarSolucao">—</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2.5 bg-white rounded-3 border">
+                                    <strong class="small text-primary text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-users me-1"></i> Público-Alvo:</strong>
+                                    <span class="small text-secondary" id="avaliarPublicoAlvo">—</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-2.5 bg-white rounded-3 border">
+                                    <strong class="small text-warning text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-coins me-1"></i> Modelo de Negócio:</strong>
+                                    <span class="small text-secondary" id="avaliarModeloNegocio">—</span>
+                                </div>
+                            </div>
+                        </div>
 
-                <div class="mb-3">
-                    <label class="form-label-custom fw-bold">Empreendedorismo (0 a 10)</label>
-                    <input type="number" name="pitch_empreendedorismo" class="form-control-custom" min="0" max="10" required placeholder="Ex: 9">
-                    <small class="text-muted" style="font-size: 0.65rem; display:block; margin-top:2px;">Capacidade de execução da equipa e ambição.</small>
-                </div>
+                        <div class="mt-2.5 p-2.5 bg-white rounded-3 border" id="avaliarDiferencialWrapper">
+                            <strong class="small text-info text-uppercase d-block mb-1" style="font-size:0.68rem;"><i class="fa fa-shield-halved me-1"></i> Diferencial Competitivo:</strong>
+                            <span class="small text-secondary" id="avaliarDiferencial">—</span>
+                        </div>
+                    </div>
 
-                <div class="mb-0">
-                    <label class="form-label-custom fw-bold">Observações / Parecer Técnico</label>
-                    <textarea name="pitch_observacoes" class="form-control-custom" rows="3" placeholder="Insira o seu parecer sobre o pitch..."></textarea>
+                    <!-- DIREITA: FICHA DE PONTUAÇÃO & CÁLCULO DE MÉDIA (40%) -->
+                    <div class="col-lg-5 ps-lg-4">
+                        <div class="p-3 bg-light rounded-3 border mb-3 text-center shadow-sm">
+                            <div class="label-mini text-uppercase fw-bold text-secondary">Média Ponderada Calculada</div>
+                            <div class="display-6 fw-bold text-warning my-1" id="avaliarMediaCalc">5.0</div>
+                            <small class="text-muted" style="font-size:0.7rem;">Pontuação de precisão de 0.0 a 10.0</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
+                                <span>Inovação & Originalidade</span>
+                                <span class="badge bg-primary text-white fw-bold" id="valIno">5</span>
+                            </label>
+                            <input type="range" name="pitch_inovacao" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Grau de novidade e diferenciação no mercado.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
+                                <span>Autossustentabilidade</span>
+                                <span class="badge bg-success text-white fw-bold" id="valSust">5</span>
+                            </label>
+                            <input type="range" name="pitch_sustentabilidade" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Viabilidade financeira e modelo de negócio.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label-custom fw-bold d-flex justify-content-between mb-1">
+                                <span>Equipa & Execução</span>
+                                <span class="badge bg-warning text-white fw-bold" id="valEmp">5</span>
+                            </label>
+                            <input type="range" name="pitch_empreendedorismo" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
+                            <small class="text-muted" style="font-size: 0.65rem; display:block;">Capacidade de execução da equipa e ambição.</small>
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label-custom fw-bold mb-1">Parecer Técnico / Observações</label>
+                            <textarea name="pitch_observacoes" class="form-control-custom" rows="3" placeholder="Insira o seu parecer qualificado sobre a ideia..."></textarea>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer-v2">
+            <div class="modal-footer-v2 bg-light">
                 <button type="button" class="btn btn-light border fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
-                <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3" style="background:var(--primary); border:none; color:white;"><i class="fa fa-save me-1"></i> Gravar Avaliação</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3 text-white" style="background:var(--primary); border:none;"><i class="fa fa-paper-plane me-1.5"></i> Gravar & Enviar para Fila de Seleção</button>
             </div>
         </form>
     </div>
@@ -871,17 +932,24 @@ function abrirModal(c) {
     `;
 
     let footer = '';
-    if (c.estado === 'pendente' || c.estado === 'em_analise') {
+    let candJsonEscaped = JSON.stringify(c).replace(/'/g, "&apos;");
+    if (c.estado === 'pendente' || !c.pitch_inovacao) {
+        footer = `
+            <button type="button" class="btn btn-warning fw-bold text-white px-4 py-2 rounded-3" style="background:var(--primary); border:none;" onclick="fecharModal('modalDetalhe'); abrirModalAvaliar(${candJsonEscaped});">
+                <i class="fa fa-star me-2"></i> Avaliar Pitch
+            </button>
+        `;
+    } else if (c.estado === 'em_analise') {
         if (usuarioPerfil === 'superadmin') {
             footer = `
-                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
                     <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="${c.id}"><input type="hidden" name="estado" value="selecionado">
                     <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar Admissão</button>
                 </form>
             `;
-        } else if (c.estado === 'em_analise') {
-            footer = `<span class="text-muted small me-3"><i class="fa fa-user-shield me-1"></i> Aguardando aprovação do Super Admin (DG/PR)</span>`;
+        } else {
+            footer = `<span class="text-muted small me-3"><i class="fa fa-user-shield me-1"></i> Aguardando Decisão Final do Super Admin (DG/PR)</span>`;
         }
     }
     document.getElementById('modalFooter').innerHTML = footer + `<button class="btn btn-light fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalDetalhe')">Fechar</button>`;
@@ -892,9 +960,42 @@ function fecharModal(id) { document.getElementById(id).classList.remove('open');
 
 function abrirModalAvaliar(c) {
     document.getElementById('avaliarIdCand').value = c.id;
-    document.getElementById('avaliarNome').textContent = c.nome;
-    document.getElementById('avaliarIdeia').textContent = `Ideia: ${c.titulo_ideia}`;
+    document.getElementById('avaliarCandidatoNome').textContent = `${c.nome} (${c.email})`;
+    document.getElementById('avaliarTituloIdeia').textContent = c.titulo_ideia || 'Sem Título';
+    document.getElementById('avaliarArea').textContent = c.area_tematica || 'Geral';
+    
+    const tiposProjMap = {
+        'startup_tecnologica': '🚀 Startup Tech',
+        'negocio_tradicional': '🏢 Empresa',
+        'individual': '👤 Individual',
+        'equipa': '👥 Equipa',
+        'impacto_social': '🌍 Impacto Social'
+    };
+    document.getElementById('avaliarTipoProj').textContent = tiposProjMap[c.tipo_projeto] || c.tipo_projeto || 'Startup Tech';
+    document.getElementById('avaliarDescricao').textContent = c.descricao_ideia || '—';
+    document.getElementById('avaliarProblema').textContent = c.problema || '—';
+    document.getElementById('avaliarSolucao').textContent = c.solucao || '—';
+    document.getElementById('avaliarPublicoAlvo').textContent = c.publico_alvo || '—';
+    document.getElementById('avaliarModeloNegocio').textContent = c.modelo_negocio || '—';
+    document.getElementById('avaliarDiferencial').textContent = c.diferencial || '—';
+    
+    calcMediaAvaliacao();
     document.getElementById('modalAvaliarPitch').classList.add('open');
+}
+
+function calcMediaAvaliacao() {
+    const f = document.getElementById('formAvaliarPitch');
+    if (!f) return;
+    const ino = parseFloat(f.querySelector('[name="pitch_inovacao"]').value) || 0;
+    const sust = parseFloat(f.querySelector('[name="pitch_sustentabilidade"]').value) || 0;
+    const emp = parseFloat(f.querySelector('[name="pitch_empreendedorismo"]').value) || 0;
+    
+    document.getElementById('valIno').textContent = ino;
+    document.getElementById('valSust').textContent = sust;
+    document.getElementById('valEmp').textContent = emp;
+    
+    const media = ((ino + sust + emp) / 3).toFixed(1);
+    document.getElementById('avaliarMediaCalc').textContent = media;
 }
 
 function gerarConvite(c) {

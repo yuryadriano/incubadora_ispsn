@@ -20,7 +20,7 @@ if (!str_starts_with($redirect, '/incubadora_ispsn/')) {
 
 // ── Segurança de Perfil por Ação ──
 $perfilUsuario = $_SESSION['usuario_perfil'] ?? 'utilizador';
-$acoesAdmin = ['criar_processo', 'toggle_processo', 'triagem_automatica', 'gerar_convite_seguro', 'gerar_convite_ajax', 'mudar_estado_cand', 'remover_candidatura'];
+$acoesAdmin = ['criar_processo', 'toggle_processo', 'triagem_automatica', 'gerar_convite_seguro', 'gerar_convite_ajax', 'mudar_estado_cand', 'remover_candidatura', 'validar_presencial_cand'];
 if (in_array($action, $acoesAdmin) && !in_array($perfilUsuario, ['admin', 'superadmin'])) {
     $_SESSION['flash_erro'] = '⚠️ Permissão negada para esta ação.';
     header("Location: $redirect");
@@ -462,6 +462,40 @@ if ($action === 'remover_candidatura') {
             $_SESSION['flash_erro'] = 'Erro ao remover a candidatura: ' . $mysqli->error;
         }
         $stmt->close();
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+/* ── VALIDAR & ATIVAR INCUBAÇÃO (APÓS ENTREVISTA PRESENCIAL) ── */
+if ($action === 'validar_presencial_cand') {
+    obrigarPerfil(['admin', 'superadmin']);
+    $idCand = (int)($_POST['id_cand'] ?? 0);
+
+    if ($idCand > 0) {
+        $stmt = $mysqli->prepare("SELECT email, nome FROM candidaturas WHERE id = ? LIMIT 1");
+        $stmt->bind_param('i', $idCand);
+        $stmt->execute();
+        $cand = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($cand) {
+            $email = $cand['email'];
+            // 1. Ativar conta na tabela usuarios
+            $stmtUpUser = $mysqli->prepare("UPDATE usuarios SET activo = 1 WHERE email = ?");
+            $stmtUpUser->bind_param('s', $email);
+            $stmtUpUser->execute();
+            $stmtUpUser->close();
+
+            // 2. Atualizar estado da candidatura
+            $obs = 'Conta ativada e validada após entrevista presencial com a Direção da Incubadora ISPSN.';
+            $stmtUpCand = $mysqli->prepare("UPDATE candidaturas SET estado = 'registado', observacoes_admin = ?, avaliado_por = ?, avaliado_em = NOW() WHERE id = ?");
+            $stmtUpCand->bind_param('sii', $obs, $idAdmin, $idCand);
+            $stmtUpCand->execute();
+            $stmtUpCand->close();
+
+            $_SESSION['flash_ok'] = "🎉 Sucesso! A conta de {$cand['nome']} foi ativada após a entrevista presencial e já possui acesso total ao portal!";
+        }
     }
     header("Location: $redirect");
     exit;

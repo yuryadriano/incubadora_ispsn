@@ -102,11 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
             $chk->close();
         } else {
             $chk->close();
+            $activoInicial = ($perfil === 'utilizador') ? 0 : 1;
             $stmt = $mysqli->prepare("
                 INSERT INTO usuarios (nome, email, numero_estudante, telefone, senha_hash, perfil, tipo_utilizador, activo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->bind_param('sssssss', $nome, $email, $numero_estudante, $telefone, $hash, $perfil, $tipo);
+            $stmt->bind_param('sssssssi', $nome, $email, $numero_estudante, $telefone, $hash, $perfil, $tipo, $activoInicial);
 
             if ($stmt->execute()) {
                 $novoId = $mysqli->insert_id;
