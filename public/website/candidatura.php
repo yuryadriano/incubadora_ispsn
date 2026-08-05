@@ -46,45 +46,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     elseif (strlen($descricao_ideia) < 30) $erro = 'A descrição da ideia deve ter pelo menos 30 caracteres.';
     else {
         $pitch_path = '';
-        if (isset($_FILES['pitch_ficheiro']) && $_FILES['pitch_ficheiro']['error'] === UPLOAD_ERR_OK) {
-            $maxBytes = 15 * 1024 * 1024; // 15 MB
-            $exts = ['pdf', 'ppt', 'pptx', 'zip'];
-            $mimes = [
-                'application/pdf',
-                'application/vnd.ms-powerpoint',
-                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                'application/zip',
-                'application/x-zip-compressed'
-            ];
-            
-            $fileSize = $_FILES['pitch_ficheiro']['size'];
-            $tmpPath = $_FILES['pitch_ficheiro']['tmp_name'];
-            $ext = strtolower(pathinfo($_FILES['pitch_ficheiro']['name'], PATHINFO_EXTENSION));
-            
-            if ($fileSize > $maxBytes) {
-                $erro = 'Ficheiro do Pitch demasiado grande. Limite máximo: 15 MB.';
-            } elseif (!in_array($ext, $exts)) {
-                $erro = 'Tipo de ficheiro para Pitch não permitido. Extensões aceites: PDF, PPT, PPTX, ZIP.';
-            } else {
-                $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                $mimeReal = finfo_file($finfo, $tmpPath);
-                finfo_close($finfo);
-                
-                if (!in_array($mimeReal, $mimes)) {
-                    $erro = 'O conteúdo do ficheiro do Pitch não corresponde ao tipo de ficheiro aceite.';
-                } else {
-                    $novoNome = "pitch_cand_" . time() . '_' . bin2hex(random_bytes(4)) . ".{$ext}";
-                    $folder = __DIR__ . '/../../uploads/pitches/';
-                    if (!is_dir($folder)) mkdir($folder, 0755, true);
-                    
-                    if (move_uploaded_file($tmpPath, $folder . $novoNome)) {
-                        $pitch_path = 'uploads/pitches/' . $novoNome;
-                    } else {
-                        $erro = 'Falha ao mover o ficheiro do Pitch para o servidor.';
-                    }
-                }
-            }
-        }
 
         if (empty($erro)) {
             // Verificar candidatura duplicada (mesmo email ou nº estudante se preenchido neste processo)
@@ -154,56 +115,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <link rel="stylesheet" href="/incubadora_ispsn/public/website/assets/style.css">
 <style>
-.cand-page { min-height: 100vh; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 100px 24px 60px; }
-.cand-wrapper { max-width: 780px; margin: 0 auto; }
-.cand-header { text-align: center; margin-bottom: 48px; }
-.cand-header h1 { font-size: clamp(2rem,4vw,3rem); font-weight: 900; color: #fff; margin-bottom: 12px; }
+.cand-page { min-height: 100vh; background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); padding: 90px 24px 60px; font-family: 'Inter', sans-serif; }
+.cand-wrapper { max-width: 820px; margin: 0 auto; }
+.cand-header { text-align: center; margin-bottom: 36px; }
+.cand-header h1 { font-size: clamp(2rem,4vw,3rem); font-weight: 900; color: #fff; margin-bottom: 8px; letter-spacing: -0.02em; }
 .cand-header p { color: rgba(255,255,255,0.6); font-size: 1rem; }
-.cand-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); border-radius: 24px; padding: 40px; margin-bottom: 20px; }
-.cand-card h3 { color: #fff; font-size: 1rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+.cand-card { background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(16px); border-radius: 24px; padding: 36px; margin-bottom: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+.cand-card h3 { color: #fff; font-size: 1.15rem; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px; }
 .cand-card h3 i { color: var(--primary); }
+
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-.form-group label { font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.form-group label { font-size: 0.76rem; font-weight: 700; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.06em; }
 .form-group input,
 .form-group select,
-.form-group textarea { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 10px; color: #fff; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; transition: all 0.2s; }
+.form-group textarea { width: 100%; padding: 13px 16px; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 12px; color: #fff; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; transition: all 0.25s ease; }
 .form-group input::placeholder,
-.form-group textarea::placeholder { color: rgba(255,255,255,0.25); }
+.form-group textarea::placeholder { color: rgba(255,255,255,0.3); }
 .form-group input:focus,
 .form-group select:focus,
-.form-group textarea:focus { border-color: var(--primary); background: rgba(217,119,6,0.08); }
+.form-group textarea:focus { border-color: var(--primary); background: rgba(217,119,6,0.08); box-shadow: 0 0 0 4px rgba(217,119,6,0.15); }
 .form-group select option { background: #1E293B; color: #fff; }
-.form-group textarea { resize: vertical; min-height: 100px; }
+.form-group textarea { resize: vertical; min-height: 105px; }
 .char-count { font-size: 0.72rem; color: rgba(255,255,255,0.35); text-align: right; }
-.steps-indicator { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 40px; }
-.step-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); transition: all 0.3s; cursor: pointer; }
-.step-dot.active { background: var(--primary); transform: scale(1.3); }
-.step-dot.done { background: #10B981; }
+
+/* GRID SELETOR INTERATIVO DE TIPO DE PROJETO */
+.tipo-proj-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.tipo-proj-card { background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); position: relative; }
+.tipo-proj-card:hover { border-color: rgba(217,119,6,0.5); transform: translateY(-3px); background: rgba(217,119,6,0.06); }
+.tipo-proj-card.active { border-color: var(--primary); background: linear-gradient(135deg, rgba(217,119,6,0.2) 0%, rgba(217,119,6,0.05) 100%); box-shadow: 0 0 20px rgba(217,119,6,0.25); }
+.tipo-proj-card .icon { font-size: 1.6rem; margin-bottom: 8px; }
+.tipo-proj-card .title { font-size: 0.8rem; font-weight: 700; color: #fff; line-height: 1.2; }
+.tipo-proj-card .desc { font-size: 0.68rem; color: rgba(255,255,255,0.45); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* STEPPER INTERATIVO MODERNO */
+.wizard-stepper { display: flex; align-items: center; justify-content: space-between; position: relative; margin-bottom: 36px; padding: 0 20px; }
+.wizard-step { display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 2; cursor: pointer; }
+.wizard-step .step-circle { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-weight: 700; font-size: 1rem; transition: all 0.3s ease; }
+.wizard-step.active .step-circle { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 20px rgba(217,119,6,0.5); transform: scale(1.1); }
+.wizard-step.done .step-circle { background: #10B981; border-color: #10B981; color: #fff; }
+.wizard-step .step-label-text { font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.5); transition: all 0.3s; }
+.wizard-step.active .step-label-text { color: #fff; font-weight: 800; }
+.stepper-bar-bg { position: absolute; top: 23px; left: 60px; right: 60px; height: 3px; background: rgba(255,255,255,0.08); z-index: 1; border-radius: 2px; }
+.stepper-bar-progress { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, #10B981 100%); width: 0%; border-radius: 2px; transition: width 0.4s ease; }
+
 .form-section { display: none; }
-.form-section.active { display: block; }
-.btn-next, .btn-prev, .btn-submit { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; transition: all 0.3s; font-family: 'Inter', sans-serif; }
-.btn-next, .btn-submit { background: var(--primary); color: #fff; }
-.btn-next:hover, .btn-submit:hover { background: var(--primary-dark); transform: translateY(-2px); }
-.btn-prev { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
-.btn-prev:hover { background: rgba(255,255,255,0.15); }
-.form-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; flex-wrap: wrap; gap: 12px; }
-.alert-erro { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; padding: 14px 18px; border-radius: 10px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+.form-section.active { display: block; animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.btn-next, .btn-prev, .btn-submit { display: inline-flex; align-items: center; gap: 10px; padding: 14px 28px; border-radius: 12px; font-weight: 700; font-size: 0.95rem; cursor: pointer; border: none; transition: all 0.3s ease; font-family: 'Inter', sans-serif; }
+.btn-next, .btn-submit { background: linear-gradient(135deg, var(--primary) 0%, #B45309 100%); color: #fff; box-shadow: 0 4px 15px rgba(217,119,6,0.3); }
+.btn-next:hover, .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(217,119,6,0.4); }
+.btn-prev { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.btn-prev:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.form-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 28px; flex-wrap: wrap; gap: 12px; }
+.alert-erro { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #FCA5A5; padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
 .closed-box { text-align: center; padding: 60px 24px; }
 .closed-box i { font-size: 3rem; color: rgba(255,255,255,0.2); margin-bottom: 20px; display: block; }
 .closed-box h2 { color: #fff; margin-bottom: 12px; }
 .closed-box p { color: rgba(255,255,255,0.5); }
 .success-box { text-align: center; padding: 60px 24px; }
-.success-box i { font-size: 4rem; color: #22C55E; margin-bottom: 20px; display: block; animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275); }
+.success-box i { font-size: 4.5rem; color: #22C55E; margin-bottom: 20px; display: block; animation: popIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275); }
 @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
-.success-box h2 { color: #fff; font-size: 2rem; margin-bottom: 12px; }
-.success-box p { color: rgba(255,255,255,0.6); max-width: 500px; margin: 0 auto 24px; line-height: 1.7; }
+.success-box h2 { color: #fff; font-size: 2.2rem; font-weight: 800; margin-bottom: 12px; }
+.success-box p { color: rgba(255,255,255,0.6); max-width: 520px; margin: 0 auto 24px; line-height: 1.7; }
 .success-box a { display: inline-flex; align-items: center; gap: 8px; color: var(--primary); text-decoration: none; font-weight: 600; }
-.progress-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 32px; }
-.progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width 0.4s ease; }
-.step-label { text-align: center; font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 24px; }
-.step-label strong { color: rgba(255,255,255,0.8); }
-@media(max-width:600px) { .form-row { grid-template-columns: 1fr; } .cand-card { padding: 24px; } }
+
+@media(max-width:600px) { .form-row { grid-template-columns: 1fr; } .cand-card { padding: 24px; } .tipo-proj-grid { grid-template-columns: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -268,15 +246,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
         <div class="alert-erro"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($erro) ?></div>
         <?php endif; ?>
 
-        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:33%"></div></div>
-        <div class="step-label">Passo <strong id="stepLabel">1</strong> de 3</div>
+        <?php if ($erro): ?>
+        <div class="alert-erro"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($erro) ?></div>
+        <?php endif; ?>
 
-        <div class="steps-indicator">
-            <div class="step-dot active" id="dot1"></div>
-            <div class="step-dot" id="dot2"></div>
-            <div class="step-dot" id="dot3"></div>
+        <!-- STEPPER INTERATIVO MODERNO -->
+        <div class="wizard-stepper">
+            <div class="stepper-bar-bg"><div class="stepper-bar-progress" id="stepperProgress" style="width:0%"></div></div>
+            <div class="wizard-step active" id="stepIndicator1" onclick="currentStep > 1 && prevStep(currentStep)">
+                <div class="step-circle" id="circle1">1</div>
+                <span class="step-label-text">Dados Pessoais</span>
+            </div>
+            <div class="wizard-step" id="stepIndicator2">
+                <div class="step-circle" id="circle2">2</div>
+                <span class="step-label-text">O Teu Pitch</span>
+            </div>
+            <div class="wizard-step" id="stepIndicator3">
+                <div class="step-circle" id="circle3">3</div>
+                <span class="step-label-text">Confirmação</span>
+            </div>
         </div>
-        <form method="post" id="candidaturaForm" novalidate enctype="multipart/form-data">
+
+        <form method="post" id="candidaturaForm" novalidate>
 
             <!-- PASSO 1: Dados Pessoais -->
             <div class="form-section active" id="section1">
@@ -339,18 +330,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                 <div class="cand-card">
                     <h3><i class="fa fa-rocket me-2" style="color:var(--primary)"></i> O Teu Pitch / A Tua Ideia</h3>
                     <p style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin-bottom:20px;">
-                        Preenche a ficha abaixo para estruturar a apresentação da tua ideia. Quanto mais claro fores, melhor a comissão avaliará a tua candidatura.
+                        Seleciona a natureza do teu projeto e responde às perguntas do Pitch. Quanto mais claro fores, melhor será a avaliação da tua candidatura.
                     </p>
 
                     <div class="form-group">
                         <label>Tipo de Projeto / Entidade *</label>
-                        <select name="tipo_projeto" required>
-                            <option value="startup_tecnologica">🚀 Startup Tecnológica (Software, App, Plataforma Digital)</option>
-                            <option value="negocio_tradicional">🏢 Empresa Registada / Negócio Tradicional (Comércio, Serviços, Indústria)</option>
-                            <option value="individual">👤 Projeto Individual / Empreendedor Autónomo</option>
-                            <option value="equipa">👥 Equipa / Grupo de Estudantes</option>
-                            <option value="impacto_social">🌍 Projeto de Impacto Social / Comunitário</option>
-                        </select>
+                        <input type="hidden" name="tipo_projeto" id="input_tipo_projeto" value="startup_tecnologica">
+                        <div class="tipo-proj-grid">
+                            <div class="tipo-proj-card active" onclick="selectTipoProjeto('startup_tecnologica', this)">
+                                <div class="icon">🚀</div>
+                                <div class="title">Startup Tech</div>
+                                <div class="desc">Software, App, Plataforma Digital</div>
+                            </div>
+                            <div class="tipo-proj-card" onclick="selectTipoProjeto('negocio_tradicional', this)">
+                                <div class="icon">🏢</div>
+                                <div class="title">Empresa / Negócio</div>
+                                <div class="desc">Comércio, Serviços, Indústria</div>
+                            </div>
+                            <div class="tipo-proj-card" onclick="selectTipoProjeto('individual', this)">
+                                <div class="icon">👤</div>
+                                <div class="title">Individual</div>
+                                <div class="desc">Empreendedor Autónomo</div>
+                            </div>
+                            <div class="tipo-proj-card" onclick="selectTipoProjeto('equipa', this)">
+                                <div class="icon">👥</div>
+                                <div class="title">Equipa / Grupo</div>
+                                <div class="desc">Estudantes Cofundadores</div>
+                            </div>
+                            <div class="tipo-proj-card" onclick="selectTipoProjeto('impacto_social', this)">
+                                <div class="icon">🌍</div>
+                                <div class="title">Impacto Social</div>
+                                <div class="desc">Projeto Comunitário</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-row">
@@ -373,7 +385,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 
                     <div class="form-group">
                         <label>Descrição Geral da Ideia * (mín. 30 caracteres)</label>
-                        <textarea name="descricao_ideia" id="desc" placeholder="Resumo executivo do que é o teu projeto..." required oninput="updateCount('desc','descCount',30)"></textarea>
+                        <textarea name="descricao_ideia" id="desc" placeholder="Resumo executivo do teu projeto..." required oninput="updateCount('desc','descCount',30)"></textarea>
                         <div class="char-count"><span id="descCount">0</span> caracteres</div>
                     </div>
 
@@ -402,12 +414,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
                     <div class="form-group">
                         <label>Diferencial Competitivo</label>
                         <textarea name="diferencial" placeholder="O que torna a tua solução única ou diferente das alternativas existentes?"></textarea>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label><i class="fa fa-paperclip"></i> Ficheiro do Pitch / Apresentação (Opcional)</label>
-                        <input type="file" name="pitch_ficheiro" accept=".pdf,.ppt,.pptx,.zip" style="background:rgba(255,255,255,0.05);color:#fff;border-color:rgba(255,255,255,0.15)">
-                        <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-top:4px;">Aceita PDF, PPT, PPTX ou ZIP até 15MB. Se já tiveres um Pitch Deck pronto, podes anexá-lo aqui.</span>
                     </div>
 
                 </div>
@@ -451,12 +457,32 @@ let currentStep = 1;
 const totalSteps = 3;
 
 function updateProgress(step) {
-    document.getElementById('progressFill').style.width = ((step / totalSteps) * 100) + '%';
-    document.getElementById('stepLabel').textContent = step;
+    const pct = ((step - 1) / (totalSteps - 1)) * 100;
+    const progressEl = document.getElementById('stepperProgress');
+    if (progressEl) progressEl.style.width = pct + '%';
+    
     for (let i = 1; i <= totalSteps; i++) {
-        const dot = document.getElementById('dot' + i);
-        dot.className = 'step-dot' + (i === step ? ' active' : (i < step ? ' done' : ''));
+        const ind = document.getElementById('stepIndicator' + i);
+        const circle = document.getElementById('circle' + i);
+        if (!ind || !circle) continue;
+        
+        if (i === step) {
+            ind.className = 'wizard-step active';
+            circle.innerHTML = i;
+        } else if (i < step) {
+            ind.className = 'wizard-step done';
+            circle.innerHTML = '<i class="fa fa-check"></i>';
+        } else {
+            ind.className = 'wizard-step';
+            circle.innerHTML = i;
+        }
     }
+}
+
+function selectTipoProjeto(val, cardEl) {
+    document.getElementById('input_tipo_projeto').value = val;
+    document.querySelectorAll('.tipo-proj-card').forEach(c => c.classList.remove('active'));
+    if (cardEl) cardEl.classList.add('active');
 }
 
 function toggleTipoCandidato(value) {
