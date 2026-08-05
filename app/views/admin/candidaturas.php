@@ -727,26 +727,28 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <input type="range" name="pitch_sustentabilidade" class="form-range" min="0" max="10" step="1" value="5" oninput="calcMediaAvaliacao()" required>
                         </div>
 
-                        <div class="mb-0">
-                            <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Parecer Técnico / Observações</label>
+                        <div class="mb-3">
+                            <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">PARECER TÉCNICO / OBSERVAÇÕES</label>
                             <textarea name="pitch_observacoes" class="form-control-custom" rows="2" placeholder="Insira o seu parecer qualificado sobre a ideia..."></textarea>
+                        </div>
+
+                        <!-- BOTÃO DE CONFIRMAÇÃO DIRETO NA COLUNA DA DIREITA -->
+                        <div class="p-3 bg-white border rounded-3 text-center shadow-sm">
+                            <div class="form-check text-start mb-2">
+                                <input class="form-check-input" type="checkbox" id="chkConfirmarAvaliacao" required checked>
+                                <label class="form-check-label small fw-bold text-secondary" for="chkConfirmarAvaliacao" style="font-size:0.75rem;">
+                                    Confirmo o parecer e as 5 notas atribuídas
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100 fw-bold py-2.5 rounded-3 text-white shadow-sm" id="btnConfirmarAvaliacaoSubmit" style="background:var(--primary); border:none; font-size:0.88rem;">
+                                <i class="fa fa-check-circle me-1.5"></i> Confirmar Avaliação (<span id="btnMediaText">5.0</span>)
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer-v2 bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="form-check text-start mb-0 ms-2">
-                    <input class="form-check-input" type="checkbox" id="chkConfirmarAvaliacao" required checked>
-                    <label class="form-check-label small fw-bold text-secondary" for="chkConfirmarAvaliacao" style="font-size:0.78rem;">
-                        Confirmo o parecer e as notas atribuídas a este Pitch
-                    </label>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-light border fw-bold px-3.5 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
-                    <button type="submit" class="btn btn-warning fw-bold px-4 py-2 rounded-3 text-white shadow-sm" id="btnConfirmarAvaliacaoSubmit" style="background:var(--primary); border:none; font-size:0.85rem;">
-                        <i class="fa fa-check-circle me-1.5"></i> Confirmar Avaliação (<span id="btnMediaText">5.0</span>)
-                    </button>
-                </div>
+            <div class="modal-footer-v2 bg-light justify-content-end">
+                <button type="button" class="btn btn-light border fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalAvaliarPitch')">Cancelar</button>
             </div>
         </form>
     </div>
