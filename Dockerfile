@@ -1,15 +1,11 @@
-# 1. Fase de Base: Usar a imagem oficial do PHP com Apache
+# 1. Base Image: PHP 8.2 com Apache (idêntico à clinica-ispsn)
 FROM php:8.2-apache
 
-# 2. Configuração de Variáveis de Ambiente
+# 2. Variáveis de Ambiente
 ENV APACHE_RUN_USER www-data
 ENV APACHE_RUN_GROUP www-data
 
 # 3. Instalar Extensões PHP Necessárias
-# - mysqli: Necessário para a conexão com o banco de dados.
-# - pdo_mysql: Alternativa moderna de conexão.
-# - gd: Para processamento de imagens (blog/galeria).
-# - intl, zip: Extensões comuns em projetos PHP.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
        libzip-dev \
@@ -20,31 +16,17 @@ RUN apt-get update \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl
 
-# 4. Configurar o Servidor Web (Apache)
-# Habilitar o mod_rewrite para URLs amigáveis
+# 4. Habilitar mod_rewrite
 RUN a2enmod rewrite
 
-# Truque de compatibilidade para caminhos fixos /incubadora_ispsn/
-RUN ln -s /var/www/html /var/www/html/incubadora_ispsn
-
-# Criar um index.php na raiz que redireciona para o website público
-RUN echo '<?php header("Location: /incubadora_ispsn/public/website/"); exit;' > /var/www/html/index.php
-
-# 5. Copiar o Código Fonte
+# 5. Copiar Código Fonte limpo (sem loops de symlink)
 COPY . /var/www/html/
 
-# 6. Definir Permissões (Crucial para uploads)
-# Garantir que as pastas de imagens tenham permissões de escrita para o Apache
+# 6. Truque de compatibilidade para caminhos /incubadora_ispsn/ pós-COPY
+RUN ln -s /var/www/html /var/www/html/incubadora_ispsn
+
+# 7. Permissões
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html \
-    && mkdir -p /var/www/html/assets/img/blog \
-    && mkdir -p /var/www/html/assets/img/galeria \
-    && chmod -R 775 /var/www/html/assets/img/blog \
-    && chmod -R 775 /var/www/html/assets/img/galeria
+    && chmod -R 755 /var/www/html
 
-# 7. Configuração Adicional do PHP (Opcional)
-# Se necessário, você pode adicionar um php.ini personalizado
-# COPY php.ini /usr/local/etc/php/conf.d/
-
-# O Apache expõe a porta 80 por padrão
 EXPOSE 80
