@@ -2,8 +2,7 @@ version: '3.9'
 
 services:
   # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA APLICAÇÃO PHP
-  # Ficheiros injetados pelo Dockerfile (COPY . /var/www/html/).
+  # SERVIÇO DA APLICAÇÃO PHP (Incubadora ISPSN)
   # ─────────────────────────────────────────────────────────────────
   app-php:
     build: 
@@ -21,7 +20,7 @@ services:
         condition: service_healthy
 
   # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA BASE DE DADOS MYSQL
+  # SERVIÇO DA BASE DE DADOS MYSQL (sem initdb crashes)
   # ─────────────────────────────────────────────────────────────────
   mysql:
     image: mysql:8

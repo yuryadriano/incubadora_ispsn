@@ -87,6 +87,22 @@ function close_session_early(): void {
 }
 
 
+// Auto-seeding inicial se a base de dados estiver limpa
+$checkUserTable = @$mysqli->query("SHOW TABLES LIKE 'usuarios'");
+if (!$checkUserTable || $checkUserTable->num_rows === 0) {
+    $schemaSql = __DIR__ . '/../database/schema.sql';
+    if (file_exists($schemaSql)) {
+        $sqlContent = file_get_contents($schemaSql);
+        if ($sqlContent && @$mysqli->multi_query($sqlContent)) {
+            do {
+                if ($result = @$mysqli->store_result()) {
+                    $result->free();
+                }
+            } while (@$mysqli->next_result());
+        }
+    }
+}
+
 // Auto-verificação de Schema: Para evitar bloqueios concorrentes e erro 504 no servidor de produção,
 // as migrações automáticas foram desativadas de cada requisição.
 // Para correr as migrações na base de dados, aceda a qualquer página com o parâmetro '?run_migrations=1' na URL.
