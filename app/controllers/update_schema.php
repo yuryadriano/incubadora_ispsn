@@ -344,7 +344,49 @@ adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_mercado', "TEXT DEFA
 adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_equipa', "TEXT DEFAULT NULL");
 adicionarColunaSeNaoExistir($mysqli, 'avaliacoes', 'parecer_sustentabilidade', "TEXT DEFAULT NULL");
 
-echo "Schema updated v2.4 (com Estúdio Enterprise de Avaliação Lado-a-Lado)!";
+// ============================================================
+// ÍNDICES DE OPTIMIZAÇÃO DE PERFORMANCE v2.5
+// ============================================================
+
+// candidaturas
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', 'estado',                  'idx_cand_estado');
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', 'tipo_candidato',          'idx_cand_tipo');
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', 'area_tematica',           'idx_cand_area');
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', '`estado`, `tipo_candidato`', 'idx_cand_estado_tipo');
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', 'criado_em',               'idx_cand_criado');
+
+// projetos
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', 'estado',                      'idx_proj_estado');
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', 'fase',                        'idx_proj_fase');
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', 'estado_avaliacao',            'idx_proj_estado_aval');
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', 'destaque_publico',            'idx_proj_destaque');
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', '`estado`, `fase`',            'idx_proj_estado_fase');
+
+// avaliacoes
+adicionarIndiceSeNaoExistir($mysqli, 'avaliacoes', 'decisao',                   'idx_aval_decisao');
+adicionarIndiceSeNaoExistir($mysqli, 'avaliacoes', '`id_projeto`, `decisao`',   'idx_aval_proj_decisao');
+
+// notificacoes
+adicionarIndiceSeNaoExistir($mysqli, 'notificacoes', '`id_usuario`, `lida`',    'idx_notif_lida_user');
+adicionarIndiceSeNaoExistir($mysqli, 'notificacoes', 'criado_em',               'idx_notif_criado');
+
+// usuarios
+adicionarIndiceSeNaoExistir($mysqli, 'usuarios', 'perfil',                      'idx_usr_perfil');
+adicionarIndiceSeNaoExistir($mysqli, 'usuarios', '`activo`, `perfil`',          'idx_usr_activo_perfil');
+
+// reservas_espaco
+adicionarIndiceSeNaoExistir($mysqli, 'reservas_espaco', '`data_reserva`, `status`',   'idx_res_data_status');
+adicionarIndiceSeNaoExistir($mysqli, 'reservas_espaco', '`id_espaco`, `data_reserva`', 'idx_res_espaco_data');
+adicionarIndiceSeNaoExistir($mysqli, 'reservas_espaco', 'id_usuario',                  'idx_res_usuario');
+
+// mensagens
+adicionarIndiceSeNaoExistir($mysqli, 'mensagens', '`id_projeto`, `lida`',       'idx_msg_lida_proj');
+
+// logs_acesso
+adicionarIndiceSeNaoExistir($mysqli, 'logs_acesso', 'data_login',               'idx_log_data');
+adicionarIndiceSeNaoExistir($mysqli, 'logs_acesso', '`sucesso`, `data_login`',  'idx_log_sucesso');
+
+echo "Schema updated v2.5 (índices de optimização de performance)!";
 ?>
 
 
