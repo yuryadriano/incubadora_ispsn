@@ -1,37 +1,41 @@
-version: '3.9'
+version: '3.8'
 
 services:
   # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA APLICAÇÃO PHP (Incubadora ISPSN)
-  # O código é injetado pelo Dockerfile (COPY . /var/www/html/).
+  # SERVIÇO WEB PRINCIPAL (Incubadora ISPSN)
+  # Serviço com nome 'web' correspondente às regras do Coolify
   # ─────────────────────────────────────────────────────────────────
-  app-php:
+  web:
     build: 
       context: .
       dockerfile: Dockerfile
     restart: always
     environment:
-      DB_HOST: mysql
+      DB_HOST: ${DB_HOST:-db}
       DB_NAME: ${DB_NAME:-imcubadora_ispsn}
-      DB_USER: ${DB_USER:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-test123}
+      DB_USER: ${DB_USER:-incubadora_user}
+      DB_PASS: ${DB_PASS:-incubadora_pass}
+      DB_PASSWORD: ${DB_PASS:-incubadora_pass}
     depends_on:
-      mysql:
+      db:
         condition: service_healthy
 
   # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA BASE DE DADOS MYSQL
+  # SERVIÇO DA BASE DE DADOS (MySQL 8)
   # ─────────────────────────────────────────────────────────────────
-  mysql:
+  db:
     image: mysql:8
     restart: always
     environment:
       MYSQL_DATABASE: ${DB_NAME:-imcubadora_ispsn}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-test123}
+      MYSQL_USER: ${DB_USER:-incubadora_user}
+      MYSQL_PASSWORD: ${DB_PASS:-incubadora_pass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_pass}
     volumes:
-      - mysql-data:/var/lib/mysql
+      - db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-test123}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER:-incubadora_user}", "-p${DB_PASS:-incubadora_pass}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -44,14 +48,13 @@ services:
     image: phpmyadmin/phpmyadmin:latest
     restart: always
     environment:
-      PMA_HOST: mysql
-      PMA_USER: ${DB_USER:-root}
-      PMA_PASSWORD: ${DB_PASSWORD:-test123}
-      PMA_ABSOLUTE_URI: https://phpmyadmin-incubadora.ispsn.app/
+      PMA_HOST: db
+      PMA_USER: ${DB_USER:-incubadora_user}
+      PMA_PASSWORD: ${DB_PASS:-incubadora_pass}
       UPLOAD_LIMIT: 300M
     depends_on:
-      mysql:
+      db:
         condition: service_healthy
 
 volumes:
-  mysql-data:
+  db_data:
