@@ -1,57 +1,59 @@
-version: '3.9'
+version: '3.8'
+
 services:
-  # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA APLICAÇÃO PHP (Incubadora ISPSN)
-  # Identico ao clinica.ispsn.app para compatibilidade total Coolify
-  # ─────────────────────────────────────────────────────────────────
-  app-php:
-    build: 
-      context: .
-      dockerfile: Dockerfile
+  # Serviço Web (PHP + Apache)
+  web:
+    build: .
+    container_name: incubadora_web
     restart: always
+    ports:
+      - "87:80"
     environment:
-      DB_HOST: mysql
-      DB_NAME: ${DB_NAME:-imcubadora_ispsn}
-      DB_USER: ${DB_USER:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-test123}
-      DB_PASS: ${DB_PASSWORD:-test123}
+      - DB_HOST=db
+      - DB_USER=incubadora_user
+      - DB_PASS=incubadora_pass
+      - DB_NAME=imcubadora_ispsn
     depends_on:
-      mysql:
-        condition: service_healthy
+      - db
+    networks:
+      - incubadora_network
 
-  # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO DA BASE DE DADOS MYSQL
-  # ─────────────────────────────────────────────────────────────────
-  mysql:
-    image: mysql:8
+  # Serviço de Base de Dados (MariaDB)
+  db:
+    image: mariadb:10.11
+    container_name: incubadora_db
     restart: always
     environment:
-      MYSQL_DATABASE: ${DB_NAME:-imcubadora_ispsn}
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-test123}
+      - MYSQL_DATABASE=imcubadora_ispsn
+      - MYSQL_USER=incubadora_user
+      - MYSQL_PASSWORD=incubadora_pass
+      - MYSQL_ROOT_PASSWORD=root_pass
     volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-test123}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+      - incubadora_db_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - incubadora_network
 
-  # ─────────────────────────────────────────────────────────────────
-  # SERVIÇO PHPMYADMIN
-  # ─────────────────────────────────────────────────────────────────
+  # Interface de Gestão da BD (phpMyAdmin)
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
+    image: phpmyadmin:latest
+    container_name: incubadora_phpmyadmin
     restart: always
+    ports:
+      - "8081:80"
     environment:
-      PMA_HOST: mysql
-      PMA_USER: ${DB_USER:-root}
-      PMA_PASSWORD: ${DB_PASSWORD:-test123}
-      PMA_ABSOLUTE_URI: https://phpmyadmin-incubadora.ispsn.app/
-      UPLOAD_LIMIT: 300M
+      - PMA_HOST=db
+      - PMA_USER=incubadora_user
+      - PMA_PASSWORD=incubadora_pass
+      - MYSQL_ROOT_PASSWORD=root_pass
     depends_on:
-      mysql:
-        condition: service_healthy
+      - db
+    networks:
+      - incubadora_network
+
+networks:
+  incubadora_network:
+    driver: bridge
 
 volumes:
-  mysql-data:
+  incubadora_db_data:
