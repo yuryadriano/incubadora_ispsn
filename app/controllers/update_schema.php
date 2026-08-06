@@ -1,7 +1,5 @@
 <?php
-if (!defined('DB_HOST')) {
-    require_once __DIR__ . '/../../config/config.php';
-}
+require_once __DIR__ . '/../../config/config.php';
 
 if (!function_exists('adicionarColunaSeNaoExistir')) {
     function adicionarColunaSeNaoExistir($mysqli, $tabela, $coluna, $definicao) {

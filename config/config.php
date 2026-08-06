@@ -4,7 +4,7 @@
 // Configurações de ligação à BD
 define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', (getenv('DB_PASS') !== false && getenv('DB_PASS') !== '') ? getenv('DB_PASS') : (getenv('DB_PASSWORD') ?: ''));
+define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
@@ -87,28 +87,18 @@ function close_session_early(): void {
 }
 
 
-// Auto-seeding inicial se a base de dados estiver limpa
-$checkUserTable = @$mysqli->query("SHOW TABLES LIKE 'usuarios'");
-if (!$checkUserTable || $checkUserTable->num_rows === 0) {
-    $schemaSql = __DIR__ . '/../database/schema.sql';
-    if (file_exists($schemaSql)) {
-        $sqlContent = file_get_contents($schemaSql);
-        if ($sqlContent && @$mysqli->multi_query($sqlContent)) {
-            do {
-                if ($result = @$mysqli->store_result()) {
-                    $result->free();
-                }
-            } while (@$mysqli->next_result());
-        }
-    }
-}
-
 // Auto-verificação de Schema: Para evitar bloqueios concorrentes e erro 504 no servidor de produção,
 // as migrações automáticas foram desativadas de cada requisição.
 // Para correr as migrações na base de dados, aceda a qualquer página com o parâmetro '?run_migrations=1' na URL.
 $runUpdate = false;
 if (isset($_GET['run_migrations']) && $_GET['run_migrations'] == '1') {
     $runUpdate = true;
+} else {
+    // Auto-healing: se a nova tabela do modulo de avaliacoes nao existir, executa o schema silenciosamente
+    $checkAtrib = @$mysqli->query("SHOW TABLES LIKE 'avaliacoes_atribuicao'");
+    if (!$checkAtrib || $checkAtrib->num_rows === 0) {
+        $runUpdate = true;
+    }
 }
 
 if ($runUpdate) {
