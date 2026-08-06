@@ -93,12 +93,6 @@ function close_session_early(): void {
 $runUpdate = false;
 if (isset($_GET['run_migrations']) && $_GET['run_migrations'] == '1') {
     $runUpdate = true;
-} else {
-    // Auto-healing: se a nova tabela do modulo de avaliacoes nao existir, executa o schema silenciosamente
-    $checkAtrib = @$mysqli->query("SHOW TABLES LIKE 'avaliacoes_atribuicao'");
-    if (!$checkAtrib || $checkAtrib->num_rows === 0) {
-        $runUpdate = true;
-    }
 }
 
 if ($runUpdate) {
