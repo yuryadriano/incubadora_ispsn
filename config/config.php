@@ -57,6 +57,7 @@ if (!$connected || !$mysqli || $mysqli->connect_errno) {
 }
 
 $mysqli->set_charset('utf8mb4');
+@$mysqli->query("SET SESSION innodb_lock_wait_timeout = 10");
 
 // Guarda para reconectar automaticamente se a conexão oscilar no meio do script
 function ensure_db_connection() {
@@ -65,6 +66,7 @@ function ensure_db_connection() {
         $mysqli = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
         if ($mysqli) {
             $mysqli->set_charset('utf8mb4');
+            @$mysqli->query("SET SESSION innodb_lock_wait_timeout = 10");
         }
     }
     return $mysqli;
@@ -87,21 +89,13 @@ function close_session_early(): void {
 }
 
 
-// Auto-verificação de Schema: Para evitar bloqueios concorrentes e erro 504 no servidor de produção,
-// as migrações automáticas foram desativadas de cada requisição.
-// Para correr as migrações na base de dados, aceda a qualquer página com o parâmetro '?run_migrations=1' na URL.
-$runUpdate = false;
-if (isset($_GET['run_migrations']) && $_GET['run_migrations'] == '1') {
-    $runUpdate = true;
-} else {
-    // Auto-healing: se a nova tabela do modulo de avaliacoes nao existir, executa o schema silenciosamente
-    $checkAtrib = @$mysqli->query("SHOW TABLES LIKE 'avaliacoes_atribuicao'");
-    if (!$checkAtrib || $checkAtrib->num_rows === 0) {
-        $runUpdate = true;
-    }
-}
+// Proteção de Schema: As migrações automáticas de DDL foram totalmente desativadas do ciclo de requisição HTTP para evitar bloqueios concorrentes (Metadata Locks).
+// As migrações manuais exigem privilégios de SuperAdmin autenticado na sessão OU a chave configurada estritamente na variável de ambiente MIGRATION_KEY no servidor.
+$migrationKey = getenv('MIGRATION_KEY');
+$isAuthorizedAdmin = (!empty($_SESSION['usuario_perfil']) && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin']));
+$hasValidKey = (!empty($migrationKey) && isset($_GET['key']) && !empty($_GET['key']) && hash_equals($migrationKey, $_GET['key']));
 
-if ($runUpdate) {
+if (isset($_GET['run_migrations']) && $_GET['run_migrations'] === '1' && ($isAuthorizedAdmin || $hasValidKey)) {
     $schemaFile = __DIR__ . '/../app/controllers/update_schema.php';
     if (file_exists($schemaFile)) {
         ob_start();

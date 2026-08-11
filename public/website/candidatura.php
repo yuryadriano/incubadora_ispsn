@@ -60,12 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
             if ($chk->get_result()->fetch_assoc()) {
                 $erro = 'Já existe uma candidatura registada com este email ou número de estudante para este processo.';
             } else {
-                // Assegurar colunas na BD
-                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS tipo_projeto ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
-                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS publico_alvo TEXT DEFAULT NULL");
-                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS modelo_negocio TEXT DEFAULT NULL");
-                @$mysqli->query("ALTER TABLE candidaturas ADD COLUMN IF NOT EXISTS diferencial TEXT DEFAULT NULL");
-
                 $stmt = $mysqli->prepare("
                     INSERT INTO candidaturas 
                     (id_processo, nome, email, telefone, numero_estudante, curso, ano_estudo,

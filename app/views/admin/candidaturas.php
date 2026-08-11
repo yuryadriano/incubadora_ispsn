@@ -2,25 +2,6 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['admin', 'superadmin', 'mentor']);
 
-// Auto-migração resiliente de esquema para colunas do Pitch (executa 1 vez por sessão para evitar locks de BD)
-if (empty($_SESSION['auto_migrated_pitch_cols'])) {
-    try {
-        $chkCol = $mysqli->query("SHOW COLUMNS FROM `candidaturas` LIKE 'pitch_problema'");
-        if ($chkCol && $chkCol->num_rows === 0) {
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `tipo_projeto` ENUM('startup_tecnologica','negocio_tradicional','individual','equipa','impacto_social') DEFAULT 'startup_tecnologica'");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `publico_alvo` TEXT NULL");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `modelo_negocio` TEXT NULL");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `diferencial` TEXT NULL");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_problema` DECIMAL(4,2) DEFAULT 0");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_solucao` DECIMAL(4,2) DEFAULT 0");
-            $mysqli->query("ALTER TABLE `candidaturas` ADD COLUMN `pitch_modelo_negocio` DECIMAL(4,2) DEFAULT 0");
-        }
-    } catch (Throwable $e) {
-        // Silencioso se MariaDB/MySQL já tiver criado
-    }
-    $_SESSION['auto_migrated_pitch_cols'] = true;
-}
-
 $tituloPagina = 'Candidaturas';
 $paginaActiva = 'candidaturas';
 
