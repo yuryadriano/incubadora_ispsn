@@ -1,5 +1,5 @@
 # 1. Fase de Base: Usar a imagem oficial do PHP com Apache
-FROM php:8.2-apache
+FROM php:8.2.35-apache
 
 # 2. Configuração de Variáveis de Ambiente
 ENV APACHE_RUN_USER www-data

@@ -10,6 +10,15 @@ csrf_verificar();
 $action = $_POST['action'] ?? '';
 $redirect = $_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/usuarios.php';
 
+// SEGURANÇA: Este controlador serve exclusivamente convites avulsos (mentores/parceiros).
+// Qualquer convite vinculado a candidaturas DEVE passar pelo módulo de candidaturas (candidatura_action.php).
+if (!empty($_POST['id_candidatura']) || !empty($_GET['id_candidatura'])) {
+    http_response_code(400);
+    $_SESSION['flash_erro'] = 'Operação não permitida: convites associados a candidaturas devem ser emitidos no módulo de Gestão de Candidaturas.';
+    header("Location: $redirect");
+    exit;
+}
+
 if ($action === 'enviar_convite' || $action === 'gerar_link') {
     $email = filter_var($_POST['email'] ?? '', FILTER_SANITIZE_EMAIL);
     $perfil = $_POST['perfil'] ?? 'mentor';

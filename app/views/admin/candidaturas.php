@@ -18,6 +18,7 @@ if ($res) while ($r = $res->fetch_assoc()) $processos[] = $r;
 // Processo selecionado para ver candidaturas
 $id_processo_sel = (int)($_GET['processo'] ?? ($processos[0]['id'] ?? 0));
 $filtro_fase     = $_GET['fase'] ?? 'rastreio_pitch';
+$filtro_sub      = $_GET['sub'] ?? 'todos';
 
 // Candidaturas do processo selecionado
 $candidaturas = [];
@@ -27,7 +28,20 @@ if ($id_processo_sel) {
     } elseif ($filtro_fase === 'selecao_admissao') {
         $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'em_analise' AND c.pitch_nota_final > 0";
     } elseif ($filtro_fase === 'admitidos') {
-        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado IN ('selecionado', 'convite_enviado', 'registado')";
+        $where = "WHERE c.id_processo = $id_processo_sel AND c.estado IN ('selecionado', 'convocado', 'validado_presencial', 'convite_enviado', 'registado', 'ausente', 'recusou', 'reprovado_reuniao')";
+        if ($filtro_sub === 'selecionados') {
+            $where .= " AND c.estado = 'selecionado'";
+        } elseif ($filtro_sub === 'convocados') {
+            $where .= " AND c.estado = 'convocado'";
+        } elseif ($filtro_sub === 'validados') {
+            $where .= " AND c.estado = 'validado_presencial'";
+        } elseif ($filtro_sub === 'convite_enviado') {
+            $where .= " AND c.estado = 'convite_enviado'";
+        } elseif ($filtro_sub === 'registados') {
+            $where .= " AND c.estado = 'registado'";
+        } elseif ($filtro_sub === 'ocorrencias') {
+            $where .= " AND c.estado IN ('ausente', 'recusou', 'reprovado_reuniao')";
+        }
     } elseif ($filtro_fase === 'rejeitados') {
         $where = "WHERE c.id_processo = $id_processo_sel AND c.estado = 'rejeitado'";
     } else {
@@ -35,9 +49,15 @@ if ($id_processo_sel) {
     }
 
     $res = $mysqli->query("
-        SELECT c.*, u.nome as avaliador_nome
+        SELECT c.*, u.nome as avaliador_nome,
+               conv.id as conv_id, conv.data_reuniao, conv.hora_reuniao, conv.local_reuniao,
+               conv.documentos_a_levar, conv.observacoes as conv_obs, conv.estado_convocatoria,
+               conv.convocado_em, conv.presenca_validada_em, conv.validado_por
         FROM candidaturas c
         LEFT JOIN usuarios u ON u.id = c.avaliado_por
+        LEFT JOIN convocatorias conv ON conv.id = (
+            SELECT id FROM convocatorias WHERE candidatura_id = c.id ORDER BY id DESC LIMIT 1
+        )
         $where
         ORDER BY c.criado_em DESC
     ");
@@ -45,14 +65,31 @@ if ($id_processo_sel) {
 }
 
 // Contagens operacionais unificadas numa única consulta ultra-rápida
-$contFases = ['rastreio_pitch' => 0, 'selecao_admissao' => 0, 'admitidos' => 0, 'rejeitados' => 0];
+$contFases = [
+    'rastreio_pitch' => 0, 
+    'selecao_admissao' => 0, 
+    'admitidos' => 0, 
+    'rejeitados' => 0,
+    'sub_selecionado' => 0,
+    'sub_convocado' => 0,
+    'sub_validado' => 0,
+    'sub_convite_enviado' => 0,
+    'sub_registado' => 0,
+    'sub_ocorrencias' => 0
+];
 if ($id_processo_sel) {
     $resStats = $mysqli->query("
         SELECT 
             SUM(CASE WHEN (estado = 'pendente' OR (estado = 'em_analise' AND (pitch_nota_final IS NULL OR pitch_nota_final = 0))) THEN 1 ELSE 0 END) as rastreio_pitch,
             SUM(CASE WHEN estado = 'em_analise' AND pitch_nota_final > 0 THEN 1 ELSE 0 END) as selecao_admissao,
-            SUM(CASE WHEN estado IN ('selecionado', 'convite_enviado', 'registado') THEN 1 ELSE 0 END) as admitidos,
-            SUM(CASE WHEN estado = 'rejeitado' THEN 1 ELSE 0 END) as rejeitados
+            SUM(CASE WHEN estado IN ('selecionado', 'convocado', 'validado_presencial', 'convite_enviado', 'registado', 'ausente', 'recusou', 'reprovado_reuniao') THEN 1 ELSE 0 END) as admitidos,
+            SUM(CASE WHEN estado = 'rejeitado' THEN 1 ELSE 0 END) as rejeitados,
+            SUM(CASE WHEN estado = 'selecionado' THEN 1 ELSE 0 END) as sub_selecionado,
+            SUM(CASE WHEN estado = 'convocado' THEN 1 ELSE 0 END) as sub_convocado,
+            SUM(CASE WHEN estado = 'validado_presencial' THEN 1 ELSE 0 END) as sub_validado,
+            SUM(CASE WHEN estado = 'convite_enviado' THEN 1 ELSE 0 END) as sub_convite_enviado,
+            SUM(CASE WHEN estado = 'registado' THEN 1 ELSE 0 END) as sub_registado,
+            SUM(CASE WHEN estado IN ('ausente', 'recusou', 'reprovado_reuniao') THEN 1 ELSE 0 END) as sub_ocorrencias
         FROM candidaturas 
         WHERE id_processo = $id_processo_sel
     ");
@@ -61,6 +98,12 @@ if ($id_processo_sel) {
         $contFases['selecao_admissao'] = (int)($st['selecao_admissao'] ?? 0);
         $contFases['admitidos'] = (int)($st['admitidos'] ?? 0);
         $contFases['rejeitados'] = (int)($st['rejeitados'] ?? 0);
+        $contFases['sub_selecionado'] = (int)($st['sub_selecionado'] ?? 0);
+        $contFases['sub_convocado'] = (int)($st['sub_convocado'] ?? 0);
+        $contFases['sub_validado'] = (int)($st['sub_validado'] ?? 0);
+        $contFases['sub_convite_enviado'] = (int)($st['sub_convite_enviado'] ?? 0);
+        $contFases['sub_registado'] = (int)($st['sub_registado'] ?? 0);
+        $contFases['sub_ocorrencias'] = (int)($st['sub_ocorrencias'] ?? 0);
     }
 }
 $totalCand = array_sum($contFases);
@@ -446,11 +489,60 @@ require_once __DIR__ . '/../partials/_layout.php';
             </div>
         </div>
 
+        <?php if ($filtro_fase === 'admitidos'): ?>
+        <!-- SUB-SEPARADORES OPERACIONAIS DO FUNIL DE ADMISSÃO -->
+        <div class="px-3 pt-2.5 pb-2.5 bg-white border-bottom d-flex align-items-center justify-content-between gap-2 flex-wrap" style="font-size: 0.8rem;">
+            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                <span class="text-muted small fw-bold text-uppercase me-1" style="font-size:0.7rem;"><i class="fa fa-stream me-1"></i>Etapas:</span>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=todos" class="btn btn-sm <?= ($filtro_sub==='todos')?'btn-dark':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    Todos (<?= $contFases['admitidos'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=selecionados" class="btn btn-sm <?= ($filtro_sub==='selecionados')?'btn-warning text-dark fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-circle-check me-1 text-success"></i>1. Selecionados (<?= $contFases['sub_selecionado'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convocados" class="btn btn-sm <?= ($filtro_sub==='convocados')?'btn-info text-dark fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-calendar-days me-1 text-primary"></i>2. Convocados (<?= $contFases['sub_convocado'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=validados" class="btn btn-sm <?= ($filtro_sub==='validados')?'btn-success text-white fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-user-check me-1 text-white"></i>3. Validados Presencial (<?= $contFases['sub_validado'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convite_enviado" class="btn btn-sm <?= ($filtro_sub==='convite_enviado')?'btn-primary text-white fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-paper-plane me-1"></i>4. Convite 48h Enviado (<?= $contFases['sub_convite_enviado'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=registados" class="btn btn-sm <?= ($filtro_sub==='registados')?'btn-dark text-white fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-id-badge me-1 text-success"></i>5. Registados (<?= $contFases['sub_registado'] ?>)
+                </a>
+                <a href="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=ocorrencias" class="btn btn-sm <?= ($filtro_sub==='ocorrencias')?'btn-danger text-white fw-bold':'btn-outline-secondary' ?> py-1 px-2.5 rounded-pill" style="font-size:0.75rem;">
+                    <i class="fa fa-triangle-exclamation me-1"></i>Ocorrências (<?= $contFases['sub_ocorrencias'] ?>)
+                </a>
+            </div>
+
+            <!-- BOTÕES DE AÇÃO COLETIVA BIFURCADOS -->
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-primary rounded-3 fw-bold py-1 px-2.5" onclick="iniciarWizardEnvio('convocatoria')" style="font-size:0.75rem;">
+                    <i class="fa fa-calendar-check me-1"></i>Assistente de Convocatórias
+                </button>
+                <button class="btn btn-sm btn-outline-secondary rounded-3 fw-bold py-1 px-2.5" onclick="abrirModalMassa('convocatoria')" style="font-size:0.75rem;">
+                    <i class="fa fa-copy me-1"></i>Convocatórias em Massa
+                </button>
+
+                <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                <button class="btn btn-sm btn-success text-white rounded-3 fw-bold py-1 px-2.5" onclick="iniciarWizardEnvio('convite')" style="font-size:0.75rem;">
+                    <i class="fa fa-paper-plane me-1"></i>Assistente Convites 48h (Validados)
+                </button>
+                <button class="btn btn-sm btn-outline-success rounded-3 fw-bold py-1 px-2.5" onclick="abrirModalMassa('convite')" style="font-size:0.75rem;">
+                    <i class="fa fa-bolt me-1"></i>Convites 48h em Massa
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <?php if (empty($candidaturas)): ?>
             <div class="text-center p-5 bg-white">
                 <i class="fa fa-inbox fa-3x text-muted opacity-25 mb-3"></i>
-                <h6 class="fw-bold">Sem candidaturas registradas</h6>
-                <p class="text-muted small">Não foram encontradas candidaturas com este filtro.</p>
+                <h6 class="fw-bold">Sem candidaturas registadas</h6>
+                <p class="text-muted small">Não foram encontradas candidaturas nesta etapa com os filtros selecionados.</p>
             </div>
         <?php else: ?>
             <div class="table-responsive">
@@ -460,7 +552,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <th style="padding: 14px 20px;">Candidato & Ideia</th>
                             <th style="padding: 14px 15px;">Contacto & Perfil</th>
                             <th style="padding: 14px 15px;">Entidade / Projeto</th>
-                            <th style="padding: 14px 15px;">Estado / Pitch</th>
+                            <th style="padding: 14px 15px;">Estado / Agendamento</th>
                             <th style="padding: 14px 20px;" class="text-end">Ações</th>
                         </tr>
                     </thead>
@@ -473,20 +565,25 @@ require_once __DIR__ . '/../partials/_layout.php';
                             
                             $st = $c['estado'];
                             $stBadge = [
-                                'pendente' => ['bg'=>'#F1F5F9', 'color'=>'#475569'],
-                                'em_analise' => ['bg'=>'#FEF3C7', 'color'=>'#92400E'],
-                                'selecionado' => ['bg'=>'#DCFCE7', 'color'=>'#166534'],
-                                'rejeitado' => ['bg'=>'#FEE2E2', 'color'=>'#991B1B'],
-                                'convite_enviado' => ['bg'=>'#DBEAFE', 'color'=>'#1E40AF'],
-                                'registado' => ['bg'=>'#F5F3FF', 'color'=>'#5B21B6']
-                            ][$st] ?? ['bg'=>'#eee', 'color'=>'#333'];
+                                'pendente'            => ['bg'=>'#F1F5F9', 'color'=>'#475569', 'label'=>'Pendente'],
+                                'em_analise'          => ['bg'=>'#FEF3C7', 'color'=>'#92400E', 'label'=>'Em Análise'],
+                                'selecionado'         => ['bg'=>'#FEF3C7', 'color'=>'#B45309', 'label'=>'1. Selecionado (Aguardando Convocatória)'],
+                                'convocado'           => ['bg'=>'#E0F2FE', 'color'=>'#0369A1', 'label'=>'2. Convocado (Reunião Agendada)'],
+                                'validado_presencial' => ['bg'=>'#DCFCE7', 'color'=>'#166534', 'label'=>'3. Presença Validada (Apto p/ Convite)'],
+                                'convite_enviado'     => ['bg'=>'#DBEAFE', 'color'=>'#1E40AF', 'label'=>'4. Convite 48h Enviado'],
+                                'registado'           => ['bg'=>'#F5F3FF', 'color'=>'#5B21B6', 'label'=>'5. Conta Registada'],
+                                'ausente'             => ['bg'=>'#FEE2E2', 'color'=>'#991B1B', 'label'=>'Ausente / Falta'],
+                                'recusou'             => ['bg'=>'#F3F4F6', 'color'=>'#4B5563', 'label'=>'Recusou Vaga'],
+                                'reprovado_reuniao'   => ['bg'=>'#FEE2E2', 'color'=>'#991B1B', 'label'=>'Reprovado na Reunião'],
+                                'rejeitado'           => ['bg'=>'#FEE2E2', 'color'=>'#991B1B', 'label'=>'Rejeitado']
+                            ][$st] ?? ['bg'=>'#eee', 'color'=>'#333', 'label'=>$st];
 
                             $tiposProjMap = [
                                 'startup_tecnologica' => '🚀 Startup Tech',
                                 'negocio_tradicional' => '🏢 Negócio / Empresa',
-                                'individual' => '👤 Individual',
-                                'equipa' => '👥 Equipa / Grupo',
-                                'impacto_social' => '🌍 Impacto Social'
+                                'individual'          => '👤 Individual',
+                                'equipa'              => '👥 Equipa / Grupo',
+                                'impacto_social'      => '🌍 Impacto Social'
                             ];
                             $projText = $tiposProjMap[$c['tipo_projeto'] ?? ''] ?? ($c['tipo_projeto'] ?? '🚀 Startup Tech');
                         ?>
@@ -525,16 +622,21 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <div class="small text-muted" style="font-size:0.7rem">Ino: <?= $c['pitch_inovacao'] ?> · Aut: <?= $c['pitch_sustentabilidade'] ?> · Emp: <?= $c['pitch_empreendedorismo'] ?></div>
                                 <?php elseif ($filtro_fase === 'admitidos'): ?>
                                     <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
-                                        <?= $st === 'registado' ? 'Conta Aberta' : ($st === 'convite_enviado' ? 'Convite Enviado' : 'Aprovado') ?>
+                                        <?= $stBadge['label'] ?>
                                     </span>
+                                    <?php if (!empty($c['data_reuniao'])): ?>
+                                        <div class="small text-muted mt-1" style="font-size:0.72rem;">
+                                            <i class="fa fa-calendar me-1 text-primary"></i><?= date('d/m/Y', strtotime($c['data_reuniao'])) ?> às <?= substr($c['hora_reuniao'],0,5) ?>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <span class="status-badge-v2" style="background:<?= $stBadge['bg'] ?>; color:<?= $stBadge['color'] ?>">
-                                        <?= ucfirst(str_replace('_',' ',$st)) ?>
+                                        <?= $stBadge['label'] ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
                             <td style="padding: 14px 20px;" class="text-end">
-                                <div class="d-flex align-items-center justify-content-end gap-1">
+                                <div class="d-flex align-items-center justify-content-end gap-1 flex-wrap">
                                     <button class="btn-action-v2" title="Dossier Completo" onclick='abrirModal(<?= json_encode($c) ?>)'><i class="fa fa-id-card"></i></button>
                                     
                                     <?php if ($filtro_fase === 'rastreio_pitch'): ?>
@@ -544,11 +646,13 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <?php if ($filtro_fase === 'selecao_admissao'): ?>
                                         <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
                                         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="selecionado">
                                             <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar Admissão"><i class="fa fa-check"></i></button>
+                                            <button type="submit" class="btn-action-v2 btn-success" title="Aprovar Seleção (Avançar p/ Convocatória)"><i class="fa fa-check"></i></button>
                                         </form>
                                         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
                                             <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
                                             <button type="submit" class="btn-action-v2 btn-danger" title="Rejeitar Candidatura" onclick="return confirm('Tem a certeza que deseja rejeitar esta candidatura?')"><i class="fa fa-ban"></i></button>
@@ -559,14 +663,47 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <?php endif; ?>
 
                                     <?php if ($filtro_fase === 'admitidos'): ?>
+                                        <!-- ESTADO 1: SELECIONADO -->
                                         <?php if ($st === 'selecionado'): ?>
-                                            <button class="btn-action-v2" style="color:#25D366; border-color:#25D366; background:#F0FDF4" title="Enviar Convite WhatsApp" onclick='gerarConvite(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
+                                            <button class="btn-action-v2" style="color:#D97706; border-color:#FDE68A; background:#FFFBEB" title="Convocar para Reunião Presencial" onclick='abrirModalConvocar(<?= json_encode($c) ?>)'><i class="fa fa-calendar-check"></i></button>
+                                            <button class="btn-action-v2 text-secondary" title="Marcar Recusa" onclick='abrirModalOcorrencia(<?= json_encode($c) ?>, "recusa")'><i class="fa fa-user-xmark"></i></button>
+                                        
+                                        <!-- ESTADO 2: CONVOCADO -->
+                                        <?php elseif ($st === 'convocado'): ?>
+                                            <button class="btn-action-v2" style="color:#25D366; border-color:#86EFAC; background:#F0FDF4" title="Abrir Convocatória no WhatsApp (sem link)" onclick='abrirWaConvocatoria(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
+                                            <button class="btn-action-v2 text-primary" style="border-color:#BFDBFE; background:#EFF6FF" title="Reagendar Reunião" onclick='abrirModalReagendar(<?= json_encode($c) ?>)'><i class="fa fa-clock-rotate-left"></i></button>
+                                            
+                                            <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                                                <button class="btn-action-v2" style="color:#166534; border-color:#86EFAC; background:#DCFCE7;" title="Validar Presença Presencial (DG/PR)" onclick='abrirModalValidarPresenca(<?= json_encode($c) ?>)'><i class="fa fa-user-check"></i></button>
+                                                <button class="btn-action-v2 text-danger" style="border-color:#FECACA; background:#FEF2F2;" title="Reprovar na Reunião (DG/PR)" onclick='abrirModalOcorrencia(<?= json_encode($c) ?>, "reprovar")'><i class="fa fa-thumbs-down"></i></button>
+                                            <?php endif; ?>
+                                            <button class="btn-action-v2 text-muted" title="Marcar Ausência (Falta)" onclick='abrirModalOcorrencia(<?= json_encode($c) ?>, "ausencia")'><i class="fa fa-user-slash"></i></button>
+                                        
+                                        <!-- ESTADO 3: VALIDADO PRESENCIAL -->
+                                        <?php elseif ($st === 'validado_presencial'): ?>
+                                            <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                                                <button class="btn-action-v2" style="color:#16A34A; border-color:#86EFAC; background:#DCFCE7; font-weight:bold;" title="Emitir Convite Oficial de Registo (Link 48h)" onclick='abrirModalEmitirConvite(<?= json_encode($c) ?>)'><i class="fa fa-paper-plane"></i></button>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary-subtle text-secondary small px-1.5 py-1 rounded" style="font-size:0.65rem;" title="Apenas o Super Admin pode emitir o link de registo"><i class="fa fa-user-shield me-1"></i>Aguardando DG/PR</span>
+                                            <?php endif; ?>
+
+                                        <!-- ESTADO 4: CONVITE ENVIADO -->
+                                        <?php elseif ($st === 'convite_enviado'): ?>
+                                            <button class="btn-action-v2 text-success" title="Reabrir WhatsApp com Convite" onclick='abrirWaConviteEnviado(<?= json_encode($c) ?>)'><i class="fa-brands fa-whatsapp"></i></button>
+                                            <?php if ($_SESSION['usuario_perfil'] === 'superadmin'): ?>
+                                                <button class="btn-action-v2 text-primary" title="Reenviar / Regenerar Convite 48h" onclick='reenviarConvite(<?= json_encode($c) ?>)'><i class="fa fa-rotate-right"></i></button>
+                                            <?php endif; ?>
+
+                                        <!-- ESTADO 5: AUSENTE -->
+                                        <?php elseif ($st === 'ausente'): ?>
+                                            <button class="btn-action-v2 text-warning-dark" style="border-color:#FDE68A; background:#FFFBEB" title="Reconvocar Candidato em Falta" onclick='abrirModalReconvocar(<?= json_encode($c) ?>)'><i class="fa fa-calendar-plus"></i></button>
                                         <?php endif; ?>
 
                                         <?php if ($st !== 'registado' && $_SESSION['usuario_perfil'] === 'superadmin'): ?>
                                         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="<?= $c['id'] ?>"><input type="hidden" name="estado" value="rejeitado">
-                                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
+                                            <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>&sub=<?= $filtro_sub ?>">
                                             <button type="submit" class="btn-action-v2 btn-danger" title="Cancelar Admissão / Rejeitar" onclick="return confirm('Cancelar admissão e rejeitar?')"><i class="fa fa-ban"></i></button>
                                         </form>
                                         <?php endif; ?>
@@ -746,79 +883,320 @@ require_once __DIR__ . '/../partials/_layout.php';
     </div>
 </div>
 
-<div class="modal-overlay" id="modalConvite">
-    <div class="modal-box-v2" style="max-width: 500px;">
-        <div class="modal-header-v2">
-            <h6 class="mb-0 fw-bold"><i class="fa-brands fa-whatsapp me-2"></i> Enviar Convite Seguro</h6>
-            <button class="btn-close btn-close-white" onclick="fecharModal('modalConvite')"></button>
+<!-- MODAL: CONVOCAR CANDIDATO -->
+<div class="modal-overlay" id="modalConvocar">
+    <div class="modal-box-v2" style="max-width: 580px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #1E293B 0%, #D97706 100%);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-calendar-check me-2"></i> Convocatória para Reunião Presencial</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalConvocar')"></button>
         </div>
         <div class="modal-body-v2">
-            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
-                <input type="hidden" name="action" value="gerar_convite_seguro">
-                <input type="hidden" name="id_cand" id="conviteIdCand">
-                <input type="hidden" name="id_processo" value="<?= $id_processo_sel ?>">
-                
-                <div class="p-3 bg-light rounded-3 mb-3 border border-dashed">
-                    <div class="label-mini">Candidato Selecionado</div>
-                    <div class="fw-bold" id="conviteNome" style="font-size: 1.1rem;"></div>
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formConvocar">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="convocar_candidato">
+                <input type="hidden" name="id_cand" id="convocarIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convocados">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-primary">Candidato Selecionado</div>
+                    <div class="fw-bold fs-6" id="convocarNome"></div>
+                    <div class="small text-muted" id="convocarEmailTel"></div>
                 </div>
-                
-                <p class="text-muted small mb-4">Isto irá gerar um link de uso único e abrir o WhatsApp com uma mensagem personalizada.</p>
-                
-                <button type="submit" class="wa-btn-v2 w-100 justify-content-center py-3">
-                    <i class="fa fa-rocket me-2"></i> Gerar Link e Abrir WhatsApp
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Data da Reunião *</label>
+                        <input type="date" name="data_reuniao" class="form-control-custom w-100" min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d', strtotime('+2 days')) ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Hora da Reunião *</label>
+                        <input type="time" name="hora_reuniao" class="form-control-custom w-100" value="10:00" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Local da Reunião *</label>
+                    <input type="text" name="local_reuniao" class="form-control-custom w-100" value="Gabinete da Incubadora Académica - ISPSN" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Documentos a Levar</label>
+                    <textarea name="documentos_a_levar" class="form-control-custom w-100" rows="2">Bilhete de Identidade, Cartão de Estudante e Dossier preliminar do projeto</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Observações / Recomendações Adicionais</label>
+                    <textarea name="observacoes" class="form-control-custom w-100" rows="2" placeholder="Ex: Trazer amostra física ou apresentação em formato pendrive..."></textarea>
+                </div>
+
+                <div class="alert alert-warning border-0 small py-2 mb-3 rounded-3" style="font-size:0.75rem;">
+                    <i class="fa fa-info-circle me-1"></i> <strong>Nota:</strong> Esta ação <strong>NÃO</strong> gera link de registo de conta. O candidato receberá a mensagem oficial de convocatória para agendamento.
+                </div>
+
+                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold rounded-3 text-white shadow-sm" style="background:#D97706; border:none;">
+                    <i class="fa fa-calendar-check me-2"></i> Gravar Convocatória e Abrir WhatsApp
                 </button>
             </form>
         </div>
     </div>
 </div>
 
-<!-- MODAL: Assistente de Envio Wizard -->
+<!-- MODAL: REAGENDAR CONVOCATÓRIA -->
+<div class="modal-overlay" id="modalReagendar">
+    <div class="modal-box-v2" style="max-width: 580px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #1E293B 0%, #2563EB 100%);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-clock-rotate-left me-2"></i> Reagendar Reunião Presencial</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalReagendar')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formReagendar">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="reagendar_convocatoria">
+                <input type="hidden" name="id_cand" id="reagendarIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convocados">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-primary">Candidato Convocado</div>
+                    <div class="fw-bold fs-6" id="reagendarNome"></div>
+                    <div class="small text-muted" id="reagendarDadosAtuais"></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Nova Data da Reunião *</label>
+                        <input type="date" name="data_reuniao" id="reagendarData" class="form-control-custom w-100" min="<?= date('Y-m-d') ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Nova Hora *</label>
+                        <input type="time" name="hora_reuniao" id="reagendarHora" class="form-control-custom w-100" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Local da Reunião *</label>
+                    <input type="text" name="local_reuniao" id="reagendarLocal" class="form-control-custom w-100" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Documentos a Levar</label>
+                    <textarea name="documentos_a_levar" id="reagendarDocs" class="form-control-custom w-100" rows="2"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Motivo do Reagendamento / Observações</label>
+                    <textarea name="observacoes" id="reagendarObs" class="form-control-custom w-100" rows="2" placeholder="Ex: Remarcado a pedido do candidato por motivos académicos..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-3 text-white shadow-sm" style="background:#2563EB; border:none;">
+                    <i class="fa fa-clock-rotate-left me-2"></i> Reagendar Reunião e Notificar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: RECONVOCAR CANDIDATO AUSENTE -->
+<div class="modal-overlay" id="modalReconvocar">
+    <div class="modal-box-v2" style="max-width: 580px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #1E293B 0%, #D97706 100%);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-calendar-plus me-2"></i> Reconvocar Candidato em Falta</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalReconvocar')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formReconvocar">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="reconvocar_candidato">
+                <input type="hidden" name="id_cand" id="reconvocarIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convocados">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-danger">Candidato Anteriormente Ausente</div>
+                    <div class="fw-bold fs-6" id="reconvocarNome"></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Nova Data *</label>
+                        <input type="date" name="data_reuniao" class="form-control-custom w-100" min="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d', strtotime('+3 days')) ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Nova Hora *</label>
+                        <input type="time" name="hora_reuniao" class="form-control-custom w-100" value="11:00" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Local *</label>
+                    <input type="text" name="local_reuniao" class="form-control-custom w-100" value="Gabinete da Incubadora Académica - ISPSN" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Documentos</label>
+                    <textarea name="documentos_a_levar" class="form-control-custom w-100" rows="2">Bilhete de Identidade, Cartão de Estudante e Justificativo de ausência prévia</textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Observações da Reconvocatória</label>
+                    <textarea name="observacoes" class="form-control-custom w-100" rows="2" placeholder="Ex: Segunda chamada concedida pela Coordenação..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-warning w-100 py-3 fw-bold rounded-3 text-white shadow-sm" style="background:#D97706; border:none;">
+                    <i class="fa fa-calendar-plus me-2"></i> Confirmar Reconvocatória
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: VALIDAR PRESENÇA PRESENCIAL (DG/PR) -->
+<div class="modal-overlay" id="modalValidarPresenca">
+    <div class="modal-box-v2" style="max-width: 520px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #064E3B 0%, #16A34A 100%);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-user-check me-2"></i> Validação Presencial (Decisão DG/PR)</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalValidarPresenca')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="validar_presencial_cand">
+                <input type="hidden" name="id_cand" id="validarIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=validados">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-success">Candidato Convocado</div>
+                    <div class="fw-bold fs-6" id="validarNome"></div>
+                    <div class="small text-muted" id="validarIdeia"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" style="font-size:0.8rem;">Parecer da Direção / Observações da Entrevista</label>
+                    <textarea name="observacoes" class="form-control-custom w-100" rows="3" required>Presença e documentação conferidas presencialmente com a Direção da Incubadora. Parecer favorável à incubação.</textarea>
+                </div>
+
+                <div class="form-check p-3 bg-white border rounded-3 mb-3">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" id="chkConfirmaPresenca" required checked>
+                    <label class="form-check-label small fw-bold text-secondary" for="chkConfirmaPresenca" style="font-size:0.8rem;">
+                        Confirmo que o candidato compareceu à reunião presencial e que o projeto foi validado para receber convite de acesso.
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3 text-white shadow-sm" style="background:#16A34A; border:none;">
+                    <i class="fa fa-check-double me-2"></i> Validar Presença e Habilitar Envio de Convite
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: EMITIR CONVITE OFICIAL DE REGISTO (48H) -->
+<div class="modal-overlay" id="modalEmitirConvite">
+    <div class="modal-box-v2" style="max-width: 520px;">
+        <div class="modal-header-v2" style="background: linear-gradient(135deg, #0F172A 0%, #16A34A 100%);">
+            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-paper-plane me-2"></i> Emitir Convite Oficial de Registo (48h)</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalEmitirConvite')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="enviar_convite_registo">
+                <input type="hidden" name="id_cand" id="emitirIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=convite_enviado">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-success"><i class="fa fa-circle-check me-1"></i>Presença Validada Presencialmente</div>
+                    <div class="fw-bold fs-6" id="emitirNome"></div>
+                    <div class="small text-muted" id="emitirEmailTel"></div>
+                </div>
+
+                <div class="p-3 bg-light border border-dashed rounded-3 small mb-3 text-secondary">
+                    <div class="fw-bold text-dark mb-1"><i class="fa fa-shield-halved me-1 text-primary"></i>Garantias de Segurança:</div>
+                    • Gera um token criptográfico de uso único exclusivo para este candidato.<br>
+                    • Validade estrita de <strong>48 horas</strong> a partir deste instante.<br>
+                    • O registo ativará a conta e criará o projeto incubado automaticamente no portal.
+                </div>
+
+                <button type="submit" class="btn btn-success w-100 py-3 fw-bold rounded-3 text-white shadow-sm" style="background:#16A34A; border:none;">
+                    <i class="fa fa-paper-plane me-2"></i> Gerar Token de 48h e Abrir WhatsApp
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: REGISTO DE OCORRÊNCIA (AUSÊNCIA / RECUSA / REPROVAÇÃO) -->
+<div class="modal-overlay" id="modalOcorrencia">
+    <div class="modal-box-v2" style="max-width: 500px;">
+        <div class="modal-header-v2" id="modalOcorrenciaHeader" style="background:#DC2626;">
+            <h6 class="mb-0 fw-bold text-white" id="modalOcorrenciaTitulo"><i class="fa fa-triangle-exclamation me-2"></i> Registo de Ocorrência</h6>
+            <button class="btn-close btn-close-white" onclick="fecharModal('modalOcorrencia')"></button>
+        </div>
+        <div class="modal-body-v2">
+            <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formOcorrencia">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" id="ocorrenciaAction" value="marcar_ausencia">
+                <input type="hidden" name="id_cand" id="ocorrenciaIdCand">
+                <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=ocorrencias">
+
+                <div class="p-3 bg-light rounded-3 mb-3 border">
+                    <div class="label-mini text-secondary">Candidato</div>
+                    <div class="fw-bold fs-6" id="ocorrenciaNome"></div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label-custom fw-bold mb-1" id="ocorrenciaMotivoLabel" style="font-size:0.8rem;">Justificativo / Motivo *</label>
+                    <textarea name="motivo" id="ocorrenciaMotivo" class="form-control-custom w-100" rows="3" required placeholder="Descreva os detalhes da ocorrência..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-3 text-white shadow-sm" id="ocorrenciaBtnSubmit">
+                    Confirmar Registo
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Assistente de Envio Wizard (BIFURCADO) -->
 <div class="modal-overlay" id="modalWizard">
     <div class="modal-box-v2" style="max-width: 600px;">
-        <div class="modal-header-v2" style="background: #25D366;">
-            <h6 class="mb-0 fw-bold text-white"><i class="fa-brands fa-whatsapp me-2"></i> Assistente de Envio de Convites</h6>
+        <div class="modal-header-v2" id="wizardHeader" style="background: #25D366;">
+            <h6 class="mb-0 fw-bold text-white" id="wizardTitulo"><i class="fa-brands fa-whatsapp me-2"></i> Assistente de Envio</h6>
             <button class="btn-close btn-close-white" onclick="fecharModal('modalWizard')"></button>
         </div>
         <div class="modal-body-v2">
-            <div id="wizardContent">
-                <!-- Conteúdo dinâmico preenchido por JS -->
-            </div>
+            <div id="wizardContent"></div>
         </div>
         <div class="modal-footer-v2">
             <span class="text-muted small me-auto" id="wizardProgress">Progresso: 0 / 0</span>
-            <button class="btn btn-light fw-bold px-3 py-2 rounded-3" onclick="fecharModal('modalWizard')">Cancelar</button>
+            <button class="btn btn-light fw-bold px-3 py-2 rounded-3" onclick="fecharModal('modalWizard')">Fechar</button>
             <button class="btn btn-success fw-bold text-white px-3 py-2 rounded-3" id="btnWizardNext" style="display:none;" onclick="wizardNext()">Avançar para o Próximo <i class="fa fa-arrow-right ms-1"></i></button>
         </div>
     </div>
 </div>
 
-<!-- MODAL: Exportação em Massa -->
+<!-- MODAL: Exportação / Disparo em Massa (BIFURCADO) -->
 <div class="modal-overlay" id="modalMassa">
     <div class="modal-box-v2" style="max-width: 650px;">
         <div class="modal-header-v2" style="background: var(--slate-900);">
-            <h6 class="mb-0 fw-bold text-white"><i class="fa fa-copy me-2"></i> Exportar Links em Massa</h6>
+            <h6 class="mb-0 fw-bold text-white" id="massaModalTitulo"><i class="fa fa-copy me-2"></i> Exportação em Massa</h6>
             <button class="btn-close btn-close-white" onclick="fecharModal('modalMassa')"></button>
         </div>
         <div class="modal-body-v2">
-            <p class="text-muted small">Abaixo estão listados todos os candidatos aprovados. Clique no botão para gerar tokens de convites e criar uma lista de envio formatada para copiar para a área de transferência.</p>
+            <p class="text-muted small" id="massaDescricao">Selecione os candidatos na lista abaixo para gerar o lote de mensagens.</p>
             
             <div class="form-check mb-3">
                 <input class="form-check-input" type="checkbox" id="chkSelecionarTodosMassa" checked onchange="toggleSelectMassa(this)">
                 <label class="form-check-label fw-bold small text-uppercase" for="chkSelecionarTodosMassa">Selecionar Todos</label>
             </div>
             
-            <div id="massaList" style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--slate-200); border-radius: 12px; padding: 12px;">
-                <!-- Lista de checkboxes para cada candidato -->
-            </div>
+            <div id="massaList" style="max-height: 180px; overflow-y: auto; margin-bottom: 20px; border: 1px solid var(--slate-200); border-radius: 12px; padding: 12px;"></div>
             
             <div class="mb-3" style="display:none;" id="massaTextAreaWrapper">
-                <label class="label-mini">Lista Formatada de Convites</label>
+                <label class="label-mini" id="massaTextAreaLabel">Lista Formatada de Mensagens</label>
                 <textarea class="form-control-custom w-100" id="massaTextArea" rows="6" readonly style="font-family: monospace; font-size: 0.8rem; background: var(--slate-50); outline: none; border: 1px solid var(--slate-200); padding: 10px; border-radius: 8px;"></textarea>
             </div>
             
             <button class="btn btn-warning fw-bold w-100 py-3 rounded-3 text-white" id="btnMassaProcessar" style="background:#D97706; border:none;" onclick="processarMassa()">
-                <i class="fa fa-bolt me-1"></i> Gerar e Copiar Links Selecionados
+                <i class="fa fa-bolt me-1"></i> Processar Lote Selecionado
             </button>
         </div>
     </div>
@@ -831,6 +1209,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold">Novo Processo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-4">
                 <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="criar_processo">
                     <div class="mb-3"><label class="form-label fw-bold small text-uppercase">Título</label><input type="text" name="nome" class="form-control rounded-3" placeholder="Ex: Batch #02 2026" required></div>
                     <div class="mb-3"><label class="form-label fw-bold small text-uppercase">Vagas</label><input type="number" name="vagas" class="form-control rounded-3" value="10" min="1"></div>
@@ -843,7 +1222,17 @@ require_once __DIR__ . '/../partials/_layout.php';
 
 <script>
 const usuarioPerfil = <?= json_encode($_SESSION['usuario_perfil']) ?>;
-const candidatosAprovados = <?= json_encode(array_values(array_filter($candidaturas, function($c) { return $c['estado'] === 'selecionado'; }))) ?>;
+const csrfToken = <?= json_encode(csrf_token()) ?>;
+const candidaturasListaGlobal = <?= json_encode($candidaturas) ?>;
+
+function fecharModal(id) { 
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open'); 
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { 
+    if (e.target === m) m.classList.remove('open'); 
+}));
 
 function abrirModal(c) {
     const isPre = c.tipo_candidato === 'pre_licenciado';
@@ -910,24 +1299,16 @@ function abrirModal(c) {
                                 <span class="small text-muted">${c.solucao || '—'}</span>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-white rounded-3 border">
-                                <strong class="small text-primary text-uppercase d-block mb-1"><i class="fa fa-users me-1"></i> Público-Alvo:</strong>
-                                <span class="small text-muted">${c.publico_alvo || '—'}</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 bg-white rounded-3 border">
-                                <strong class="small text-warning text-uppercase d-block mb-1"><i class="fa fa-coins me-1"></i> Modelo de Negócio:</strong>
-                                <span class="small text-muted">${c.modelo_negocio || '—'}</span>
-                            </div>
-                        </div>
                     </div>
 
-                    ${c.diferencial ? `
-                        <div class="mt-3 p-3 bg-white rounded-3 border">
-                            <strong class="small text-info text-uppercase d-block mb-1"><i class="fa fa-shield-halved me-1"></i> Diferencial Competitivo:</strong>
-                            <span class="small text-muted">${c.diferencial}</span>
+                    ${c.data_reuniao ? `
+                        <div class="mt-3 p-3 bg-white rounded-3 border border-primary">
+                            <strong class="small text-primary text-uppercase d-block mb-1"><i class="fa fa-calendar-check me-1"></i> Agendamento Presencial:</strong>
+                            <div class="small text-secondary">
+                                <strong>Data:</strong> ${c.data_reuniao} às ${c.hora_reuniao}<br>
+                                <strong>Local:</strong> ${c.local_reuniao || 'Incubadora ISPSN'}<br>
+                                <strong>Documentos:</strong> ${c.documentos_a_levar || 'Padrão'}
+                            </div>
                         </div>
                     ` : ''}
 
@@ -951,58 +1332,16 @@ function abrirModal(c) {
                 <i class="fa fa-star me-2"></i> Avaliar Pitch
             </button>
         `;
-    } else if (c.estado === 'em_analise') {
-        if (usuarioPerfil === 'superadmin') {
-            footer = `
-                <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin:0;">
-                    <input type="hidden" name="action" value="mudar_estado_cand"><input type="hidden" name="id_cand" value="${c.id}"><input type="hidden" name="estado" value="selecionado">
-                    <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">
-                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3"><i class="fa fa-check me-2"></i> Aprovar Admissão</button>
-                </form>
-            `;
-        } else {
-            footer = `<span class="text-muted small me-3"><i class="fa fa-user-shield me-1"></i> Aguardando Decisão Final do Super Admin (DG/PR)</span>`;
-        }
     }
     document.getElementById('modalFooter').innerHTML = footer + `<button class="btn btn-light fw-bold px-4 py-2 rounded-3" onclick="fecharModal('modalDetalhe')">Fechar</button>`;
     document.getElementById('modalDetalhe').classList.add('open');
 }
-
-function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
 
 function abrirModalAvaliar(c) {
     document.getElementById('avaliarIdCand').value = c.id;
     document.getElementById('avaliarCandidatoNome').textContent = `${c.nome} (${c.email})`;
     document.getElementById('avaliarTituloIdeia').textContent = c.titulo_ideia || 'Sem Título';
     document.getElementById('avaliarArea').textContent = c.area_tematica || 'Geral';
-    
-    const tiposProjMap = {
-        'startup_tecnologica': '🚀 Startup Tech',
-        'negocio_tradicional': '🏢 Empresa',
-        'individual': '👤 Individual',
-        'equipa': '👥 Equipa',
-        'impacto_social': '🌍 Impacto Social'
-    };
-    document.getElementById('avaliarTipoProj').textContent = tiposProjMap[c.tipo_projeto] || c.tipo_projeto || 'Startup Tech';
-    document.getElementById('avaliarDescricao').textContent = c.descricao_ideia || '—';
-    document.getElementById('avaliarProblema').textContent = c.problema || '—';
-    document.getElementById('avaliarSolucao').textContent = c.solucao || '—';
-    document.getElementById('avaliarPublicoAlvo').textContent = c.publico_alvo || '—';
-    document.getElementById('avaliarModeloNegocio').textContent = c.modelo_negocio || '—';
-    document.getElementById('avaliarDiferencial').textContent = c.diferencial || '—';
-
-    const fileContainer = document.getElementById('avaliarPitchFileContainer');
-    const fileLink = document.getElementById('avaliarPitchFileLink');
-    if (fileContainer && fileLink) {
-        if (c.pitch_path) {
-            fileLink.href = `/incubadora_ispsn/${c.pitch_path}`;
-            fileContainer.style.display = 'block';
-        } else {
-            fileContainer.style.display = 'none';
-        }
-    }
-    
-    calcMediaAvaliacao();
     document.getElementById('modalAvaliarPitch').classList.add('open');
 }
 
@@ -1023,27 +1362,180 @@ function calcMediaAvaliacao() {
     
     const media = ((prob + sol + mod + ino + sust) / 5).toFixed(1);
     if (document.getElementById('avaliarMediaCalc')) document.getElementById('avaliarMediaCalc').textContent = media;
-    if (document.getElementById('btnMediaText')) document.getElementById('btnMediaText').textContent = media;
 }
 
-function gerarConvite(c) {
-    document.getElementById('conviteIdCand').value = c.id;
-    document.getElementById('conviteNome').textContent = c.nome;
-    document.getElementById('modalConvite').classList.add('open');
+// ── FUNÇÕES DE MODAIS DE TRANSIÇÃO ESPECÍFICA ──
+function abrirModalConvocar(c) {
+    document.getElementById('convocarIdCand').value = c.id;
+    document.getElementById('convocarNome').textContent = c.nome;
+    document.getElementById('convocarEmailTel').textContent = `${c.email} · Tel: ${c.telefone}`;
+    document.getElementById('modalConvocar').classList.add('open');
 }
 
-document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
+function abrirModalReagendar(c) {
+    document.getElementById('reagendarIdCand').value = c.id;
+    document.getElementById('reagendarNome').textContent = c.nome;
+    document.getElementById('reagendarDadosAtuais').textContent = `Agendamento anterior: ${c.data_reuniao || '—'} às ${c.hora_reuniao || '—'} (${c.local_reuniao || 'Incubadora'})`;
+    document.getElementById('reagendarData').value = c.data_reuniao || '<?= date('Y-m-d', strtotime('+2 days')) ?>';
+    document.getElementById('reagendarHora').value = c.hora_reuniao ? c.hora_reuniao.substring(0,5) : '10:00';
+    document.getElementById('reagendarLocal').value = c.local_reuniao || 'Gabinete da Incubadora Académica - ISPSN';
+    document.getElementById('reagendarDocs').value = c.documentos_a_levar || 'Bilhete de Identidade, Cartão de Estudante e Dossier preliminar do projeto';
+    document.getElementById('reagendarObs').value = c.conv_obs || '';
+    document.getElementById('modalReagendar').classList.add('open');
+}
 
-// Lógica de Envio Dinâmico Wizard
+function abrirModalReconvocar(c) {
+    document.getElementById('reconvocarIdCand').value = c.id;
+    document.getElementById('reconvocarNome').textContent = `${c.nome} (${c.email})`;
+    document.getElementById('modalReconvocar').classList.add('open');
+}
+
+function abrirModalValidarPresenca(c) {
+    document.getElementById('validarIdCand').value = c.id;
+    document.getElementById('validarNome').textContent = c.nome;
+    document.getElementById('validarIdeia').textContent = `Projeto: ${c.titulo_ideia} · Tel: ${c.telefone}`;
+    document.getElementById('modalValidarPresenca').classList.add('open');
+}
+
+function abrirModalEmitirConvite(c) {
+    document.getElementById('emitirIdCand').value = c.id;
+    document.getElementById('emitirNome').textContent = c.nome;
+    document.getElementById('emitirEmailTel').textContent = `${c.email} · Tel: ${c.telefone}`;
+    document.getElementById('modalEmitirConvite').classList.add('open');
+}
+
+function abrirModalOcorrencia(c, tipo) {
+    document.getElementById('ocorrenciaIdCand').value = c.id;
+    document.getElementById('ocorrenciaNome').textContent = `${c.nome} (${c.titulo_ideia})`;
+    const header = document.getElementById('modalOcorrenciaHeader');
+    const titulo = document.getElementById('modalOcorrenciaTitulo');
+    const actionInput = document.getElementById('ocorrenciaAction');
+    const motivoLabel = document.getElementById('ocorrenciaMotivoLabel');
+    const motivoText = document.getElementById('ocorrenciaMotivo');
+    const btnSubmit = document.getElementById('ocorrenciaBtnSubmit');
+
+    if (tipo === 'ausencia') {
+        header.style.background = '#DC2626';
+        titulo.innerHTML = '<i class="fa fa-user-slash me-2"></i> Marcar Falta / Ausência';
+        actionInput.value = 'marcar_ausencia';
+        motivoLabel.textContent = 'Motivo da Falta à Reunião *';
+        motivoText.value = 'Não compareceu à reunião presencial agendada e não apresentou justificação prévia.';
+        btnSubmit.textContent = 'Confirmar Ausência';
+    } else if (tipo === 'recusa') {
+        header.style.background = '#4B5563';
+        titulo.innerHTML = '<i class="fa fa-user-xmark me-2"></i> Marcar Desistência / Recusa';
+        actionInput.value = 'marcar_recusa';
+        motivoLabel.textContent = 'Motivo da Recusa / Desistência *';
+        motivoText.value = 'Candidato informou que não possui disponibilidade para prosseguir com a incubação.';
+        btnSubmit.textContent = 'Confirmar Recusa';
+    } else if (tipo === 'reprovar') {
+        header.style.background = '#991B1B';
+        titulo.innerHTML = '<i class="fa fa-thumbs-down me-2"></i> Reprovar Candidato na Reunião (DG/PR)';
+        actionInput.value = 'reprovar_reuniao';
+        motivoLabel.textContent = 'Parecer de Reprovação na Entrevista *';
+        motivoText.value = 'Após alinhamento presencial com a Direção, o projeto não preenche os requisitos essenciais para incubação.';
+        btnSubmit.textContent = 'Confirmar Reprovação na Reunião';
+    }
+    document.getElementById('modalOcorrencia').classList.add('open');
+}
+
+// ── DISPARO DE MENSAGENS AVULSAS WHATSAPP ──
+function abrirWaConvocatoria(c) {
+    const primeiroNome = (c.nome || '').split(' ')[0];
+    const dataFmt = c.data_reuniao ? c.data_reuniao.split('-').reverse().join('/') : 'A definir';
+    const horaFmt = c.hora_reuniao ? c.hora_reuniao.substring(0,5) : '10:00';
+    const local = c.local_reuniao || 'Gabinete da Incubadora Académica - ISPSN';
+    const docs = c.documentos_a_levar || 'Bilhete de Identidade, Cartão de Estudante e Dossier preliminar do projeto';
+
+    let msg = `Olá, ${primeiroNome}! 🎉\n\n`;
+    msg += `Temos o prazer de informar que a sua candidatura do projeto *"${c.titulo_ideia}"* foi *SELECIONADA* pela Comissão da *Incubadora Académica ISPSN*! 🚀\n\n`;
+    msg += `Para formalizar a sua admissão, convocamo-lo(a) para uma *reunião presencial* com a Direção da Incubadora:\n\n`;
+    msg += `📅 *Data:* ${dataFmt}\n`;
+    msg += `⏰ *Hora:* ${horaFmt}\n`;
+    msg += `📍 *Local:* ${local}\n`;
+    msg += `📄 *Documentos a levar:* ${docs}\n\n`;
+    msg += `Por favor, responda a esta mensagem para confirmar a sua presença.\n\n`;
+    msg += `Atenciosamente,\n_Direção da Incubadora Académica ISPSN_`;
+
+    let telClean = (c.telefone || '').replace(/\D/g, '');
+    if (telClean.length === 9 && telClean.startsWith('9')) telClean = '244' + telClean;
+    const waUrl = 'https://wa.me/' + telClean + '?text=' + encodeURIComponent(msg);
+    window.open(waUrl, '_blank');
+}
+
+function abrirWaConviteEnviado(c) {
+    if (!c.token_convite) {
+        alert('Esta candidatura ainda não possui token de convite gerado.');
+        return;
+    }
+    const primeiroNome = (c.nome || '').split(' ')[0];
+    const link = `http://${window.location.host}/incubadora_ispsn/public/register.php?invite=${c.token_convite}`;
+    let msg = `Olá, ${primeiroNome}! 🎉\n\n`;
+    msg += `A sua admissão na *Incubadora Académica ISPSN* foi *CONCLUÍDA COM SUCESSO!* 🚀🌟\n\n`;
+    msg += `Para criar a sua conta oficial no portal e ativar o seu projeto incubado, aceda ao link seguro exclusivo abaixo:\n\n`;
+    msg += `🔗 ${link}\n\n`;
+    msg += `⏰ *Atenção:* Este link é pessoal e intransferível, com validade de 48 horas.\n\n`;
+    msg += `Atenciosamente,\n_Direção da Incubadora Académica ISPSN_`;
+
+    let telClean = (c.telefone || '').replace(/\D/g, '');
+    if (telClean.length === 9 && telClean.startsWith('9')) telClean = '244' + telClean;
+    const waUrl = 'https://wa.me/' + telClean + '?text=' + encodeURIComponent(msg);
+    window.open(waUrl, '_blank');
+}
+
+function reenviarConvite(c) {
+    if (!confirm(`Deseja reemitir um novo token de 48h para ${c.nome}? O link anterior será invalidado.`)) return;
+
+    const fd = new FormData();
+    fd.append('action', 'reenviar_convite_registo');
+    fd.append('id_cand', c.id);
+    fd.append('_csrf_token', csrfToken);
+
+    fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: fd
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.sucesso) {
+            window.open(data.wa_url, '_blank');
+            alert('Novo convite de 48h emitido e WhatsApp aberto com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro: ' + (data.erro || 'Falha na reemissão'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro ao processar pedido.');
+    });
+}
+
+// ── ASSISTENTE WIZARD DINÂMICO (BIFURCADO) ──
+let wizardModo = 'convocatoria';
 let wizardQueue = [];
 let wizardIndex = 0;
 
-function iniciarWizardEnvio() {
-    wizardQueue = candidatosAprovados.filter(c => c.estado === 'selecionado');
+function iniciarWizardEnvio(modo) {
+    wizardModo = modo;
+    if (modo === 'convocatoria') {
+        wizardQueue = candidaturasListaGlobal.filter(c => c.estado === 'selecionado');
+        document.getElementById('wizardTitulo').innerHTML = '<i class="fa fa-calendar-check me-2"></i> Assistente de Convocatórias (Sem Link)';
+        document.getElementById('wizardHeader').style.background = '#D97706';
+    } else {
+        wizardQueue = candidaturasListaGlobal.filter(c => c.estado === 'validado_presencial');
+        document.getElementById('wizardTitulo').innerHTML = '<i class="fa fa-paper-plane me-2"></i> Assistente de Convites Oficiais (Link 48h)';
+        document.getElementById('wizardHeader').style.background = '#16A34A';
+    }
+
     if (wizardQueue.length === 0) {
-        alert('Nenhum candidato aguardando envio de convite nesta lista.');
+        alert(modo === 'convocatoria' 
+            ? 'Nenhum candidato aguardando convocatória (estado "selecionado") nesta lista.'
+            : 'Nenhum candidato validado presencialmente aguardando envio de convite.');
         return;
     }
+
     wizardIndex = 0;
     mostrarWizardStep();
     document.getElementById('modalWizard').classList.add('open');
@@ -1055,7 +1547,7 @@ function mostrarWizardStep() {
             <div class="text-center p-5">
                 <i class="fa fa-circle-check fa-4x text-success mb-3"></i>
                 <h5 class="fw-bold">Fila Concluída!</h5>
-                <p class="text-muted small">Todos os convites da fila atual foram abertos no WhatsApp.</p>
+                <p class="text-muted small">Todos os candidatos da fila foram processados com sucesso.</p>
                 <button class="btn btn-primary fw-bold px-4 py-2 mt-2 rounded-3" style="background:var(--primary); border:none;" onclick="location.reload()">Concluir e Recarregar</button>
             </div>
         `;
@@ -1068,60 +1560,74 @@ function mostrarWizardStep() {
     document.getElementById('wizardProgress').textContent = `Candidato ${wizardIndex + 1} de ${wizardQueue.length}`;
     document.getElementById('btnWizardNext').style.display = 'none';
 
-    const isPre = c.tipo_candidato === 'pre_licenciado';
-    const numEstudanteText = isPre ? 'Pré-licenciado' : 'Nº ' + c.numero_estudante;
-
-    document.getElementById('wizardContent').innerHTML = `
-        <div class="p-3 bg-light rounded-4 border mb-4">
-            <div class="label-mini text-primary">Candidato Atual</div>
-            <h5 class="fw-bold mb-1">${c.nome}</h5>
-            <div class="text-muted small">${c.email} · ${numEstudanteText}</div>
-            <div class="mt-2"><span class="badge bg-success-subtle text-success small" style="font-size:0.8rem; color:#166534;"><i class="fa fa-phone me-1"></i>${c.telefone}</span></div>
-        </div>
-
-        <div class="mb-4">
-            <div class="label-mini">Visualização da Mensagem</div>
-            <div class="p-3 bg-white border rounded-3 small text-muted" style="white-space: pre-wrap; font-family: sans-serif; max-height: 150px; overflow-y: auto;">
-Olá ${c.nome.split(' ')[0]}! 🎉
-
-A sua candidatura à *Incubadora Académica ISPSN* foi *APROVADA!* 🚀
-
-Para criar a sua conta no portal e iniciar o processo, aceda ao link abaixo:
-🔗 http://${window.location.host}/incubadora_ispsn/public/register.php?invite=[Token Seguro]
-
-⏰ *Atenção:* Este link é válido por apenas *48 horas* e pode ser usado *uma única vez*.
+    if (wizardModo === 'convocatoria') {
+        document.getElementById('wizardContent').innerHTML = `
+            <div class="p-3 bg-light rounded-4 border mb-3">
+                <div class="label-mini text-warning">Candidato Selecionado (Aguardando Convocatória)</div>
+                <h5 class="fw-bold mb-1">${c.nome}</h5>
+                <div class="text-muted small">${c.email} · Tel: ${c.telefone}</div>
             </div>
-        </div>
-
-        <div class="text-center animate__animated animate__fadeIn" id="wizardActionArea">
-            <button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" style="background:#25D366; border:none;" onclick="gerarEAbrirWhatsApp(${c.id})">
-                <i class="fa-brands fa-whatsapp me-2"></i> Gerar Link e Abrir WhatsApp
-            </button>
-        </div>
-    `;
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label class="label-mini">Data da Reunião</label>
+                    <input type="date" id="wizData" class="form-control-custom w-100" value="<?= date('Y-m-d', strtotime('+2 days')) ?>">
+                </div>
+                <div class="col-6">
+                    <label class="label-mini">Hora</label>
+                    <input type="time" id="wizHora" class="form-control-custom w-100" value="10:00">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="label-mini">Local</label>
+                <input type="text" id="wizLocal" class="form-control-custom w-100" value="Gabinete da Incubadora Académica - ISPSN">
+            </div>
+            <div class="text-center" id="wizardActionArea">
+                <button class="btn btn-warning btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm text-white" style="background:#D97706; border:none;" onclick="processarWizardConvocatoria(${c.id})">
+                    <i class="fa fa-calendar-check me-2"></i> Gravar Convocatória e Abrir WhatsApp
+                </button>
+            </div>
+        `;
+    } else {
+        document.getElementById('wizardContent').innerHTML = `
+            <div class="p-3 bg-light rounded-4 border mb-3">
+                <div class="label-mini text-success"><i class="fa fa-circle-check me-1"></i>Presença Validada Presencialmente</div>
+                <h5 class="fw-bold mb-1">${c.nome}</h5>
+                <div class="text-muted small">${c.email} · Tel: ${c.telefone}</div>
+            </div>
+            <div class="alert alert-success border-0 small py-2 mb-3 rounded-3" style="font-size:0.75rem;">
+                <i class="fa fa-shield-halved me-1"></i> Esta ação gera um token exclusivo de 48 horas e atualiza o estado para "convite_enviado".
+            </div>
+            <div class="text-center" id="wizardActionArea">
+                <button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" style="background:#16A34A; border:none;" onclick="processarWizardConvite(${c.id})">
+                    <i class="fa fa-paper-plane me-2"></i> Gerar Link 48h e Abrir WhatsApp
+                </button>
+            </div>
+        `;
+    }
 }
 
-function gerarEAbrirWhatsApp(idCand) {
+function processarWizardConvocatoria(idCand) {
     const actionArea = document.getElementById('wizardActionArea');
-    actionArea.innerHTML = `<button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" disabled style="background:#25D366; border:none;"><i class="fa fa-spinner fa-spin me-2"></i> A gerar link seguro...</button>`;
+    actionArea.innerHTML = `<button class="btn btn-warning btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm text-white" disabled><i class="fa fa-spinner fa-spin me-2"></i> A gravar convocatória...</button>`;
 
-    const formData = new FormData();
-    formData.append('action', 'gerar_convite_ajax');
-    formData.append('id_cand', idCand);
+    const fd = new FormData();
+    fd.append('action', 'convocar_candidato');
+    fd.append('id_cand', idCand);
+    fd.append('data_reuniao', document.getElementById('wizData').value);
+    fd.append('hora_reuniao', document.getElementById('wizHora').value);
+    fd.append('local_reuniao', document.getElementById('wizLocal').value);
+    fd.append('_csrf_token', csrfToken);
 
     fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
         method: 'POST',
-        body: formData
+        headers: { 'Accept': 'application/json' },
+        body: fd
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
         if (data.sucesso) {
             window.open(data.wa_url, '_blank');
-            actionArea.innerHTML = `
-                <div class="alert alert-success border-0 small py-3 mb-0 rounded-4" style="background:#DCFCE7; color:#166534;">
-                    <i class="fa fa-circle-check me-2"></i> Convite seguro gerado e WhatsApp aberto em nova janela!
-                </div>
-            `;
+            actionArea.innerHTML = `<div class="alert alert-success border-0 small py-3 mb-0 rounded-4"><i class="fa fa-circle-check me-2"></i> Convocatória registada e WhatsApp aberto!</div>`;
             document.getElementById('btnWizardNext').style.display = 'inline-block';
         } else {
             alert('Erro: ' + data.erro);
@@ -1130,7 +1636,39 @@ function gerarEAbrirWhatsApp(idCand) {
     })
     .catch(err => {
         console.error(err);
-        alert('Erro ao processar convite via AJAX.');
+        alert('Erro ao gravar convocatória.');
+        mostrarWizardStep();
+    });
+}
+
+function processarWizardConvite(idCand) {
+    const actionArea = document.getElementById('wizardActionArea');
+    actionArea.innerHTML = `<button class="btn btn-success btn-lg w-100 py-3 fw-bold rounded-4 shadow-sm" disabled><i class="fa fa-spinner fa-spin me-2"></i> A gerar link seguro 48h...</button>`;
+
+    const fd = new FormData();
+    fd.append('action', 'enviar_convite_registo');
+    fd.append('id_cand', idCand);
+    fd.append('_csrf_token', csrfToken);
+
+    fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: fd
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.sucesso) {
+            window.open(data.wa_url, '_blank');
+            actionArea.innerHTML = `<div class="alert alert-success border-0 small py-3 mb-0 rounded-4"><i class="fa fa-circle-check me-2"></i> Convite oficial 48h gerado e WhatsApp aberto!</div>`;
+            document.getElementById('btnWizardNext').style.display = 'inline-block';
+        } else {
+            alert('Erro: ' + data.erro);
+            mostrarWizardStep();
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro ao gerar convite.');
         mostrarWizardStep();
     });
 }
@@ -1140,27 +1678,50 @@ function wizardNext() {
     mostrarWizardStep();
 }
 
-// Lógica de Envio em Lote / Cópia em Massa
-function abrirModalMassa() {
+// ── EXPORTAÇÃO / DISPARO EM MASSA (BIFURCADO) ──
+let massaModo = 'convocatoria';
+
+function abrirModalMassa(modo) {
+    massaModo = modo;
     const list = document.getElementById('massaList');
-    const aprovados = candidatosAprovados.filter(c => c.estado === 'selecionado');
-    
-    if (aprovados.length === 0) {
-        alert('Nenhum candidato aprovado para exportar.');
+    const titulo = document.getElementById('massaModalTitulo');
+    const desc = document.getElementById('massaDescricao');
+    const btn = document.getElementById('btnMassaProcessar');
+
+    let candidatos = [];
+    if (modo === 'convocatoria') {
+        candidatos = candidaturasListaGlobal.filter(c => c.estado === 'selecionado');
+        titulo.innerHTML = '<i class="fa fa-calendar-check me-2"></i> Convocatórias em Massa';
+        desc.textContent = 'Abaixo estão listados os candidatos selecionados. Ao processar, cada um será colocado em "convocado" e a lista de mensagens de convocatória será copiada.';
+        btn.innerHTML = '<i class="fa fa-calendar-check me-1"></i> Gerar e Copiar Convocatórias Selecionadas';
+        btn.style.background = '#D97706';
+    } else {
+        candidatos = candidaturasListaGlobal.filter(c => c.estado === 'validado_presencial');
+        titulo.innerHTML = '<i class="fa fa-paper-plane me-2"></i> Convites de Registo 48h em Massa';
+        desc.textContent = 'Apenas candidatos com presença validada pelo Super Admin. Ao processar, serão gerados tokens individuais de 48h e gerada a lista de links para envio.';
+        btn.innerHTML = '<i class="fa fa-bolt me-1"></i> Gerar Tokens 48h e Copiar Links';
+        btn.style.background = '#16A34A';
+    }
+
+    if (candidatos.length === 0) {
+        alert(modo === 'convocatoria' 
+            ? 'Nenhum candidato selecionado aguardando convocatória.' 
+            : 'Nenhum candidato validado presencialmente aguardando convite de registo.');
         return;
     }
 
-    list.innerHTML = aprovados.map(c => `
+    list.innerHTML = candidatos.map(c => `
         <div class="form-check py-1 border-bottom d-flex align-items-center">
             <input class="form-check-input chk-massa-cand me-2" type="checkbox" value="${c.id}" id="chkMassa_${c.id}" checked>
             <label class="form-check-label small mb-0" for="chkMassa_${c.id}">
-                <strong>${c.nome}</strong> (${c.telefone})
+                <strong>${c.nome}</strong> (${c.telefone}) · <em>${c.titulo_ideia}</em>
             </label>
         </div>
     `).join('');
 
     document.getElementById('massaTextAreaWrapper').style.display = 'none';
-    document.getElementById('btnMassaProcessar').style.display = 'block';
+    btn.style.display = 'block';
+    btn.disabled = false;
     document.getElementById('modalMassa').classList.add('open');
 }
 
@@ -1177,26 +1738,37 @@ function processarMassa() {
 
     const ids = Array.from(checkboxes).map(chk => parseInt(chk.value));
     const btn = document.getElementById('btnMassaProcessar');
-    btn.innerHTML = `<i class="fa fa-spinner fa-spin me-2"></i> A processar convites em lote...`;
+    btn.innerHTML = `<i class="fa fa-spinner fa-spin me-2"></i> A processar lote com guarda de integridade...`;
     btn.disabled = true;
 
     let resultadosText = "";
-    
-    // Processamento assíncrono sequencial
+    const actionAlvo = (massaModo === 'convocatoria') ? 'convocar_candidato' : 'enviar_convite_registo';
+
     async function processarItens() {
         for (let id of ids) {
-            const formData = new FormData();
-            formData.append('action', 'gerar_convite_ajax');
-            formData.append('id_cand', id);
+            const fd = new FormData();
+            fd.append('action', actionAlvo);
+            fd.append('id_cand', id);
+            fd.append('_csrf_token', csrfToken);
+            if (massaModo === 'convocatoria') {
+                fd.append('data_reuniao', '<?= date('Y-m-d', strtotime('+2 days')) ?>');
+                fd.append('hora_reuniao', '10:00');
+                fd.append('local_reuniao', 'Gabinete da Incubadora Académica - ISPSN');
+            }
 
             try {
-                let response = await fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
+                let res = await fetch('/incubadora_ispsn/app/controllers/candidatura_action.php', {
                     method: 'POST',
-                    body: formData
+                    headers: { 'Accept': 'application/json' },
+                    body: fd
                 });
-                let data = await response.json();
+                let data = await res.json();
                 if (data.sucesso) {
-                    resultadosText += `Candidato: ${data.candidato.nome}\nTelefone: ${data.candidato.telefone}\nLink Único: ${data.link_registo}\n\n`;
+                    if (massaModo === 'convocatoria') {
+                        resultadosText += `CANDIDATO: ${data.candidato.nome}\nTELEFONE: ${data.candidato.telefone}\nMENSAGEM:\n${data.mensagem}\n------------------------\n\n`;
+                    } else {
+                        resultadosText += `CANDIDATO: ${data.candidato.nome}\nTELEFONE: ${data.candidato.telefone}\nLINK EXCLUSIVO (48h): ${data.link_registo}\n------------------------\n\n`;
+                    }
                 }
             } catch (e) {
                 console.error("Erro no id " + id, e);
@@ -1205,9 +1777,9 @@ function processarMassa() {
     }
 
     processarItens().then(() => {
-        btn.innerHTML = `<i class="fa fa-check me-2"></i> Convites Gerados!`;
+        btn.innerHTML = `<i class="fa fa-check me-2"></i> Lote Processado com Sucesso!`;
         btn.style.background = '#10B981';
-        
+
         const textArea = document.getElementById('massaTextArea');
         textArea.value = resultadosText;
         document.getElementById('massaTextAreaWrapper').style.display = 'block';
@@ -1215,18 +1787,8 @@ function processarMassa() {
         textArea.select();
         textArea.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(resultadosText)
-        .then(() => {
-            alert('Todos os links foram gerados com sucesso e copiados para a área de transferência!');
-        })
-        .catch(() => {
-            alert('Links gerados! Por favor, copie manualmente da caixa de texto.');
-        });
-
-        setTimeout(() => {
-            btn.innerHTML = `<i class="fa fa-bolt me-1"></i> Gerar e Copiar Links Selecionados`;
-            btn.style.background = '#D97706';
-            btn.disabled = false;
-        }, 3000);
+        .then(() => alert('Processamento concluído! Todos os dados formatados foram copiados para a área de transferência.'))
+        .catch(() => alert('Processamento concluído! Por favor, copie da caixa de texto.'));
     });
 }
 
@@ -1239,10 +1801,7 @@ function filtrarCandidaturasTabela() {
     });
 }
 
-function filtrarPorTipoProjeto(tipo, el) {
-    document.querySelectorAll('.tipo-cand-card').forEach(c => c.classList.remove('active-card'));
-    if (el) el.classList.add('active-card');
-    
+function filtrarPorTipoProjeto(tipo) {
     const rows = document.querySelectorAll('.cand-table-row');
     rows.forEach(row => {
         if (tipo === 'todos') {

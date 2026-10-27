@@ -11,7 +11,7 @@ $convite  = null;
 
 if ($token) {
     $stmt = $mysqli->prepare("
-        SELECT c.*, cand.numero_estudante as numero_esperado, cand.nome as nome_sugerido, cand.tipo_candidato
+        SELECT c.*, cand.numero_estudante as numero_esperado, cand.nome as nome_sugerido, cand.tipo_candidato, cand.estado as cand_estado
         FROM convites c
         LEFT JOIN candidaturas cand ON cand.id = c.id_candidatura
         WHERE c.token = ? AND c.aceite = 0
@@ -25,9 +25,21 @@ if ($token) {
         $erro = 'Este link de convite é inválido ou já foi utilizado.';
         $token = '';
     } elseif (!empty($convite['data_expiracao']) && strtotime($convite['data_expiracao']) < time()) {
-        $erro = 'Este link de convite expirou. Contacte a Incubadora para solicitar um novo.';
+        $erro = 'Este link de convite expirou (validade de 48 horas excedida). Contacte a Incubadora para solicitar a reemissão.';
         $convite = null;
         $token = '';
+    } elseif (!empty($convite['id_candidatura'])) {
+        // SEGURANÇA REFORÇADA: A candidatura DEVE estar estritamente no estado 'convite_enviado'
+        $candEstado = $convite['cand_estado'] ?? '';
+        if ($candEstado !== 'convite_enviado') {
+            if ($candEstado === 'registado') {
+                $erro = 'A conta associada a esta candidatura já foi registada com sucesso. Aceda ao login.';
+            } else {
+                $erro = 'Acesso não autorizado: a sua candidatura ainda não concluiu a fase de validação presencial necessária para criar conta.';
+            }
+            $convite = null;
+            $token = '';
+        }
     }
 }
 

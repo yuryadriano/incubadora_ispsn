@@ -62,7 +62,7 @@ if ($tipo === 'candidaturas') {
         $types   .= 'i';
     }
     if ($estado) {
-        $estados_validos = ['pendente','em_analise','selecionado','rejeitado','convite_enviado','registado'];
+        $estados_validos = ['pendente','em_analise','selecionado','rejeitado','convite_enviado','registado','convocado','validado_presencial','ausente','recusou','reprovado_reuniao'];
         if (in_array($estado, $estados_validos)) {
             $sql    .= " AND c.estado = ?";
             $params[] = $estado;
@@ -194,7 +194,7 @@ if ($tipo === 'impacto') {
     // Candidaturas por mês
     $stmt = $mysqli->prepare("
         SELECT MONTH(criado_em) as mes, MONTHNAME(criado_em) as nome_mes, COUNT(*) as total,
-               SUM(CASE WHEN estado IN ('selecionado','registado','convite_enviado') THEN 1 ELSE 0 END) as aprovados,
+               SUM(CASE WHEN estado IN ('selecionado','convocado','validado_presencial','convite_enviado','registado') THEN 1 ELSE 0 END) as aprovados,
                SUM(CASE WHEN estado = 'rejeitado' THEN 1 ELSE 0 END) as rejeitados
         FROM candidaturas
         WHERE YEAR(criado_em) = ?

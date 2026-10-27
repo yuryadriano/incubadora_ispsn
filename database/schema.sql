@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS `candidaturas` (
   `problema` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `solucao` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `area_tematica` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT 'tecnologia',
-  `estado` enum('pendente','em_analise','selecionado','rejeitado','convite_enviado','registado') COLLATE utf8mb4_unicode_ci DEFAULT 'pendente',
+  `estado` enum('pendente','em_analise','selecionado','rejeitado','convite_enviado','registado','convocado','validado_presencial','ausente','recusou','reprovado_reuniao') COLLATE utf8mb4_unicode_ci DEFAULT 'pendente',
   `observacoes_admin` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `token_convite` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `convite_enviado_em` datetime DEFAULT NULL,
@@ -146,6 +146,44 @@ CREATE TABLE IF NOT EXISTS `candidaturas` (
   `criado_em` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: convocatorias
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `convocatorias` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `candidatura_id` int(10) unsigned NOT NULL,
+  `data_reuniao` date NOT NULL,
+  `hora_reuniao` time NOT NULL,
+  `local_reuniao` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'Gabinete da Incubadora Académica - ISPSN',
+  `documentos_a_levar` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `observacoes` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `convocado_por` int(10) unsigned NOT NULL,
+  `convocado_em` datetime DEFAULT current_timestamp(),
+  `presenca_validada_em` datetime DEFAULT NULL,
+  `validado_por` int(10) unsigned DEFAULT NULL,
+  `estado_convocatoria` enum('agendada','reagendada','compareceu','ausente','recusou','reprovada') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'agendada',
+  `criado_em` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_conv_cand` (`candidatura_id`),
+  KEY `idx_conv_estado` (`estado_convocatoria`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- TABELA: candidatura_historico
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `candidatura_historico` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `candidatura_id` int(10) unsigned NOT NULL,
+  `estado_anterior` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `estado_novo` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `alterado_por` int(10) unsigned NOT NULL,
+  `alterado_em` datetime DEFAULT current_timestamp(),
+  `nota` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_hist_cand` (`candidatura_id`),
+  KEY `idx_hist_data` (`alterado_em`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
 -- TABELA: convites
