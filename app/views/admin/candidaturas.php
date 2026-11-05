@@ -149,8 +149,7 @@ if ($id_processo_sel) {
         $contFases['sub_ocorrencias'] = (int) ($st['sub_ocorrencias'] ?? 0);
     }
 }
-$totalCand = array_sum($contFases);
-$totalCand = array_sum($contFases);
+$totalCand = (int)($contFases['rastreio_pitch'] + $contFases['selecao_admissao'] + $contFases['admitidos'] + $contFases['rejeitados']);
 
 // Contagens por Tipo de Projeto / Entidade (estilo Coordenações)
 $contTiposProjeto = [
@@ -649,6 +648,24 @@ require_once __DIR__ . '/../partials/_layout.php';
 <?php if ($flash_erro): ?>
     <div class="alert alert-danger border-0 shadow-sm mb-4"><?= htmlspecialchars($flash_erro) ?></div><?php endif; ?>
 
+<?php if ($wa_redirect): ?>
+    <div class="card border-0 shadow-sm mb-4"
+        style="background: linear-gradient(to right, #DCFCE7, #fff); border-left: 5px solid #25D366 !important; border-radius: 16px;">
+        <div class="card-body d-flex align-items-center justify-content-between flex-wrap p-3">
+            <div class="ps-2">
+                <div class="fw-bold text-success mb-0" style="font-size: 1rem;"><i
+                        class="fa-brands fa-whatsapp me-2"></i>Notificação WhatsApp Gerada</div>
+                <div class="text-muted small">A mensagem oficial foi gerada com sucesso. Se o WhatsApp não abrir automaticamente, clique no botão ao lado.</div>
+            </div>
+            <a href="<?= htmlspecialchars($wa_redirect) ?>" target="_blank" class="wa-btn-v2"><i
+                    class="fa-brands fa-whatsapp"></i> Abrir WhatsApp</a>
+        </div>
+    </div>
+    <script>
+        window.open(<?= json_encode($wa_redirect) ?>, '_blank');
+    </script>
+<?php endif; ?>
+
 <?php if ($waLink): ?>
     <div class="card border-0 shadow-sm mb-4"
         style="background: linear-gradient(to right, #DCFCE7, #fff); border-left: 5px solid #25D366 !important; border-radius: 16px;">
@@ -952,10 +969,11 @@ require_once __DIR__ . '/../partials/_layout.php';
                     </thead>
                     <tbody>
                         <?php foreach ($candidaturas as $c):
-                            $words = explode(' ', $c['nome']);
-                            $iniciais = mb_substr($words[0], 0, 1) . (isset($words[1]) ? mb_substr($words[1], 0, 1) : '');
+                            $words = explode(' ', $c['nome'] ?? '');
+                            $iniciais = mb_substr($words[0] ?? '', 0, 1) . (isset($words[1]) ? mb_substr($words[1], 0, 1) : '');
                             $colors = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
-                            $color = $colors[ord($c['nome'][0]) % count($colors)];
+                            $char1 = !empty($c['nome']) ? $c['nome'][0] : 'A';
+                            $color = $colors[ord($char1) % count($colors)];
 
                             $st = $c['estado'];
                             $stBadge = [
@@ -2052,7 +2070,8 @@ require_once __DIR__ . '/../partials/_layout.php';
             return;
         }
         const primeiroNome = (c.nome || '').split(' ')[0];
-        const link = `http://${window.location.host}/incubadora_ispsn/public/register.php?invite=${c.token_convite}`;
+        const protocol = window.location.protocol;
+        const link = `${protocol}//${window.location.host}/incubadora_ispsn/public/register.php?invite=${c.token_convite}`;
         let msg = `Olá, ${primeiroNome}! 🎉\n\n`;
         msg += `A sua admissão na *Incubadora Académica ISPSN* foi *CONCLUÍDA COM SUCESSO!* 🚀🌟\n\n`;
         msg += `Para criar a sua conta oficial no portal e ativar o seu projeto incubado, aceda ao link seguro exclusivo abaixo:\n\n`;
@@ -2113,9 +2132,15 @@ require_once __DIR__ . '/../partials/_layout.php';
         }
 
         if (wizardQueue.length === 0) {
-            alert(modo === 'convocatoria'
-                ? 'Nenhum candidato aguardando convocatória (estado "selecionado") nesta lista.'
-                : 'Nenhum candidato validado presencialmente aguardando envio de convite.');
+            if (modo === 'convocatoria') {
+                if (confirm('Não foram encontrados candidatos no estado "selecionado" nesta listagem. Deseja alternar para a etapa "1. Selecionados" para usar o Assistente?')) {
+                    window.location.href = `?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=selecionados`;
+                }
+            } else {
+                if (confirm('Não foram encontrados candidatos no estado "validado_presencial" nesta listagem. Deseja alternar para a etapa "3. Validados Presencial" para usar o Assistente?')) {
+                    window.location.href = `?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=validados`;
+                }
+            }
             return;
         }
 
@@ -2287,9 +2312,15 @@ require_once __DIR__ . '/../partials/_layout.php';
         }
 
         if (candidatos.length === 0) {
-            alert(modo === 'convocatoria'
-                ? 'Nenhum candidato selecionado aguardando convocatória.'
-                : 'Nenhum candidato validado presencialmente aguardando convite de registo.');
+            if (modo === 'convocatoria') {
+                if (confirm('Não foram encontrados candidatos no estado "selecionado" nesta listagem. Deseja alternar para a etapa "1. Selecionados" para processar convocatórias em massa?')) {
+                    window.location.href = `?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=selecionados`;
+                }
+            } else {
+                if (confirm('Não foram encontrados candidatos no estado "validado_presencial" nesta listagem. Deseja alternar para a etapa "3. Validados Presencial" para gerar convites em massa?')) {
+                    window.location.href = `?processo=<?= $id_processo_sel ?>&fase=admitidos&sub=validados`;
+                }
+            }
             return;
         }
 
