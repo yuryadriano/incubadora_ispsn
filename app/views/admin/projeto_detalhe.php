@@ -379,6 +379,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <i class="fa fa-sliders"></i> Mudar Estado
         </button>
         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="display:inline">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="toggle_destaque">
             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
             <button type="submit" class="btn-ghost" style="color: <?= $projeto['destaque_publico'] ? '#10b981' : '#64748b' ?>" title="<?= $projeto['destaque_publico'] ? 'Remover da Vitrine Pública' : 'Publicar na Vitrine Pública' ?>">
@@ -407,6 +408,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <hr>
             <div class="text-end">
                 <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="display:inline">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="gerar_analise_ia">
                     <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                     <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0" style="font-size:0.75rem; color:#8b5cf6">
@@ -545,6 +547,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/convite_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="gerar_link">
                 <input type="hidden" name="perfil" value="mentor">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
@@ -592,6 +595,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             </ul>
         </div>
         <form id="formMudarFase" action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="display:none">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="mudar_fase">
             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
             <input type="hidden" name="fase" id="inputFase">
@@ -759,6 +763,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     </div>
                     <?php if ($perfil === 'superadmin'): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="mudar_estado_mentoria">
                             <input type="hidden" name="id_mentoria" value="<?= $mentorAssoc['id_mentoria'] ?>">
                             <input type="hidden" name="estado_m" value="cancelada">
@@ -772,6 +777,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <p class="text-muted small mb-3">Nenhum mentor associado a esta startup no momento.</p>
                     <?php if ($perfil === 'superadmin'): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="criar_mentoria">
                             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                             <input type="hidden" name="data_inicio" value="<?= date('Y-m-d') ?>">
@@ -839,6 +845,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 
                         <?php if ($perfil === 'superadmin' && $estT === 'assinado'): ?>
                             <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php" style="margin:0" onsubmit="return confirm('Tem a certeza que deseja revogar este contrato?')">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="revogar_termo">
                                 <input type="hidden" name="id_termo" value="<?= $termoGerado['id'] ?>">
                                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -856,6 +863,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?php if (in_array($perfil, ['admin', 'superadmin'])): ?>
                             <p class="text-muted small mb-3">Gere o contrato de adesão para formalizar o ingresso do projeto na incubadora.</p>
                             <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php" style="margin:0">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="gerar_termo">
                                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -922,6 +930,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         </div>
                         <?php if (in_array($perfil, ['admin','superadmin']) && $m['id_usuario'] != $projeto['criado_por']): ?>
                         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" style="margin:0">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="remover_membro">
                             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                             <input type="hidden" name="id_usuario_remover" value="<?= $m['id_usuario'] ?>">
@@ -1019,6 +1028,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
                 <div class="p-2 border-top">
                     <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-1">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="enviar_mensagem">
                         <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                         <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -1160,6 +1170,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <?php if ($perfil !== 'utilizador'): ?>
                 <!-- Adicionar comentário -->
                 <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" style="margin-bottom:24px">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="adicionar_comentario">
                     <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                     <input type="hidden" name="redirect" value="<?= $redirectBack ?>">
@@ -1272,6 +1283,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="adicionar_membro">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $redirectBack ?>">
@@ -1309,6 +1321,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="upload_documento">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $redirectBack ?>">
@@ -1387,6 +1400,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="mudar_estado">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $redirectBack ?>">
@@ -1429,6 +1443,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="avaliar_projeto">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $redirectBack ?>">
@@ -1499,6 +1514,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="adicionar_membro">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">

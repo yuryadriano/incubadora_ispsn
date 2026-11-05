@@ -530,7 +530,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
         <div class="hero-sub">
             <?php if($ultimoProjeto): ?>
                 Startup: <strong style="color:#FBBF24"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong>
-                &nbsp;·&nbsp; Estado da Candidatura: <strong><?= htmlspecialchars($labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado']) ?></strong>
+                &nbsp;·&nbsp; Estado da Incubação: <strong><?= htmlspecialchars($labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado']) ?></strong>
             <?php else: ?>
                 Bem-vindo à Incubadora Académica do ISPSN. Submeta a sua primeira ideia para começar.
             <?php endif; ?>
@@ -813,6 +813,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content" style="border:none; border-radius:18px; overflow:hidden;">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_projeto">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
                 <div style="padding:22px 24px; border-bottom:1px solid #F3F4F6; background:#FFFBF2;">
@@ -873,6 +874,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 18px; overflow: hidden;">
             <form action="/incubadora_ispsn/app/controllers/metas_action.php" method="POST" enctype="multipart/form-data" class="m-0">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="submeter_evidencia">
                 <input type="hidden" name="id_meta_projeto" id="submeterMetaId">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
