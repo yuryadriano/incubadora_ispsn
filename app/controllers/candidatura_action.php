@@ -39,14 +39,33 @@ if (in_array($action, $acoesAdmin) && !in_array($perfilUsuario, ['admin', 'super
 
 // ── FUNÇÃO DE REGISTO DE HISTÓRICO DE TRANSIÇÕES (AUDITORIA) ──
 function registarHistoricoCandidatura(mysqli $mysqli, int $idCand, ?string $de, string $para, int $idUsuario, ?string $nota): void {
-    $stmt = $mysqli->prepare("
-        INSERT INTO candidatura_historico (candidatura_id, estado_anterior, estado_novo, alterado_por, alterado_em, nota)
-        VALUES (?, ?, ?, ?, NOW(), ?)
-    ");
-    if ($stmt) {
-        $stmt->bind_param('issis', $idCand, $de, $para, $idUsuario, $nota);
-        $stmt->execute();
-        $stmt->close();
+    try {
+        $stmt = $mysqli->prepare("
+            INSERT INTO candidatura_historico (candidatura_id, estado_anterior, estado_novo, alterado_por, alterado_em, nota)
+            VALUES (?, ?, ?, ?, NOW(), ?)
+        ");
+        if ($stmt) {
+            $stmt->bind_param('issis', $idCand, $de, $para, $idUsuario, $nota);
+            $stmt->execute();
+            $stmt->close();
+        }
+    } catch (Throwable $e) {
+        if (function_exists('garantirTabelasConvocatorias')) {
+            garantirTabelasConvocatorias($mysqli);
+            try {
+                $stmt = $mysqli->prepare("
+                    INSERT INTO candidatura_historico (candidatura_id, estado_anterior, estado_novo, alterado_por, alterado_em, nota)
+                    VALUES (?, ?, ?, ?, NOW(), ?)
+                ");
+                if ($stmt) {
+                    $stmt->bind_param('issis', $idCand, $de, $para, $idUsuario, $nota);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            } catch (Throwable $e2) {
+                error_log("Erro ao salvar histórico de candidatura: " . $e2->getMessage());
+            }
+        }
     }
 }
 
