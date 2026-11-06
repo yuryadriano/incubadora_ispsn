@@ -5,10 +5,9 @@ require_once __DIR__ . '/../../../config/config.php';
 obrigarLogin();
 
 $realPerfil = $_SESSION['usuario_perfil'] ?? 'utilizador';
-$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin']);
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
 
 if ($isAdminOrSuper) {
-    // Admin can choose which student to view
     $idUsuario = (int)($_GET['id_usuario'] ?? 0);
     if ($idUsuario <= 0) {
         $resFallback = $mysqli->query("
@@ -20,8 +19,7 @@ if ($isAdminOrSuper) {
         $fallback = $resFallback ? $resFallback->fetch_assoc() : null;
         $idUsuario = $fallback ? (int)$fallback['id'] : 0;
     }
-    
-    // Fetch student's name
+
     $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ?");
     if ($stmtU) {
         $stmtU->bind_param('i', $idUsuario);
@@ -32,68 +30,19 @@ if ($isAdminOrSuper) {
     } else {
         $nome = 'Estudante';
     }
-    
-    // Override variables for layout
+
     $nomeUsuario = $nome;
-    $perfil = 'utilizador'; // Force layout to render student menus
+    $perfil = 'utilizador';
 } else {
     $idUsuario = (int)($_SESSION['usuario_id'] ?? 0);
     $nome = $_SESSION['usuario_nome'] ?? 'Utilizador';
 }
 
-/* ============================
-   COMENTÁRIOS DO ORIENTADOR
-   ============================ */
-
-// salvar comentário
-if (
-    !$isAdminOrSuper &&
-    $_SERVER['REQUEST_METHOD'] === 'POST' &&
-    isset($_POST['novo_comentario'], $_POST['id_projeto'])
-) {
-    $comentario = trim($_POST['novo_comentario']);
-    $idProjeto  = (int)$_POST['id_projeto'];
-    $fase       = $_POST['fase'] ?? 'em_analise';
-
-    if (strlen($comentario) >= 5) {
-        $stmt = $mysqli->prepare("
-            INSERT INTO comentarios_projetos
-            (id_projeto, id_usuario, comentario, fase)
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmt->bind_param(
-            "iiss",
-            $idProjeto,
-            $_SESSION['usuario_id'],
-            $comentario,
-            $fase
-        );
-        $stmt->execute();
-        $stmt->close();
-    }
-}
-
-
-/* SUBMISSÃO DE PROJECTO — gerida por projeto_action.php via POST directo */
-// (flash messages são lidas abaixo na view)
-
-/* CONTADORES */
-$stmt = $mysqli->prepare("SELECT COUNT(*) total FROM projetos WHERE criado_por=?");
-$stmt->bind_param('i', $idUsuario);
-$stmt->execute();
-$meusProjetos = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
-$stmt->close();
-
-$stmt = $mysqli->prepare("SELECT COUNT(*) total FROM projetos WHERE criado_por=? AND tipo='pfc'");
-$stmt->bind_param('i', $idUsuario);
-$stmt->execute();
-$minhasPfcs = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
-$stmt->close();
-
+/* ── 1. PROJETO MAIS RECENTE DO ESTUDANTE ── */
 $stmt = $mysqli->prepare("
     SELECT *
     FROM projetos
-    WHERE criado_por=?
+    WHERE criado_por = ?
     ORDER BY criado_em DESC LIMIT 1
 ");
 $stmt->bind_param('i', $idUsuario);
@@ -101,739 +50,895 @@ $stmt->execute();
 $ultimoProjeto = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
-$comentarios = [];
-
-if ($ultimoProjeto) {
-    $stmt = $mysqli->prepare("
-        SELECT c.comentario, c.fase, c.criado_em, u.nome
-        FROM comentarios_projetos c
-        JOIN usuarios u ON u.id = c.id_usuario
-        WHERE c.id_projeto = (
-            SELECT id FROM projetos
-            WHERE criado_por = ?
-            ORDER BY criado_em DESC LIMIT 1
-        )
-        ORDER BY c.criado_em DESC
-    ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $comentarios = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-}
-
-
-$mapaProgresso = [
-    'submetido'          => 10,
-    'em_avaliacao'       => 30,
-    'aprovado'           => 50,
-    'incubado'           => 75,
-    'fundo_investimento' => 90,
-    'concluido'          => 100,
-    'rejeitado'          => 0
-];
-$progresso = $ultimoProjeto ? ($mapaProgresso[$ultimoProjeto['estado']] ?? 10) : 0;
-
-$labels = [
+$labelsEstado = [
     'submetido'          => 'Submetido (Em Triagem)',
-    'em_avaliacao'       => 'Em Avaliação Técnica 🔍',
-    'aprovado'           => 'Aprovado para Incubação ✓',
-    'rejeitado'          => 'Rejeitado ✗',
-    'incubado'           => 'Em Incubação 🚀',
-    'fundo_investimento' => 'Pronto p/ Investimento 💰',
-    'concluido'          => 'Graduado ✨'
+    'em_avaliacao'       => 'Em Avaliação Técnica',
+    'aprovado'           => 'Aprovado para Incubação',
+    'rejeitado'          => 'Rejeitado',
+    'incubado'           => 'Em Incubação',
+    'fundo_investimento' => 'Pronto p/ Investimento',
+    'concluido'          => 'Graduado',
 ];
 
-$corBadge = [
-    'submetido'    => 'secondary',
-    'em_avaliacao' => 'warning',
-    'aprovado'     => 'success',
-    'rejeitado'    => 'danger',
-    'incubado'     => 'primary',
-    'fundo_investimento' => 'success',
-    'concluido'    => 'success'
+$labelsFase = [
+    'ideacao'            => 'Ideação',
+    'validacao'          => 'Validação',
+    'mvp'                => 'MVP',
+    'tracao'             => 'Tração',
+    'mercado'            => 'Mercado',
+    'fundo_investimento' => 'Financiado',
 ];
 
-/* --- NOVOS DADOS: FINANCIAMENTOS E SESSÕES --- */
-$totalFinanciamento = 0;
-$sessoesMentoria = [];
-$meusFinanciamentos = [];
-$meusKpis = [];
-$minhasTarefas = [];
-$minhasAvaliacosMentor = [];
-$mediaAvaliacaoAdmin = ['media' => 0, 'total' => 0];
-$ultimasAvaliacoesOficiais = [];
+$mentorAtivo        = null;
+$termoProjeto       = null;
+$ultimaAvaliacao    = null;
+$metasFase          = [];
+$minhasTarefas      = [];
+$minhasReunioes     = [];
+$ultimaSessao       = null;
+$metasValidadasCount = 0;
+$totalMetasFase     = 0;
+$metaPrincipal      = null;
+$metaEmAvaliacao    = null;
 
 if ($ultimoProjeto) {
-    // Buscar total aprovado para o projeto mais recente
-    $stmt = $mysqli->prepare("
-        SELECT SUM(montante_aprovado) as total 
-        FROM financiamentos 
-        WHERE id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        AND estado IN ('activo', 'concluido')
-    ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $resFin = $stmt->get_result()->fetch_assoc();
-    $totalFinanciamento = $resFin['total'] ?? 0;
-    $stmt->close();
+    $idProj     = (int)$ultimoProjeto['id'];
+    $estadoProj = (string)($ultimoProjeto['estado'] ?? '');
+    $faseActual = (string)($ultimoProjeto['fase'] ?? 'ideacao');
 
-    // Buscar sessões de mentoria
-    $stmt = $mysqli->prepare("
-        SELECT s.*, u.nome as mentor_nome
-        FROM sessoes_mentoria s
-        JOIN mentorias m ON m.id = s.id_mentoria
+    /* ── 2. MENTOR ATRIBUÍDO (MENTORIA ATIVA) ── */
+    $stmtMent = $mysqli->prepare("
+        SELECT m.id AS id_mentoria, u.nome AS mentor_nome, u.email AS mentor_email, mt.especialidade
+        FROM mentorias m
         JOIN mentores mt ON mt.id = m.id_mentor
         JOIN usuarios u ON u.id = mt.id_usuario
-        WHERE m.id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        ORDER BY s.data_sessao DESC
+        WHERE m.id_projeto = ? AND m.estado = 'activa'
+        ORDER BY m.id DESC LIMIT 1
     ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $sessoesMentoria = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    if ($stmtMent) {
+        $stmtMent->bind_param('i', $idProj);
+        $stmtMent->execute();
+        $mentorAtivo = $stmtMent->get_result()->fetch_assoc();
+        $stmtMent->close();
+    }
 
-    // Buscar Financiamentos Activos (para o modal de despesas)
-    $stmt = $mysqli->prepare("SELECT id, fonte FROM financiamentos WHERE id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1) AND estado='activo'");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $meusFinanciamentos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-
-    // Buscar KPIs Activos (para o modal de KPIs)
-    $stmt = $mysqli->prepare("SELECT id, nome, unidade FROM kpis WHERE id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1) AND activo=1");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $meusKpis = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-
-    // --- NOVOS DADOS: TAREFAS E REUNIÕES ---
-    $stmt = $mysqli->prepare("SELECT * FROM tarefas WHERE id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1) ORDER BY status ASC, data_limite ASC");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $minhasTarefas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
-
-    $minhasReunioes = [];
-    $stmt = $mysqli->prepare("
-        SELECT r.*, u.nome as mentor_nome
-        FROM reunioes r
-        JOIN usuarios u ON u.id = r.id_mentor
-        WHERE r.id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        AND r.data_reuniao >= NOW()
-        AND r.status = 'agendada'
-        ORDER BY r.data_reuniao ASC
+    /* ── 3. TERMO DE INCUBAÇÃO ── */
+    $stmtTermo = $mysqli->prepare("
+        SELECT id, codigo_termo, tipo_contrato, duracao_meses, estado, assinado_em, criado_em
+        FROM termos_incubacao
+        WHERE id_projeto = ? AND estado IN ('gerado', 'pendente_assinatura', 'assinado')
+        ORDER BY criado_em DESC LIMIT 1
     ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $minhasReunioes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    if ($stmtTermo) {
+        $stmtTermo->bind_param('i', $idProj);
+        $stmtTermo->execute();
+        $termoProjeto = $stmtTermo->get_result()->fetch_assoc();
+        $stmtTermo->close();
+    }
 
-    $minhasAvaliacosMentor = [];
-    $stmt = $mysqli->prepare("
-        SELECT av.*, u.nome as mentor_nome
-        FROM avaliacoes_mentor av
-        JOIN mentores m ON m.id = av.id_mentor
-        JOIN usuarios u ON u.id = m.id_usuario
-        WHERE av.id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        ORDER BY av.criado_em DESC
+    /* ── 4. ÚLTIMA AVALIAÇÃO OFICIAL (para estado aprovado / rejeitado / em_avaliacao) ── */
+    $stmtAv = $mysqli->prepare("
+        SELECT pontuacao_total, decisao, observacoes, avaliado_em
+        FROM avaliacoes
+        WHERE id_projeto = ?
+        ORDER BY avaliado_em DESC LIMIT 1
     ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $minhasAvaliacosMentor = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmt->close();
+    if ($stmtAv) {
+        $stmtAv->bind_param('i', $idProj);
+        $stmtAv->execute();
+        $ultimaAvaliacao = $stmtAv->get_result()->fetch_assoc();
+        $stmtAv->close();
+    }
 
-    // Buscar média das avaliações oficiais (Admin) e observações recentes
-    $mediaAvaliacaoAdmin = null;
-    $ultimasAvaliacoesOficiais = [];
-    $stmt = $mysqli->prepare("
-        SELECT pontuacao_total, observacoes, avaliado_em 
-        FROM avaliacoes 
-        WHERE id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        ORDER BY avaliado_em DESC
-    ");
-    $stmt->bind_param('i', $idUsuario);
-    $stmt->execute();
-    $resultAval = $stmt->get_result();
-    $ultimasAvaliacoesOficiais = $resultAval->fetch_all(MYSQLI_ASSOC);
-    
-    $totalAval = count($ultimasAvaliacoesOficiais);
-    $somaAval = array_sum(array_column($ultimasAvaliacoesOficiais, 'pontuacao_total'));
-    $mediaAvaliacaoAdmin = [
-        'media' => $totalAval > 0 ? $somaAval / $totalAval : 0,
-        'total' => $totalAval
-    ];
-    $stmt->close();
-
-    // ── BUSCAR DOCUMENTOS DO PROJETO ──
-    $meusDocumentos = [];
-    $stmtDoc = $mysqli->prepare("
-        SELECT f.*, u.nome as quem_submeteu, u.perfil as perfil_submeteu
-        FROM ficheiros_projeto f
-        JOIN usuarios u ON u.id = f.id_usuario_up
-        WHERE f.id_projeto = (SELECT id FROM projetos WHERE criado_por = ? ORDER BY criado_em DESC LIMIT 1)
-        ORDER BY f.criado_em DESC
-    ");
-    $stmtDoc->bind_param('i', $idUsuario);
-    $stmtDoc->execute();
-    $meusDocumentos = $stmtDoc->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmtDoc->close();
-
-    // ── BUSCAR ESPAÇOS DISPONÍVEIS E RESERVAS ──
-    $espacosDisponiveis = $mysqli->query("SELECT * FROM espacos WHERE status = 'disponivel' ORDER BY tipo, nome")->fetch_all(MYSQLI_ASSOC);
-
-    $minhasReservasPainel = [];
-    $stmtRes = $mysqli->prepare("
-        SELECT r.*, e.nome as espaco_nome, e.tipo as espaco_tipo 
-        FROM reservas_espaco r 
-        JOIN espacos e ON e.id = r.id_espaco 
-        WHERE r.id_usuario = ? 
-        ORDER BY r.data_reserva DESC, r.hora_inicio DESC
-        LIMIT 4
-    ");
-    $stmtRes->bind_param('i', $idUsuario);
-    $stmtRes->execute();
-    $minhasReservasPainel = $stmtRes->get_result()->fetch_all(MYSQLI_ASSOC);
-    $stmtRes->close();
-
-    // --- METAS DO PROJETO ---
-    $metasFase = [];
-    $percentMetasConcluidas = 0;
-    $metaActiva = null;
-    if ($ultimoProjeto && $ultimoProjeto['estado'] !== 'rejeitado') {
-        $faseActual = $ultimoProjeto['fase'] ?? 'ideacao';
-        
+    /* ── 5. METAS DA FASE ATUAL (apenas quando incubado/fundo_investimento/concluido) ── */
+    if (in_array($estadoProj, ['incubado', 'fundo_investimento', 'concluido'], true)) {
         $stmtM = $mysqli->prepare("
-            SELECT mp.*, mpd.titulo as meta_titulo, mpd.descricao as meta_descricao,
+            SELECT mp.*, mpd.numero, mpd.titulo AS meta_titulo, mpd.descricao AS meta_descricao,
                    mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual, mpd.prazo_dias
             FROM metas_projeto mp
             JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
             WHERE mp.id_projeto = ? AND mpd.fase = ?
-            ORDER BY mpd.numero
+            ORDER BY mpd.numero ASC
         ");
-        $idProj = $ultimoProjeto['id'];
-        $stmtM->bind_param('is', $idProj, $faseActual);
-        $stmtM->execute();
-        $metasFase = $stmtM->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmtM->close();
-        
-        $pesoTotal = 0;
-        $pesoConcluido = 0;
+        if ($stmtM) {
+            $stmtM->bind_param('is', $idProj, $faseActual);
+            $stmtM->execute();
+            $metasFase = $stmtM->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmtM->close();
+        }
+
+        $totalMetasFase = count($metasFase);
         foreach ($metasFase as $m) {
-            $pesoTotal += $m['peso_percentual'];
-            if ($m['estado'] === 'concluida') {
-                $pesoConcluido += $m['peso_percentual'];
-            }
-            if ($m['estado'] === 'activa' || $m['estado'] === 'reprovada') {
-                $metaActiva = $m;
+            $estM = (string)($m['estado'] ?? 'inactiva');
+            if ($estM === 'concluida') {
+                $metasValidadasCount++;
+            } elseif (($estM === 'reprovada' || $estM === 'activa') && $metaPrincipal === null) {
+                $metaPrincipal = $m;
+            } elseif ($estM === 'em_avaliacao' && $metaEmAvaliacao === null) {
+                $metaEmAvaliacao = $m;
             }
         }
-        $percentMetasConcluidas = $pesoTotal > 0 ? round(($pesoConcluido / $pesoTotal) * 100) : 0;
+    }
+
+    /* ── 6. TAREFAS DO MENTOR ── */
+    $stmtT = $mysqli->prepare("
+        SELECT id, titulo, descricao, data_limite, status, validada_mentor
+        FROM tarefas
+        WHERE id_projeto = ?
+        ORDER BY status ASC, data_limite ASC
+    ");
+    if ($stmtT) {
+        $stmtT->bind_param('i', $idProj);
+        $stmtT->execute();
+        $minhasTarefas = $stmtT->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtT->close();
+    }
+
+    /* ── 7. PRÓXIMAS REUNIÕES AGENDADAS ── */
+    $stmtR = $mysqli->prepare("
+        SELECT r.id, r.titulo, r.data_reuniao, r.duracao_min, r.local_link, u.nome AS mentor_nome
+        FROM reunioes r
+        JOIN usuarios u ON u.id = r.id_mentor
+        WHERE r.id_projeto = ? AND r.data_reuniao >= NOW() AND r.status = 'agendada'
+        ORDER BY r.data_reuniao ASC LIMIT 2
+    ");
+    if ($stmtR) {
+        $stmtR->bind_param('i', $idProj);
+        $stmtR->execute();
+        $minhasReunioes = $stmtR->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtR->close();
+    }
+
+    /* ── 8. ÚLTIMA SESSÃO DE MENTORIA REALIZADA ── */
+    $stmtS = $mysqli->prepare("
+        SELECT s.data_sessao, s.topicos, s.proximos_passos, u.nome AS mentor_nome
+        FROM sessoes_mentoria s
+        JOIN mentorias m ON m.id = s.id_mentoria
+        JOIN mentores mt ON mt.id = m.id_mentor
+        JOIN usuarios u ON u.id = mt.id_usuario
+        WHERE m.id_projeto = ?
+        ORDER BY s.data_sessao DESC LIMIT 1
+    ");
+    if ($stmtS) {
+        $stmtS->bind_param('i', $idProj);
+        $stmtS->execute();
+        $ultimaSessao = $stmtS->get_result()->fetch_assoc();
+        $stmtS->close();
     }
 }
-?>
-<?php
+
+/* ── 9. RESERVAS DE ESPAÇO DO UTILIZADOR ── */
+$minhasReservasPainel = [];
+$stmtRes = $mysqli->prepare("
+    SELECT r.id, r.data_reserva, r.hora_inicio, r.hora_fim, r.status, e.nome AS espaco_nome
+    FROM reservas_espaco r
+    JOIN espacos e ON e.id = r.id_espaco
+    WHERE r.id_usuario = ?
+    ORDER BY r.data_reserva DESC, r.hora_inicio DESC
+    LIMIT 4
+");
+if ($stmtRes) {
+    $stmtRes->bind_param('i', $idUsuario);
+    $stmtRes->execute();
+    $minhasReservasPainel = $stmtRes->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmtRes->close();
+}
+
+$reservasConfirmadas = array_values(array_filter(
+    $minhasReservasPainel,
+    fn($r) => ($r['status'] ?? '') === 'confirmada'
+));
+$totalReservasConfirmadas = count($reservasConfirmadas);
+
+/* ── DETERMINAÇÃO DO ESTADO DA MÁQUINA DE ESTADOS (E0 a E5 + E_FALLBACK) ── */
+$uiState = 'E0';
+if ($ultimoProjeto) {
+    $estP = (string)($ultimoProjeto['estado'] ?? '');
+    if (in_array($estP, ['submetido', 'em_avaliacao'], true)) {
+        $uiState = 'E1';
+    } elseif ($estP === 'aprovado') {
+        $uiState = 'E2';
+    } elseif (in_array($estP, ['incubado', 'fundo_investimento'], true)) {
+        if ($totalMetasFase > 0 && $metasValidadasCount === $totalMetasFase) {
+            $uiState = 'E4';
+        } else {
+            $uiState = 'E3';
+        }
+    } elseif ($estP === 'concluido') {
+        $uiState = 'E4';
+    } elseif ($estP === 'rejeitado') {
+        $uiState = 'E5';
+    } else {
+        $uiState = 'E_FALLBACK';
+    }
+}
+
 $tituloPagina = 'Meu Painel';
 $paginaActiva = 'dashboard';
-// Flash messages
 $flashOk   = $_SESSION['flash_ok']   ?? ''; unset($_SESSION['flash_ok']);
 $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
+
 require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
-<style>
-/* ── PAINEL GERAL ESTUDANTE ── */
-:root { --amber: #D97706; --amber-dark: #B45309; --emerald: #10B981; }
+<div class="std-painel">
 
-/* Hero Banner */
-.hero-banner {
-    background: linear-gradient(135deg, #1C1917 0%, #292524 70%, #1C1917 100%);
-    border-radius: 18px; padding: 30px 28px; color: #fff;
-    position: relative; overflow: hidden; margin-bottom: 24px;
-}
-.hero-banner::before {
-    content:''; position:absolute; width:300px; height:300px;
-    background: radial-gradient(circle, rgba(217,119,6,0.2) 0%, transparent 70%);
-    top:-120px; right:-60px; z-index:1; pointer-events:none;
-}
-.hero-banner-inner { position:relative; z-index:2; }
-.hero-badges { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-.hero-badge {
-    padding:3px 12px; border-radius:20px; font-size:0.72rem;
-    font-weight:700; letter-spacing:0.3px;
-}
-.hb-sp   { background:rgba(217,119,6,0.25); color:#FBBF24; border:1px solid rgba(217,119,6,0.3); }
-.hb-fase { background:rgba(16,185,129,0.2); color:#6EE7B7; border:1px solid rgba(16,185,129,0.3); }
-.hero-name  { font-size:1.75rem; font-weight:800; letter-spacing:-0.4px; line-height:1.2; }
-.hero-sub   { font-size:0.85rem; color:rgba(255,255,255,0.55); margin-top:4px; }
-.hero-btns  { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-.hbtn {
-    padding:9px 18px; border-radius:10px; font-size:0.83rem; font-weight:600;
-    border:none; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
-    transition:all 0.2s; text-decoration:none;
-}
-.hbtn-primary { background:#D97706; color:#fff; }
-.hbtn-primary:hover { background:#B45309; color:#fff; transform:translateY(-1px); }
-.hbtn-outline { background:rgba(255,255,255,0.1); color:#fff; border:1px solid rgba(255,255,255,0.2); }
-.hbtn-outline:hover { background:rgba(255,255,255,0.18); color:#fff; }
+    <?php if ($flashOk): ?>
+        <div class="alert-custom alert-success" role="status">
+            <i class="fa-solid fa-check-circle" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($flashOk, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
+    <?php if ($flashErro): ?>
+        <div class="alert-custom alert-danger" role="alert">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($flashErro, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
 
-/* Mini Stats */
-.mini-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
-.mini-card {
-    background:#fff; border-radius:14px; padding:16px 14px;
-    text-align:center; border:1px solid #F3F4F6;
-    box-shadow:0 2px 8px rgba(0,0,0,0.04); transition:transform 0.2s;
-}
-.mini-card:hover { transform:translateY(-2px); }
-.mini-val { font-size:1.8rem; font-weight:800; color:#D97706; line-height:1; }
-.mini-lbl { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:0.4px; color:#9CA3AF; margin-top:5px; }
-.mini-icon { font-size:1.1rem; color:#D97706; opacity:0.6; margin-bottom:8px; }
-
-/* Pipeline */
-.pipeline-card {
-    background:#fff; border-radius:16px; border:1px solid #F3F4F6;
-    box-shadow:0 2px 8px rgba(0,0,0,0.04); overflow:hidden; margin-bottom:24px;
-}
-.pipeline-card-header {
-    padding:16px 20px; border-bottom:1px solid #F9FAFB;
-    display:flex; align-items:center; justify-content:space-between;
-}
-.pipeline-card-title { font-weight:700; font-size:0.9rem; color:#1C1917; display:flex; align-items:center; gap:8px; }
-.pipeline-card-body { padding:20px; overflow-x:auto; }
-.pipe-row {
-    display:flex; align-items:flex-start; justify-content:space-between;
-    position:relative; min-width:360px; gap:4px;
-}
-.pipe-track {
-    position:absolute; top:18px; left:6%; right:6%;
-    height:3px; background:#F3F4F6; border-radius:6px; z-index:1;
-}
-.pipe-fill {
-    height:100%; border-radius:6px;
-    background:linear-gradient(90deg, #10B981, #D97706);
-    transition:width 0.8s ease;
-}
-.pipe-step { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; flex:1; }
-.pipe-dot {
-    width:36px; height:36px; border-radius:50%; border:3px solid #E5E7EB; background:#fff;
-    display:flex; align-items:center; justify-content:center; color:#9CA3AF; font-size:0.85rem;
-    box-shadow:0 2px 6px rgba(0,0,0,0.06); transition:all 0.3s; margin-bottom:7px;
-}
-.pipe-step.done   .pipe-dot { background:#10B981; border-color:#10B981; color:#fff; }
-.pipe-step.active .pipe-dot {
-    background:#D97706; border-color:#D97706; color:#fff;
-    transform:scale(1.18); box-shadow:0 0 0 5px rgba(217,119,6,0.18);
-}
-.pipe-lbl {
-    font-size:0.6rem; font-weight:700; text-transform:uppercase;
-    letter-spacing:0.4px; color:#C4C9D4; text-align:center; white-space:nowrap;
-}
-.pipe-step.done   .pipe-lbl { color:#10B981; }
-.pipe-step.active .pipe-lbl { color:#B45309; }
-
-/* Quick Actions */
-.qa-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:24px; }
-.qa-card {
-    background:#fff; border-radius:14px; border:1px solid #F3F4F6;
-    padding:20px 18px; display:flex; align-items:center; gap:14px;
-    text-decoration:none; box-shadow:0 2px 8px rgba(0,0,0,0.04);
-    transition:all 0.22s;
-}
-.qa-card:hover {
-    border-color:#D97706; transform:translateY(-2px);
-    box-shadow:0 8px 24px rgba(217,119,6,0.1); color:inherit;
-}
-.qa-icon {
-    width:44px; height:44px; border-radius:12px; flex-shrink:0;
-    background:rgba(217,119,6,0.08); color:#D97706;
-    display:flex; align-items:center; justify-content:center; font-size:1.1rem;
-}
-.qa-label { font-weight:700; font-size:0.88rem; color:#1C1917; }
-.qa-desc  { font-size:0.73rem; color:#9CA3AF; margin-top:2px; }
-.qa-arrow { margin-left:auto; color:#D1D5DB; font-size:0.8rem; transition:transform 0.2s; }
-.qa-card:hover .qa-arrow { transform:translateX(4px); color:#D97706; }
-
-/* Progresso bar do projeto */
-.proj-progress { margin-bottom:24px; }
-.progress-track { height:8px; background:#F3F4F6; border-radius:8px; overflow:hidden; }
-.progress-fill  { height:100%; border-radius:8px; background:linear-gradient(90deg, #10B981, #D97706); transition:width 0.8s ease; }
-
-/* Sem projeto */
-.empty-hero {
-    background:#fff; border-radius:18px; padding:60px 40px;
-    text-align:center; border:1px solid #F3F4F6;
-    box-shadow:0 2px 8px rgba(0,0,0,0.04); max-width:560px; margin:40px auto;
-}
-
-/* Alerts flash */
-.flash-ok  { background:#D1FAE5; color:#065F46; border-left:4px solid #10B981; padding:12px 16px; border-radius:10px; display:flex; align-items:center; gap:9px; font-size:0.87rem; margin-bottom:16px; }
-.flash-err { background:#FEE2E2; color:#991B1B; border-left:4px solid #EF4444; padding:12px 16px; border-radius:10px; display:flex; align-items:center; gap:9px; font-size:0.87rem; margin-bottom:16px; }
-
-/* Responsive */
-@media (max-width: 992px) { .qa-grid { grid-template-columns:repeat(2,1fr); } .mini-grid { grid-template-columns:repeat(2,1fr); } }
-@media (max-width: 576px)  { .qa-grid { grid-template-columns:1fr; } .mini-grid { grid-template-columns:repeat(2,1fr); } .hero-name { font-size:1.3rem; } .hero-banner { padding:22px 18px; } }
-</style>
-
-<?php if ($flashOk):   ?><div class="flash-ok"><i class="fa fa-check-circle"></i><?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
-<?php if ($flashErro): ?><div class="flash-err"><i class="fa fa-triangle-exclamation"></i><?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
-
-<?php if ($isAdminOrSuper): ?>
-    <div class="card-custom mb-4" style="background:#FFFDF5; border: 1px solid #FEF3C7; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
-        <div class="card-body-custom d-flex align-items-center justify-content-between flex-wrap gap-3 py-3 px-4">
+    <?php if ($isAdminOrSuper): ?>
+        <div class="sp-read-bar" role="region" aria-label="Modo de pré-visualização de administrador">
             <div>
-                <h6 class="fw-bold mb-1" style="color:#B45309; font-size:0.95rem;"><i class="fa fa-eye me-2"></i>Visualização de Estudante (Painel Admin)</h6>
-                <p class="small text-muted mb-0">Você está a ver o painel do estudante <strong><?= htmlspecialchars($nome) ?></strong> exatamente como ele o vê.</p>
+                <i class="fa-solid fa-eye me-2" aria-hidden="true"></i>
+                Modo de leitura: a pré-visualizar o painel de <strong><?= htmlspecialchars($nome, ENT_QUOTES, 'UTF-8') ?></strong>.
             </div>
-            <div>
-                <form method="GET" class="d-flex align-items-center gap-2" style="margin:0;">
-                    <select name="id_usuario" class="form-select" style="font-size:0.82rem; padding:6px 36px 6px 12px; border-radius:8px; border:1.5px solid #FCD34D;" onchange="this.form.submit()">
-                        <?php
-                        $estudantesList = $mysqli->query("
-                            SELECT DISTINCT u.id, u.nome, p.titulo
-                            FROM usuarios u
-                            JOIN projetos p ON p.criado_por = u.id
-                            ORDER BY u.nome
-                        ");
-                        if ($estudantesList) {
-                            while ($est = $estudantesList->fetch_assoc()) {
-                                $selected = $est['id'] == $idUsuario ? 'selected' : '';
-                                echo "<option value='{$est['id']}' {$selected}>" . htmlspecialchars($est['nome']) . " (" . htmlspecialchars($est['titulo']) . ")</option>";
-                            }
-                        }
-                        ?>
-                    </select>
-                </form>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
-
-<?php
-$horaAtual = (int)date('H');
-if ($horaAtual >= 5 && $horaAtual < 12)       $saudacao = 'Bom dia';
-elseif ($horaAtual >= 12 && $horaAtual < 18)  $saudacao = 'Boa tarde';
-else                                           $saudacao = 'Boa noite';
-$primeiroNome = htmlspecialchars(explode(' ', $nome)[0]);
-$pontos       = $ultimoProjeto['pontos'] ?? 0;
-$fase         = $ultimoProjeto['fase']   ?? 'ideacao';
-$faseLabel    = strtoupper(str_replace('_', ' ', $fase));
-?>
-
-<!-- ══ HERO ══ -->
-<div class="hero-banner">
-    <div class="hero-banner-inner">
-        <div class="hero-badges">
-            <?php if($ultimoProjeto): ?>
-                <span class="hero-badge hb-sp"><i class="fa fa-trophy me-1"></i><?= $pontos ?> Startup Points (SP)</span>
-                <span class="hero-badge hb-fase"><i class="fa fa-circle-play me-1"></i>Fase Actual: <?= $faseLabel ?></span>
-            <?php endif; ?>
-        </div>
-        <div class="hero-name"><?= $saudacao ?>, <?= $primeiroNome ?>! 👋</div>
-        <div class="hero-sub">
-            <?php if($ultimoProjeto): ?>
-                Startup: <strong style="color:#FBBF24"><?= htmlspecialchars($ultimoProjeto['titulo']) ?></strong>
-                &nbsp;·&nbsp; Estado da Incubação: <strong><?= htmlspecialchars($labels[$ultimoProjeto['estado']] ?? $ultimoProjeto['estado']) ?></strong>
-            <?php else: ?>
-                Bem-vindo à Incubadora Académica do ISPSN. Submeta a sua primeira ideia para começar.
-            <?php endif; ?>
-        </div>
-        
-        <?php if($ultimoProjeto): ?>
-        <div class="row mt-4 pt-2 g-3 align-items-center" style="max-width: 700px;">
-            <div class="col-sm-6">
-                <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:rgba(255,255,255,0.6); margin-bottom:4px; text-align:left;">Progresso da Fase (Metas)</div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="progress-track" style="flex:1; background:rgba(255,255,255,0.15);">
-                        <div class="progress-fill" style="width:<?= $percentMetasConcluidas ?>%; background:#10B981;"></div>
-                    </div>
-                    <span class="fw-bold" style="font-size:0.83rem; color:#10B981;"><?= $percentMetasConcluidas ?>%</span>
-                </div>
-            </div>
-            <div class="col-sm-6">
-                <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:rgba(255,255,255,0.6); margin-bottom:4px; text-align:left;">Evolução na Incubadora</div>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="progress-track" style="flex:1; background:rgba(255,255,255,0.15);">
-                        <div class="progress-fill" style="width:<?= $progresso ?>%; background:#D97706;"></div>
-                    </div>
-                    <span class="fw-bold" style="font-size:0.83rem; color:#FBBF24;"><?= $progresso ?>%</span>
-                </div>
-            </div>
-        </div>
-        <?php elseif (!$isAdminOrSuper): ?>
-        <div class="hero-btns mt-3">
-            <button class="hbtn hbtn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto"><i class="fa fa-plus"></i>Submeter Ideia</button>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-
-<?php if($ultimoProjeto): ?>
-<!-- ══ CONTEÚDO PRINCIPAL (COLUNA ÚNICA SIMPLIFICADA) ══ -->
-<div class="container-fluid px-0">
-    
-    <!-- ══ PIPELINE (Jornada de Maturidade) ══ -->
-    <div class="pipeline-card mb-4">
-        <div class="pipeline-card-header">
-            <div class="pipeline-card-title"><i class="fa fa-road text-warning me-2"></i> Jornada de Maturidade</div>
-            <span class="badge bg-warning text-dark font-weight-bold" style="font-size:0.75rem;">Fase: <?= $faseLabel ?></span>
-        </div>
-        <div class="pipeline-card-body">
-            <?php
-            $steps = [
-                ['id'=>'ideacao',           'label'=>'Ideação',     'icon'=>'lightbulb'],
-                ['id'=>'validacao',         'label'=>'Validação',   'icon'=>'vial'],
-                ['id'=>'mvp',               'label'=>'MVP',         'icon'=>'cube'],
-                ['id'=>'tracao',            'label'=>'Tração',      'icon'=>'chart-line'],
-                ['id'=>'mercado',           'label'=>'Mercado',     'icon'=>'store'],
-                ['id'=>'fundo_investimento','label'=>'Financiado',  'icon'=>'sack-dollar'],
-            ];
-            $currIdx = 0;
-            foreach($steps as $i => $s) { if($fase === $s['id']) $currIdx = $i; }
-            $pct = $currIdx > 0 ? round(($currIdx / (count($steps)-1)) * 84 + 8) : 8;
-            ?>
-            <div class="pipe-row">
-                <div class="pipe-track"><div class="pipe-fill" style="width:<?= $pct ?>%"></div></div>
-                <?php foreach($steps as $i => $s):
-                    $state = $i < $currIdx ? 'done' : ($i === $currIdx ? 'active' : '');
-                ?>
-                <div class="pipe-step <?= $state ?>">
-                    <div class="pipe-dot"><i class="fa fa-<?= $s['icon'] ?>"></i></div>
-                    <div class="pipe-lbl"><?= $s['label'] ?></div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ══ JORNADA DE METAS ══ -->
-    <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
-        <div class="card-header py-3 bg-white border-bottom-0 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-bullseye text-warning me-2"></i>Jornada de Metas: <?= $faseLabel ?></h6>
-            <span class="badge bg-warning text-dark font-weight-bold" style="padding: 5px 12px; border-radius: 8px; font-size: 0.78rem;"><?= $percentMetasConcluidas ?>% Concluído</span>
-        </div>
-        <div class="card-body">
-            <?php if (empty($metasFase)): ?>
-                <div class="text-center p-5 text-muted border border-dashed rounded-4 bg-light">
-                    <i class="fa fa-info-circle fa-2x mb-2 text-warning" style="opacity:0.6;"></i>
-                    <h6 class="fw-bold mb-1">Sem metas definidas</h6>
-                    <p class="small mb-0">Nenhuma meta padrão configurada para a fase de <?= htmlspecialchars($faseLabel) ?> ainda.</p>
-                </div>
-            <?php else: ?>
-                <div style="display:flex; flex-direction:column; gap:16px;">
-                    <?php foreach ($metasFase as $m): 
-                        $est = $m['estado'] ?? 'nao_inicializada';
-                        if (!$est) $est = 'nao_inicializada';
-                        $itemStyle = '';
-                        $badge = '';
-                        if ($est === 'concluida') {
-                            $itemStyle = 'border-left: 4px solid #10B981; background: #F8FAFC;';
-                            $badge = '<span class="badge bg-success text-white fw-bold"><i class="fa fa-check-circle me-1"></i>Concluída</span>';
-                        } elseif ($est === 'activa') {
-                            $itemStyle = 'border-left: 4px solid #D97706; background: #FFFBEB;';
-                            $badge = '<span class="badge bg-warning text-dark fw-bold"><i class="fa fa-bolt me-1"></i>Activa</span>';
-                        } elseif ($est === 'em_avaliacao') {
-                            $itemStyle = 'border-left: 4px solid #3B82F6; background: #EFF6FF;';
-                            $badge = '<span class="badge bg-info text-white fw-bold"><i class="fa fa-clock me-1"></i>A avaliar</span>';
-                        } elseif ($est === 'reprovada') {
-                            $itemStyle = 'border-left: 4px solid #EF4444; background: #FEF2F2;';
-                            $badge = '<span class="badge bg-danger text-white fw-bold"><i class="fa fa-triangle-exclamation me-1"></i>Devolvida</span>';
-                        } else {
-                            $itemStyle = 'border-left: 4px solid #CBD5E1; opacity: 0.65;';
-                            $badge = '<span class="badge bg-light text-muted fw-bold"><i class="fa fa-lock me-1"></i>Bloqueada</span>';
-                        }
+            <form method="GET" class="m-0">
+                <label for="selectEstudanteImpersonate" class="visually-hidden">Selecionar estudante</label>
+                <select id="selectEstudanteImpersonate" name="id_usuario" class="sp-read-select" onchange="this.form.submit()">
+                    <?php
+                    $estudantesList = $mysqli->query("
+                        SELECT DISTINCT u.id, u.nome, p.titulo
+                        FROM usuarios u
+                        JOIN projetos p ON p.criado_por = u.id
+                        ORDER BY u.nome
+                    ");
+                    if ($estudantesList):
+                        while ($est = $estudantesList->fetch_assoc()):
+                            $sel = ((int)$est['id'] === $idUsuario) ? 'selected' : '';
                     ?>
-                        <div class="p-4 rounded-4 shadow-sm text-start" style="border: 1px solid #E2E8F0; <?= $itemStyle ?>">
+                        <option value="<?= (int)$est['id'] ?>" <?= $sel ?>>
+                            <?= htmlspecialchars($est['nome'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($est['titulo'], ENT_QUOTES, 'UTF-8') ?>)
+                        </option>
+                    <?php
+                        endwhile;
+                    endif;
+                    ?>
+                </select>
+            </form>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($uiState === 'E0'): ?>
+        <!-- ══ ESTADO E0: SEM PROJETO SUBMETIDO ══ -->
+        <header class="sp-header">
+            <div class="sp-kicker">Incubadora Académica do ISPSN</div>
+            <h1 class="sp-title">Submissão de Projecto</h1>
+            <div class="sp-meta-row">
+                <span>Utilizador: <strong><?= htmlspecialchars($nome, ENT_QUOTES, 'UTF-8') ?></strong></span>
+                <span class="sp-chip sp-chip-neutral">Sem projecto submetido</span>
+            </div>
+        </header>
+
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-8">
+                <div class="sp-section-label">O que fazer a seguir</div>
+                <section class="sp-surface-primary" aria-labelledby="e0Heading">
+                    <h2 id="e0Heading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">Ainda não submeteu um projecto para incubação</h2>
+                    <p class="mb-3" style="color: var(--sp-text-sec);">
+                        Submeta a proposta da sua iniciativa para apreciação técnica. O formulário solicita a identificação do problema, a solução proposta e a descrição da ideia.
+                    </p>
+                    <?php if (!$isAdminOrSuper): ?>
+                        <button type="button" class="sp-btn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto">
+                            <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            <span>Submeter Primeira Ideia</span>
+                        </button>
+                    <?php else: ?>
+                        <div class="sp-empty-line border-0 p-0">Conta de estudante sem projecto registado.</div>
+                    <?php endif; ?>
+                </section>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="sp-section-label">Apoio e Espaços</div>
+                <aside class="sp-surface-aside" aria-label="Recursos e espaços">
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Mentoria</div>
+                        <div style="font-size: var(--sp-fs-sm); color: var(--sp-text-sec);">
+                            A atribuição de mentor ocorre após a aprovação e formalização do projecto.
+                        </div>
+                    </div>
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Reservas de Espaço</div>
+                        <div class="sp-num mb-1" style="font-size: var(--sp-fs-sm); color: var(--sp-text);">
+                            <?= $totalReservasConfirmadas > 0
+                                ? $totalReservasConfirmadas . ' reserva' . ($totalReservasConfirmadas > 1 ? 's' : '') . ' confirmada' . ($totalReservasConfirmadas > 1 ? 's' : '')
+                                : 'Sem reservas confirmadas' ?>
+                        </div>
+                        <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="sp-link">
+                            <span>Reservas de Espaço</span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+    <?php else: ?>
+        <?php
+        $estadoRaw   = (string)($ultimoProjeto['estado'] ?? '');
+        $faseKey     = (string)($ultimoProjeto['fase'] ?? 'ideacao');
+        $faseLabel   = $labelsFase[$faseKey] ?? strtoupper(str_replace('_', ' ', $faseKey));
+        $estadoLabel = $labelsEstado[$estadoRaw] ?? $estadoRaw;
+        $pontos      = (int)($ultimoProjeto['pontos'] ?? 0);
+        $dataCriacao = !empty($ultimoProjeto['criado_em'])
+            ? date('d/m/Y', strtotime((string)$ultimoProjeto['criado_em']))
+            : '';
+
+        $chipClass = 'sp-chip-neutral';
+        if (in_array($estadoRaw, ['aprovado', 'incubado', 'fundo_investimento', 'concluido'], true)) {
+            $chipClass = 'sp-chip-ok';
+        } elseif (in_array($estadoRaw, ['submetido', 'em_avaliacao'], true)) {
+            $chipClass = 'sp-chip-warn';
+        } elseif ($estadoRaw === 'rejeitado') {
+            $chipClass = 'sp-chip-err';
+        }
+
+        $mostrarStepperESp = in_array($uiState, ['E3', 'E4'], true);
+        ?>
+
+        <!-- ══ 1. CABEÇALHO EDITORIAL ("ONDE ESTOU?") ══ -->
+        <header class="sp-header">
+            <div class="sp-kicker">
+                Estado da Incubação<?php if ($mostrarStepperESp): ?> · Fase Actual: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?><?php endif; ?>
+            </div>
+            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-3">
+                <h1 class="sp-title"><?= htmlspecialchars((string)$ultimoProjeto['titulo'], ENT_QUOTES, 'UTF-8') ?></h1>
+                <?php if ($mostrarStepperESp): ?>
+                    <div class="sp-meta-row m-0">
+                        <span class="sp-num fw-semibold" style="color: var(--sp-text);">
+                            <?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> metas validadas
+                        </span>
+                        <?php if ($pontos > 0): ?>
+                            <span aria-hidden="true">·</span>
+                            <span class="sp-code fw-semibold" style="color: var(--sp-accent);"><?= (int)$pontos ?> SP</span>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="sp-meta-row">
+                <span class="sp-chip <?= $chipClass ?>">
+                    <?= htmlspecialchars($estadoLabel, ENT_QUOTES, 'UTF-8') ?>
+                </span>
+                <?php if ($dataCriacao !== ''): ?>
+                    <span class="sp-num">Submetido em <?= htmlspecialchars($dataCriacao, ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
+                <?php if (!empty($ultimoProjeto['area_tematica'])): ?>
+                    <span aria-hidden="true">·</span>
+                    <span>Área: <?= htmlspecialchars(ucfirst((string)$ultimoProjeto['area_tematica']), ENT_QUOTES, 'UTF-8') ?></span>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($mostrarStepperESp): ?>
+                <?php
+                $steps = [
+                    ['id' => 'ideacao',            'label' => 'Ideação'],
+                    ['id' => 'validacao',          'label' => 'Validação'],
+                    ['id' => 'mvp',                'label' => 'MVP'],
+                    ['id' => 'tracao',             'label' => 'Tração'],
+                    ['id' => 'mercado',            'label' => 'Mercado'],
+                    ['id' => 'fundo_investimento', 'label' => 'Financiado'],
+                ];
+                $currIdx = 0;
+                foreach ($steps as $idx => $st) {
+                    if ($faseKey === $st['id']) {
+                        $currIdx = $idx;
+                        break;
+                    }
+                }
+                ?>
+                <ol class="sp-stepper" aria-label="Fases de maturidade na incubadora">
+                    <?php foreach ($steps as $idx => $st):
+                        $isDone = ($idx < $currIdx) || ($estadoRaw === 'concluido');
+                        $isCurr = ($idx === $currIdx) && ($estadoRaw !== 'concluido');
+                    ?>
+                        <li class="sp-step <?= $isDone ? 'is-done' : '' ?>" <?= $isCurr ? 'aria-current="step"' : '' ?>>
+                            <span class="sp-step-dot" aria-hidden="true"></span>
+                            <span><?= htmlspecialchars($st['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ol>
+            <?php endif; ?>
+        </header>
+
+        <!-- ══ GRELHA PRINCIPAL (COLUNA DE FOCO + COLUNA DE APOIO) ══ -->
+        <div class="row g-4 align-items-start">
+
+            <!-- COLUNA PRINCIPAL: (2) O QUE TENHO DE FAZER A SEGUIR? -->
+            <div class="col-lg-8">
+
+                <?php if ($uiState === 'E1'): ?>
+                    <!-- ESTADO E1: SUBMETIDO / EM AVALIAÇÃO TÉCNICA (SEM BOTÃO PRIMÁRIO) -->
+                    <div class="sp-section-label">Situação do Processo</div>
+                    <section class="sp-surface-primary" aria-labelledby="e1Heading">
+                        <h2 id="e1Heading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">
+                            Proposta em apreciação técnica
+                        </h2>
+                        <p class="mb-3" style="color: var(--sp-text-sec);">
+                            O seu projecto encontra-se registado com o estado <strong><?= htmlspecialchars($estadoLabel, ENT_QUOTES, 'UTF-8') ?></strong>. Não existem ações pendentes da sua parte neste momento.
+                        </p>
+                        <?php if (!empty($ultimaAvaliacao['observacoes'])): ?>
+                            <div class="p-3 mb-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                <div class="sp-kicker mb-1">Observação registada</div>
+                                <div><?= htmlspecialchars((string)$ultimaAvaliacao['observacoes'], ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        <?php endif; ?>
+                        <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                            <span>Consultar ficha do projecto</span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </section>
+
+                <?php elseif ($uiState === 'E2'): ?>
+                    <!-- ESTADO E2: APROVADO A AGUARDAR TERMO DE INCUBAÇÃO -->
+                    <div class="sp-section-label">Formalização da Incubação</div>
+                    <section class="sp-surface-primary" aria-labelledby="e2Heading">
+                        <h2 id="e2Heading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">
+                            Projecto aprovado para incubação
+                        </h2>
+                        <p class="mb-3" style="color: var(--sp-text-sec);">
+                            A entrada em incubação e a abertura das metas da fase de Ideação ocorrem após a assinatura do Termo de Incubação pela Direção.
+                        </p>
+                        <?php if ($termoProjeto): ?>
+                            <div class="p-3 mb-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <span>Código do Termo: <strong class="sp-code"><?= htmlspecialchars((string)$termoProjeto['codigo_termo'], ENT_QUOTES, 'UTF-8') ?></strong></span>
+                                    <span class="sp-chip sp-chip-warn">
+                                        <?= htmlspecialchars((string)$termoProjeto['estado'] === 'pendente_assinatura' ? 'Pendente de assinatura' : ucfirst((string)$termoProjeto['estado']), ENT_QUOTES, 'UTF-8') ?>
+                                    </span>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="sp-empty-line mb-3">Termo de Incubação a aguardar emissão pela coordenação.</div>
+                        <?php endif; ?>
+
+                        <?php if (!empty($ultimaAvaliacao['observacoes'])): ?>
+                            <div class="p-3 mb-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                <div class="sp-kicker mb-1">
+                                    Parecer da avaliação<?php if (isset($ultimaAvaliacao['pontuacao_total'])): ?> (<span class="sp-num"><?= (int)$ultimaAvaliacao['pontuacao_total'] ?></span> pts)<?php endif; ?>
+                                </div>
+                                <div><?= htmlspecialchars((string)$ultimaAvaliacao['observacoes'], ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        <?php endif; ?>
+
+                        <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                            <span>Consultar ficha do projecto</span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </section>
+
+                <?php elseif ($uiState === 'E3' || $uiState === 'E4'): ?>
+                    <!-- ESTADO E3 / E4: INCUBADO EM FASE X OU FASE CONCLUÍDA -->
+                    <div class="sp-section-label">O que fazer a seguir</div>
+
+                    <?php if ($uiState === 'E4'): ?>
+                        <section class="sp-surface-primary" aria-labelledby="e4Heading">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                <h2 id="e4Heading" class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">
+                                    <?= $estadoRaw === 'concluido'
+                                        ? 'Ciclo de incubação concluído'
+                                        : 'Todas as metas da fase de ' . htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') . ' foram validadas' ?>
+                                </h2>
+                                <span class="sp-chip sp-chip-ok sp-num"><?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> validadas</span>
+                            </div>
+                            <p class="mb-3" style="color: var(--sp-text-sec);">
+                                <?= $estadoRaw === 'concluido'
+                                    ? 'O seu projecto concluiu o percurso de incubação.'
+                                    : 'Os entregáveis desta fase estão validados pelo mentor. O avanço para a fase seguinte é efetuado pela coordenação.' ?>
+                            </p>
+                            <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                                <span>Consultar ficha do projecto</span>
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </section>
+
+                    <?php elseif ($metaPrincipal !== null): ?>
+                        <?php
+                        $estMetaP   = (string)($metaPrincipal['estado'] ?? 'activa');
+                        $prazoMetaP = !empty($metaPrincipal['data_limite']) ? date('d/m/Y', strtotime((string)$metaPrincipal['data_limite'])) : '';
+                        $atrasadaP  = !empty($metaPrincipal['data_limite']) && (strtotime((string)$metaPrincipal['data_limite']) < strtotime(date('Y-m-d')));
+                        $payloadMeta = json_encode([
+                            'id'     => (int)$metaPrincipal['id'],
+                            'titulo' => (string)$metaPrincipal['meta_titulo'],
+                            'tipo'   => (string)$metaPrincipal['evidencia_tipo'],
+                            'desc'   => (string)$metaPrincipal['evidencia_desc'],
+                            'texto'  => (string)($metaPrincipal['evidencia_texto'] ?? ''),
+                            'link'   => (string)($metaPrincipal['evidencia_link'] ?? ''),
+                            'path'   => (string)($metaPrincipal['evidencia_path'] ?? ''),
+                        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                        ?>
+                        <section class="sp-surface-primary" aria-labelledby="e3MetaHeading">
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
                                 <div>
-                                    <span class="badge bg-secondary-subtle text-secondary fw-bold rounded-pill px-2.5 py-1 mb-2" style="font-size:0.68rem; font-weight:700;">#<?= $m['numero'] ?></span>
-                                    <h6 class="fw-bold mb-1 text-slate-800" style="font-size:0.95rem; display:inline-block; margin-left:8px;"><?= htmlspecialchars($m['meta_titulo']) ?></h6>
+                                    <span class="sp-code fw-bold me-2" style="color: var(--sp-text-muted);">#<?= (int)$metaPrincipal['numero'] ?></span>
+                                    <h2 id="e3MetaHeading" class="fw-bold d-inline m-0" style="font-size: var(--sp-fs-lg);">
+                                        <?= htmlspecialchars((string)$metaPrincipal['meta_titulo'], ENT_QUOTES, 'UTF-8') ?>
+                                    </h2>
                                 </div>
-                                <div class="d-flex gap-2 align-items-center">
-                                    <span class="badge bg-slate-100 text-slate-600 fw-bold border" style="font-size:0.7rem; padding: 4px 8px; border-radius: 6px;"><?= $m['peso_percentual'] ?>%</span>
-                                    <?= $badge ?>
-                                </div>
-                            </div>
-                            
-                            <p class="text-muted mb-3" style="font-size:0.8rem; line-height:1.5; text-align:left;"><?= htmlspecialchars($m['meta_descricao']) ?></p>
-                            
-                            <div class="p-3 rounded-3 mb-3 text-start" style="background:#fff; border: 1px solid #E2E8F0; font-size:0.75rem; line-height:1.6;">
-                                <div class="mb-1 text-slate-600"><strong><i class="fa fa-paperclip me-1 text-warning"></i>Entregável Esperado:</strong> <?= htmlspecialchars($m['evidencia_desc']) ?> (Tipo: <?= ucfirst($m['evidencia_tipo']) ?>)</div>
-                                <?php if (!empty($m['data_limite'])): 
-                                    $atrasado = (strtotime($m['data_limite']) < strtotime(date('Y-m-d')) && $est !== 'concluida');
-                                ?>
-                                    <div class="text-slate-600">
-                                        <strong><i class="fa fa-calendar me-1"></i>Prazo Limite:</strong> 
-                                        <span class="fw-bold <?= $atrasado ? 'text-danger' : 'text-success' ?>">
-                                            <?= date('d/m/Y', strtotime($m['data_limite'])) ?> <?= $atrasado ? '(ATRASADO)' : '(No prazo)' ?>
-                                        </span>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-
-                            <?php if (!empty($m['feedback_mentor'])): ?>
-                                <div class="alert alert-danger py-2 px-3 mb-3 text-start border-0" style="border-radius:10px; font-size:0.78rem; background:rgba(239, 68, 68, 0.08); color:#b91c1c;">
-                                    <strong><i class="fa fa-triangle-exclamation me-1"></i>Feedback de Correção:</strong> <?= htmlspecialchars($m['feedback_mentor']) ?>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 text-start">
-                                <?php if ($est === 'activa' || $est === 'reprovada'): ?>
-                                    <?php if (!$isAdminOrSuper): ?>
-                                    <button type="button" class="btn btn-warning btn-sm fw-bold px-4 py-2 text-dark rounded-3" style="font-size:0.75rem; border:none;" 
-                                            onclick="abrirSubmeterEvidencia(<?= htmlspecialchars(json_encode([
-                                                'id' => $m['id'],
-                                                'titulo' => $m['meta_titulo'],
-                                                'tipo' => $m['evidencia_tipo'],
-                                                'desc' => $m['evidencia_desc'],
-                                                'texto' => $m['evidencia_texto'] ?? '',
-                                                'link' => $m['evidencia_link'] ?? '',
-                                                'path' => $m['evidencia_path'] ?? ''
-                                            ])) ?>)">
-                                        <i class="fa fa-paper-plane me-1"></i>Submeter Evidência
-                                    </button>
+                                <div class="d-flex align-items-center gap-2">
+                                    <?php if ($estMetaP === 'reprovada'): ?>
+                                        <span class="sp-chip sp-chip-err">Devolvida</span>
+                                    <?php else: ?>
+                                        <span class="sp-chip sp-chip-warn">Activa</span>
                                     <?php endif; ?>
-                                <?php elseif ($est === 'em_avaliacao'): ?>
-                                    <div class="text-info small fw-semibold" style="font-size:0.78rem;"><i class="fa fa-clock me-1"></i>Evidência submetida em <?= date('d/m/Y H:i', strtotime($m['evidencia_em'])) ?>. Aguarda avaliação do mentor.</div>
-                                <?php elseif ($est === 'concluida'): ?>
-                                    <div class="text-success small fw-bold" style="font-size:0.78rem;"><i class="fa fa-circle-check me-1"></i>Meta Concluída! Startup ganhou +<?= round($m['peso_percentual']) ?> SP.</div>
-                                <?php else: ?>
-                                    <div class="text-muted small" style="font-size:0.78rem;"><i class="fa fa-lock me-1"></i>Esta meta está bloqueada. Aguarde que a administração a active.</div>
-                                <?php endif; ?>
+                                    <?php if ($prazoMetaP !== ''): ?>
+                                        <span class="sp-chip <?= $atrasadaP ? 'sp-chip-err' : 'sp-chip-neutral' ?> sp-num">
+                                            Prazo: <?= htmlspecialchars($prazoMetaP, ENT_QUOTES, 'UTF-8') ?><?= $atrasadaP ? ' (Atrasado)' : '' ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
 
-    <!-- ══ TAREFAS DO MENTOR ══ -->
-    <?php if (!empty($minhasTarefas)): ?>
-    <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;">
-        <div class="card-header bg-white py-3 border-bottom-0 text-start">
-            <h6 class="m-0 font-weight-bold text-gray-800"><i class="fa fa-list-check text-warning me-2"></i>Tarefas de Acompanhamento</h6>
-        </div>
-        <div class="card-body pt-0">
-            <div class="d-flex flex-column gap-2 text-start">
-                <?php foreach ($minhasTarefas as $t): 
-                    $concluido = $t['status'] === 'concluid' || $t['status'] === 'concluida' || $t['validada_mentor'] == 1;
-                    $corTarefa = $concluido ? 'text-decoration-line-through text-muted' : '';
-                    $badgeTarefa = $t['validada_mentor'] == 1 
-                        ? '<span class="badge bg-success-subtle text-success">Validada</span>' 
-                        : ($t['status'] === 'concluida' ? '<span class="badge bg-info-subtle text-info">Aguardando Validação</span>' : '<span class="badge bg-warning-subtle text-warning">Pendente</span>');
-                ?>
-                    <div class="p-3 border rounded-3 d-flex align-items-center justify-content-between bg-light">
-                        <div>
-                            <div class="fw-bold <?= $corTarefa ?>" style="font-size:0.88rem;"><?= htmlspecialchars($t['titulo']) ?></div>
-                            <div class="text-muted small"><?= htmlspecialchars($t['descricao']) ?></div>
-                            <?php if (!empty($t['data_limite'])): ?>
-                                <div class="small mt-1"><i class="fa fa-calendar me-1"></i>Prazo: <?= date('d/m/Y', strtotime($t['data_limite'])) ?></div>
+                            <p class="mb-3" style="color: var(--sp-text-sec);">
+                                <?= htmlspecialchars((string)$metaPrincipal['meta_descricao'], ENT_QUOTES, 'UTF-8') ?>
+                            </p>
+
+                            <div class="p-3 mb-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                <strong>Entregável esperado:</strong>
+                                <?= htmlspecialchars((string)$metaPrincipal['evidencia_desc'], ENT_QUOTES, 'UTF-8') ?>
+                                (Tipo: <?= htmlspecialchars(ucfirst((string)$metaPrincipal['evidencia_tipo']), ENT_QUOTES, 'UTF-8') ?>)
+                            </div>
+
+                            <?php if (!empty($metaPrincipal['feedback_mentor'])): ?>
+                                <div class="p-3 mb-3" style="background: var(--sp-err-bg); border: 1px solid var(--sp-err-border); color: var(--sp-err-text); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                    <strong>Feedback de correção do mentor:</strong>
+                                    <?= htmlspecialchars((string)$metaPrincipal['feedback_mentor'], ENT_QUOTES, 'UTF-8') ?>
+                                </div>
                             <?php endif; ?>
-                        </div>
-                        <div>
-                            <?= $badgeTarefa ?>
-                       </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
 
-    <!-- ══ ATALHOS RÁPIDOS INFORMATIVOS (GRID NO FUNDO) ══ -->
-    <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#9CA3AF; margin-bottom:12px; margin-top:24px; text-align:left;">Atalhos e Ações Rápidas</div>
-    <div class="row g-3">
-        <!-- Minha Startup -->
-        <div class="col-sm-6 col-md-3">
-            <div class="card border-0 shadow-sm p-3 h-100 text-start" style="border-radius: 12px; border-top: 3px solid #D97706 !important;">
-                <div style="font-size: 1.2rem; color: #D97706; margin-bottom: 6px;"><i class="fa fa-rocket"></i></div>
-                <div class="fw-bold" style="font-size: 0.85rem; color: #1E293B;">Minha Startup</div>
-                <div class="text-muted" style="font-size: 0.72rem; margin-bottom: 12px; height: 32px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                    <?= htmlspecialchars($ultimoProjeto['titulo']) ?>
-                </div>
-                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="btn btn-warning btn-xs fw-bold w-100 py-1.5 text-dark mt-auto" style="border:none; font-size:0.72rem; border-radius:6px; background:#D97706; color:#fff !important;">Ver Detalhes</a>
-            </div>
-        </div>
-        
-        <!-- Mentorias e Sessões -->
-        <div class="col-sm-6 col-md-3">
-            <div class="card border-0 shadow-sm p-3 h-100 text-start" style="border-radius: 12px; border-top: 3px solid #3B82F6 !important;">
-                <div style="font-size: 1.2rem; color: #3B82F6; margin-bottom: 6px;"><i class="fa fa-calendar-days"></i></div>
-                <div class="fw-bold" style="font-size: 0.85rem; color: #1E293B;">Mentorias & Agenda</div>
-                <div class="text-muted" style="font-size: 0.72rem; margin-bottom: 12px; height: 32px; overflow: hidden;">
-                    <?php if (!empty($minhasReunioes)): ?>
-                        Próxima: <?= date('d/m H:i', strtotime($minhasReunioes[0]['data_reuniao'])) ?>
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                <?php if (!$isAdminOrSuper): ?>
+                                    <button type="button" class="sp-btn-primary" onclick="abrirSubmeterEvidencia(<?= htmlspecialchars((string)$payloadMeta, ENT_QUOTES, 'UTF-8') ?>)">
+                                        <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                                        <span>Submeter Evidência</span>
+                                    </button>
+                                <?php endif; ?>
+                                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                                    <span>Ver ficha do projecto</span>
+                                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </section>
+
+                    <?php elseif ($metaEmAvaliacao !== null): ?>
+                        <?php
+                        $dataSubEv = !empty($metaEmAvaliacao['evidencia_em'])
+                            ? date('d/m/Y H:i', strtotime((string)$metaEmAvaliacao['evidencia_em']))
+                            : '';
+                        ?>
+                        <section class="sp-surface-primary" aria-labelledby="e3WaitHeading">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                <h2 id="e3WaitHeading" class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">
+                                    <span class="sp-code me-1">#<?= (int)$metaEmAvaliacao['numero'] ?></span>
+                                    <?= htmlspecialchars((string)$metaEmAvaliacao['meta_titulo'], ENT_QUOTES, 'UTF-8') ?>
+                                </h2>
+                                <span class="sp-chip sp-chip-warn">A avaliar pelo mentor</span>
+                            </div>
+                            <p class="mb-3" style="color: var(--sp-text-sec);">
+                                Evidência submetida<?= $dataSubEv !== '' ? ' em <span class="sp-num">' . htmlspecialchars($dataSubEv, ENT_QUOTES, 'UTF-8') . '</span>' : '' ?>. Aguarda validação do mentor atribuído.
+                            </p>
+                            <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                                <span>Consultar ficha do projecto</span>
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </section>
+
                     <?php else: ?>
-                        <?= count($sessoesMentoria) ?> sessões realizadas
+                        <section class="sp-surface-primary" aria-labelledby="e3NoActiveHeading">
+                            <h2 id="e3NoActiveHeading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">
+                                Fase Actual: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?>
+                            </h2>
+                            <p class="mb-3" style="color: var(--sp-text-sec);">
+                                <?= $totalMetasFase === 0
+                                    ? 'Ainda não existem metas inicializadas para esta fase.'
+                                    : 'As metas desta fase encontram-se bloqueadas a aguardar ativação pela administração.' ?>
+                            </p>
+                            <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                                <span>Consultar ficha do projecto</span>
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </section>
                     <?php endif; ?>
-                </div>
-                <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="btn btn-primary btn-xs fw-bold w-100 py-1.5 text-white mt-auto" style="border:none; background:#3B82F6; font-size:0.72rem; border-radius:6px;">Ver Sessões</a>
+
+                    <!-- LISTA EDITORIAL DE METAS DA FASE (SEM CARDS) -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="sp-section-label m-0">Jornada de Metas: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?></div>
+                        <span class="sp-num" style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
+                            <?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> metas validadas
+                        </span>
+                    </div>
+
+                    <?php if (empty($metasFase)): ?>
+                        <div class="sp-empty-line mb-4">Sem metas definidas para a fase de <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?>.</div>
+                    <?php else: ?>
+                        <ul class="sp-list">
+                            <?php foreach ($metasFase as $m):
+                                $estM = (string)($m['estado'] ?? 'inactiva');
+                                $chipM = 'sp-chip-neutral';
+                                $lblM  = 'Bloqueada';
+                                if ($estM === 'concluida') {
+                                    $chipM = 'sp-chip-ok';
+                                    $lblM  = 'Concluída';
+                                } elseif ($estM === 'activa') {
+                                    $chipM = 'sp-chip-warn';
+                                    $lblM  = 'Activa';
+                                } elseif ($estM === 'em_avaliacao') {
+                                    $chipM = 'sp-chip-warn';
+                                    $lblM  = 'A avaliar';
+                                } elseif ($estM === 'reprovada') {
+                                    $chipM = 'sp-chip-err';
+                                    $lblM  = 'Devolvida';
+                                }
+                                $prazoM = !empty($m['data_limite']) ? date('d/m/Y', strtotime((string)$m['data_limite'])) : '';
+                                $isSecondaryActionable = (!$isAdminOrSuper)
+                                    && ($estM === 'activa' || $estM === 'reprovada')
+                                    && ($metaPrincipal === null || (int)$m['id'] !== (int)$metaPrincipal['id']);
+                            ?>
+                                <li class="sp-list-row">
+                                    <div>
+                                        <span class="sp-code fw-semibold me-2" style="color: var(--sp-text-muted);">#<?= (int)$m['numero'] ?></span>
+                                        <strong style="color: var(--sp-text);"><?= htmlspecialchars((string)$m['meta_titulo'], ENT_QUOTES, 'UTF-8') ?></strong>
+                                        <?php if ($prazoM !== ''): ?>
+                                            <span class="sp-num ms-2" style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
+                                                · Prazo: <?= htmlspecialchars($prazoM, ENT_QUOTES, 'UTF-8') ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <?php if ($isSecondaryActionable):
+                                            $rowPayload = json_encode([
+                                                'id'     => (int)$m['id'],
+                                                'titulo' => (string)$m['meta_titulo'],
+                                                'tipo'   => (string)$m['evidencia_tipo'],
+                                                'desc'   => (string)$m['evidencia_desc'],
+                                                'texto'  => (string)($m['evidencia_texto'] ?? ''),
+                                                'link'   => (string)($m['evidencia_link'] ?? ''),
+                                                'path'   => (string)($m['evidencia_path'] ?? ''),
+                                            ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+                                        ?>
+                                            <button type="button" class="sp-btn-secondary" onclick="abrirSubmeterEvidencia(<?= htmlspecialchars((string)$rowPayload, ENT_QUOTES, 'UTF-8') ?>)">
+                                                <span>Submeter Evidência</span>
+                                            </button>
+                                        <?php endif; ?>
+                                        <span class="sp-chip <?= $chipM ?>"><?= htmlspecialchars($lblM, ENT_QUOTES, 'UTF-8') ?></span>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+
+                    <!-- LISTA EDITORIAL DE TAREFAS DO MENTOR -->
+                    <div class="sp-section-label">Tarefas de Acompanhamento</div>
+                    <?php if (empty($minhasTarefas)): ?>
+                        <div class="sp-empty-line">Sem tarefas de acompanhamento atribuídas pelo mentor.</div>
+                    <?php else: ?>
+                        <ul class="sp-list">
+                            <?php foreach ($minhasTarefas as $t):
+                                $statusT  = (string)($t['status'] ?? '');
+                                $valMent  = (int)($t['validada_mentor'] ?? 0) === 1;
+                                $conclT   = $valMent || $statusT === 'concluida' || $statusT === 'concluid';
+                                $prazoT   = !empty($t['data_limite']) ? date('d/m/Y', strtotime((string)$t['data_limite'])) : '';
+                                $chipTar  = $valMent ? 'sp-chip-ok' : ($conclT ? 'sp-chip-warn' : 'sp-chip-neutral');
+                                $lblTar   = $valMent ? 'Validada' : ($conclT ? 'Aguardando Validação' : 'Pendente');
+                            ?>
+                                <li class="sp-list-row">
+                                    <div>
+                                        <strong style="color: var(--sp-text); <?= $conclT ? 'text-decoration: line-through; opacity: 0.75;' : '' ?>">
+                                            <?= htmlspecialchars((string)$t['titulo'], ENT_QUOTES, 'UTF-8') ?>
+                                        </strong>
+                                        <?php if (!empty($t['descricao'])): ?>
+                                            <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                                                <?= htmlspecialchars((string)$t['descricao'], ENT_QUOTES, 'UTF-8') ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if ($prazoT !== ''): ?>
+                                            <div class="sp-num" style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
+                                                Prazo: <?= htmlspecialchars($prazoT, ENT_QUOTES, 'UTF-8') ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <span class="sp-chip <?= $chipTar ?>"><?= htmlspecialchars($lblTar, ENT_QUOTES, 'UTF-8') ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+
+                <?php elseif ($uiState === 'E5'): ?>
+                    <!-- ESTADO E5: PROJETO REJEITADO -->
+                    <div class="sp-section-label">Decisão Registada</div>
+                    <section class="sp-surface-primary" aria-labelledby="e5Heading">
+                        <h2 id="e5Heading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">
+                            Proposta não aprovada nesta submissão
+                        </h2>
+                        <?php if (!empty($ultimaAvaliacao['observacoes'])): ?>
+                            <div class="p-3 mb-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);">
+                                <div class="sp-kicker mb-1">Observações registadas na avaliação</div>
+                                <div><?= htmlspecialchars((string)$ultimaAvaliacao['observacoes'], ENT_QUOTES, 'UTF-8') ?></div>
+                            </div>
+                        <?php else: ?>
+                            <p class="mb-3" style="color: var(--sp-text-sec);">
+                                A proposta submetida foi encerrada com o estado Rejeitado. Pode submeter uma nova proposta revista.
+                            </p>
+                        <?php endif; ?>
+
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <?php if (!$isAdminOrSuper): ?>
+                                <button type="button" class="sp-btn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto">
+                                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                                    <span>Submeter Ideia</span>
+                                </button>
+                            <?php endif; ?>
+                            <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                                <span>Consultar ficha do projecto</span>
+                                <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        </div>
+                    </section>
+
+                <?php else: ?>
+                    <!-- ESTADO DE SALVAGUARDA (E_FALLBACK): QUALQUER ESTADO DESCONHECIDO -->
+                    <div class="sp-section-label">Situação do Projecto</div>
+                    <section class="sp-surface-primary" aria-labelledby="eFallbackHeading">
+                        <h2 id="eFallbackHeading" class="fw-bold mb-2" style="font-size: var(--sp-fs-lg);">
+                            <?= htmlspecialchars((string)$ultimoProjeto['titulo'], ENT_QUOTES, 'UTF-8') ?>
+                        </h2>
+                        <p class="mb-3" style="color: var(--sp-text-sec);">
+                            Estado registado no sistema: <span class="sp-code fw-bold"><?= htmlspecialchars($estadoRaw, ENT_QUOTES, 'UTF-8') ?></span>.
+                        </p>
+                        <a href="/incubadora_ispsn/app/views/utilizador/meu_projeto.php" class="sp-link">
+                            <span>Consultar ficha do projecto</span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </section>
+                <?php endif; ?>
+
             </div>
-        </div>
-        
-        <!-- Reservas de Espaço -->
-        <div class="col-sm-6 col-md-3">
-            <div class="card border-0 shadow-sm p-3 h-100 text-start" style="border-radius: 12px; border-top: 3px solid #10B981 !important;">
-                <div style="font-size: 1.2rem; color: #10B981; margin-bottom: 6px;"><i class="fa fa-building-user"></i></div>
-                <div class="fw-bold" style="font-size: 0.85rem; color: #1E293B;">Reservas de Espaço</div>
-                <div class="text-muted" style="font-size: 0.72rem; margin-bottom: 12px; height: 32px; overflow: hidden;">
-                    <?php
-                    $confirmadas = count(array_filter($minhasReservasPainel, fn($r)=>$r['status']==='confirmada'));
-                    echo $confirmadas ? "$confirmadas ativa" . ($confirmadas>1?'s':'') : 'Sem reservas ativas';
-                    ?>
-                </div>
-                <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="btn btn-success btn-xs fw-bold w-100 py-1.5 text-white mt-auto" style="border:none; background:#10B981; font-size:0.72rem; border-radius:6px;">Reservar Sala</a>
+
+            <!-- COLUNA LATERAL: (3) QUEM ME AJUDA E QUANDO? (SUPERFÍCIE #2) -->
+            <div class="col-lg-4">
+                <div class="sp-section-label">Quem acompanha e agenda</div>
+                <aside class="sp-surface-aside" aria-label="Mentoria, termo e reservas">
+
+                    <!-- BLOCO 1: MENTOR ATRIBUÍDO -->
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Mentor Atribuído</div>
+                        <?php if ($mentorAtivo): ?>
+                            <div class="fw-bold" style="color: var(--sp-text);">
+                                <?= htmlspecialchars((string)$mentorAtivo['mentor_nome'], ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                            <?php if (!empty($mentorAtivo['especialidade'])): ?>
+                                <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                                    <?= htmlspecialchars((string)$mentorAtivo['especialidade'], ENT_QUOTES, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                            <?php if (!empty($mentorAtivo['mentor_email'])): ?>
+                                <div class="sp-code mt-1" style="color: var(--sp-text-muted);">
+                                    <?= htmlspecialchars((string)$mentorAtivo['mentor_email'], ENT_QUOTES, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div style="font-size: var(--sp-fs-sm); color: var(--sp-text-muted);">
+                                Sem mentor ativo atribuído neste momento.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- BLOCO 2: REUNIÕES E SESSÕES -->
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Agenda de Mentoria</div>
+                        <?php if (!empty($minhasReunioes)):
+                            $proxReuniao = $minhasReunioes[0];
+                            $dataReuniao = date('d/m/Y H:i', strtotime((string)$proxReuniao['data_reuniao']));
+                        ?>
+                            <div class="fw-semibold" style="font-size: var(--sp-fs-sm); color: var(--sp-text);">
+                                <?= htmlspecialchars((string)$proxReuniao['titulo'], ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                            <div class="sp-num" style="font-size: var(--sp-fs-xs); color: var(--sp-accent);">
+                                Próxima reunião: <?= htmlspecialchars($dataReuniao, ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                            <?php if (!empty($proxReuniao['local_link'])): ?>
+                                <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                                    Local/Link: <?= htmlspecialchars((string)$proxReuniao['local_link'], ENT_QUOTES, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php elseif ($ultimaSessao):
+                            $dataUltSessao = date('d/m/Y', strtotime((string)$ultimaSessao['data_sessao']));
+                        ?>
+                            <div class="sp-num" style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                                Última sessão: <?= htmlspecialchars($dataUltSessao, ENT_QUOTES, 'UTF-8') ?>
+                            </div>
+                            <?php if (!empty($ultimaSessao['proximos_passos'])): ?>
+                                <div class="mt-1" style="font-size: var(--sp-fs-xs); color: var(--sp-text);">
+                                    <strong>Próximos passos:</strong> <?= htmlspecialchars((string)$ultimaSessao['proximos_passos'], ENT_QUOTES, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div style="font-size: var(--sp-fs-sm); color: var(--sp-text-muted);">
+                                Sem reuniões agendadas.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- BLOCO 3: TERMO DE INCUBAÇÃO -->
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Termo de Incubação</div>
+                        <?php if ($termoProjeto):
+                            $estTermo = (string)($termoProjeto['estado'] ?? '');
+                            $dataAssinatura = !empty($termoProjeto['assinado_em'])
+                                ? date('d/m/Y', strtotime((string)$termoProjeto['assinado_em']))
+                                : '';
+                        ?>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <span class="sp-code fw-bold"><?= htmlspecialchars((string)$termoProjeto['codigo_termo'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <span class="sp-chip <?= $estTermo === 'assinado' ? 'sp-chip-ok' : 'sp-chip-warn' ?>">
+                                    <?= htmlspecialchars($estTermo === 'assinado' ? 'Assinado' : ($estTermo === 'pendente_assinatura' ? 'Pendente' : ucfirst($estTermo)), ENT_QUOTES, 'UTF-8') ?>
+                                </span>
+                            </div>
+                            <?php if ($dataAssinatura !== ''): ?>
+                                <div class="sp-num mt-1" style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
+                                    Assinado em <?= htmlspecialchars($dataAssinatura, ENT_QUOTES, 'UTF-8') ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <div style="font-size: var(--sp-fs-sm); color: var(--sp-text-muted);">
+                                Sem termo emitido para este projecto.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- BLOCO 4: RESERVAS DE ESPAÇO -->
+                    <div class="sp-aside-block">
+                        <div class="sp-kicker">Reservas de Espaço</div>
+                        <div class="sp-num mb-1" style="font-size: var(--sp-fs-sm); color: var(--sp-text);">
+                            <?= $totalReservasConfirmadas > 0
+                                ? $totalReservasConfirmadas . ' reserva' . ($totalReservasConfirmadas > 1 ? 's' : '') . ' ativa' . ($totalReservasConfirmadas > 1 ? 's' : '')
+                                : 'Sem reservas ativas' ?>
+                        </div>
+                        <a href="/incubadora_ispsn/app/views/utilizador/reservas.php" class="sp-link">
+                            <span>Gerir reservas</span>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </div>
+
+                </aside>
             </div>
+
         </div>
-        
-        <!-- Ranking Geral -->
-        <div class="col-sm-6 col-md-3">
-            <div class="card border-0 shadow-sm p-3 h-100 text-start" style="border-radius: 12px; border-top: 3px solid #8B5CF6 !important;">
-                <div style="font-size: 1.2rem; color: #8B5CF6; margin-bottom: 6px;"><i class="fa fa-trophy"></i></div>
-                <div class="fw-bold" style="font-size: 0.85rem; color: #1E293B;">Ranking de Startups</div>
-                <div class="text-muted" style="font-size: 0.72rem; margin-bottom: 12px; height: 32px; overflow: hidden;">
-                    Pontos: <strong><?= $pontos ?> SP</strong>
-                </div>
-                <a href="/incubadora_ispsn/app/views/admin/ranking.php" class="btn btn-purple btn-xs fw-bold w-100 py-1.5 text-white mt-auto" style="border:none; background:#8B5CF6; font-size:0.72rem; border-radius:6px;">Ver Tabela</a>
-            </div>
-        </div>
-    </div>
+    <?php endif; ?>
 
 </div>
-<?php else: ?>
-<!-- ══ SEM PROJETO ══ -->
-<div class="empty-hero">
-    <div style="font-size:3.5rem; color:#D97706; opacity:0.7; margin-bottom:20px;"><i class="fa fa-diagram-project"></i></div>
-    <h4 style="font-weight:800; color:#1C1917; margin-bottom:8px;">Ainda sem projeto submetido</h4>
-    <p style="color:#9CA3AF; font-size:0.88rem; max-width:380px; margin:0 auto 24px;">O ecossistema da Incubadora do ISPSN vai acompanhar a sua startup da ideia até ao financiamento. Comece agora.</p>
-    <?php if (!$isAdminOrSuper): ?>
-    <button class="hbtn hbtn-primary" style="margin:0 auto;" data-bs-toggle="modal" data-bs-target="#modalProjeto">
-        <i class="fa fa-plus"></i> Submeter Primeira Ideia
-    </button>
-    <?php endif; ?>
-</div>
-<?php endif; ?>
 
 <?php if (!$isAdminOrSuper): ?>
 <!-- ══ MODAL SUBMETER PROJETO ══ -->
 <div class="modal fade" id="modalProjeto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content" style="border:none; border-radius:18px; overflow:hidden;">
+        <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_projeto">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/public/index.php">
-                <div style="padding:22px 24px; border-bottom:1px solid #F3F4F6; background:#FFFBF2;">
-                    <h5 style="font-weight:800; margin:0; color:#1C1917;"><i class="fa fa-rocket me-2" style="color:#D97706"></i>Submeter Ideia de Startup</h5>
+                <div class="modal-header-custom">
+                    <h5 class="fw-bold m-0"><i class="fa-solid fa-rocket me-2" aria-hidden="true"></i>Submeter Ideia de Startup</h5>
                 </div>
-                <div style="padding:24px;">
+                <div class="modal-body-custom">
                     <div class="mb-3">
-                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Nome da Startup *</label>
-                        <input type="text" name="titulo" class="form-control" required placeholder="Ex: AppAngola — Transporte Local">
+                        <label class="form-label-custom">Nome da Startup *</label>
+                        <input type="text" name="titulo" class="form-control-custom" required placeholder="Ex: AppAngola — Transporte Local">
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Tipo *</label>
-                            <select name="tipo" class="form-control" required>
+                            <label class="form-label-custom">Tipo *</label>
+                            <select name="tipo" class="form-control-custom" required>
                                 <option value="startup_tecnologica">Startup Tecnológica</option>
                                 <option value="negocio_tradicional">Negócio Tradicional</option>
                                 <option value="impacto_social">Impacto Social</option>
@@ -841,8 +946,8 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Área</label>
-                            <select name="area" class="form-control">
+                            <label class="form-label-custom">Área</label>
+                            <select name="area" class="form-control-custom">
                                 <option value="tecnologia">Tecnologia</option>
                                 <option value="saude">Saúde</option>
                                 <option value="educacao">Educação</option>
@@ -853,67 +958,66 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Descrição *</label>
-                        <textarea name="descricao" class="form-control" rows="3" required placeholder="Descreva o projecto..."></textarea>
+                        <label class="form-label-custom">Descrição *</label>
+                        <textarea name="descricao" class="form-control-custom" rows="3" required placeholder="Descreva o projecto..."></textarea>
                     </div>
-                    <!-- O Pitch foi removido do ato de inscrição (será solicitado na pré-incubação) -->
                     <div class="mb-3">
-                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Problema que resolve</label>
-                        <textarea name="problema" class="form-control" rows="2" placeholder="Qual o problema identificado?"></textarea>
+                        <label class="form-label-custom">Problema que resolve</label>
+                        <textarea name="problema" class="form-control-custom" rows="2" placeholder="Qual o problema identificado?"></textarea>
                     </div>
                     <div>
-                        <label class="form-label" style="font-size:0.78rem; font-weight:700; text-transform:uppercase; color:#6B7280; letter-spacing:0.4px;">Solução Proposta</label>
-                        <textarea name="solucao" class="form-control" rows="2" placeholder="Como a sua startup resolve o problema?"></textarea>
+                        <label class="form-label-custom">Solução Proposta</label>
+                        <textarea name="solucao" class="form-control-custom" rows="2" placeholder="Como a sua startup resolve o problema?"></textarea>
                     </div>
                 </div>
-                <div style="padding:16px 24px; border-top:1px solid #F3F4F6; display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4"><i class="fa fa-paper-plane me-2"></i>Submeter</button>
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>Submeter</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Submeter Evidência -->
+<!-- ══ MODAL SUBMETER EVIDÊNCIA ══ -->
 <div class="modal fade" id="modalSubmeterEvidencia" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 18px; overflow: hidden;">
+        <div class="modal-content modal-content-custom">
             <form action="/incubadora_ispsn/app/controllers/metas_action.php" method="POST" enctype="multipart/form-data" class="m-0">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="submeter_evidencia">
                 <input type="hidden" name="id_meta_projeto" id="submeterMetaId">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php">
-                
-                <div style="padding:22px 24px; border-bottom:1px solid #F3F4F6; background:#FFFBF2;">
-                    <h5 class="modal-title fw-bold" id="submeterTituloMeta" style="color:#1C1917; margin:0;"><i class="fa fa-paper-plane text-warning me-2"></i>Submeter Evidência</h5>
+
+                <div class="modal-header-custom">
+                    <h5 class="modal-title fw-bold m-0" id="submeterTituloMeta">Submeter Evidência</h5>
                 </div>
-                
-                <div style="padding:24px;">
-                    <div class="alert alert-warning py-2 px-3 small border-0 mb-3 text-start" style="border-radius:10px; font-size:0.75rem; background:rgba(217,119,6,0.08); color:#b45309;">
-                        <strong>Entregável esperado:</strong> <span id="submeterDescEvidencia"></span>
+
+                <div class="modal-body-custom">
+                    <div class="alert-custom alert-warning py-2 px-3 mb-3">
+                        <div><strong>Entregável esperado:</strong> <span id="submeterDescEvidencia"></span></div>
                     </div>
-                    
+
                     <div class="mb-3 text-start">
-                        <label class="form-label small fw-bold text-gray-700">Relatório/Descrição da Execução *</label>
-                        <textarea name="evidencia_texto" id="submeterTextoInput" class="form-control rounded-3" rows="4" required placeholder="Especifique em detalhe as tarefas que realizou..."></textarea>
+                        <label class="form-label-custom" for="submeterTextoInput">Relatório/Descrição da Execução *</label>
+                        <textarea name="evidencia_texto" id="submeterTextoInput" class="form-control-custom" rows="4" required placeholder="Especifique em detalhe as tarefas que realizou..."></textarea>
                     </div>
-                    
+
                     <div class="mb-3 text-start" id="submeterLinkContainer">
-                        <label class="form-label small fw-bold text-gray-700">Link Externo (URL) *</label>
-                        <input type="url" name="evidencia_link" id="submeterLinkInput" class="form-control rounded-3" placeholder="https://exemplo.com/doc-ou-drive">
+                        <label class="form-label-custom" for="submeterLinkInput">Link Externo (URL) *</label>
+                        <input type="url" name="evidencia_link" id="submeterLinkInput" class="form-control-custom" placeholder="https://exemplo.com/doc-ou-drive">
                     </div>
-                    
+
                     <div class="mb-0 text-start" id="submeterFicheiroContainer">
-                        <label class="form-label small fw-bold text-gray-700">Ficheiro Comprovativo (PDF, Zip, Imagem) *</label>
-                        <input type="file" name="evidencia_ficheiro" id="submeterFicheiroInput" class="form-control" style="border-radius:10px;">
+                        <label class="form-label-custom" for="submeterFicheiroInput">Ficheiro Comprovativo (PDF, Zip, Imagem) *</label>
+                        <input type="file" name="evidencia_ficheiro" id="submeterFicheiroInput" class="form-control-custom">
                         <div id="submeterFicheiroAtual" class="small text-muted mt-1"></div>
                     </div>
                 </div>
-                
-                <div style="padding:16px 24px; border-top:1px solid #F3F4F6; display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4">Enviar Evidência</button>
+
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom">Enviar Evidência</button>
                 </div>
             </form>
         </div>
@@ -922,46 +1026,44 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
 
 <script>
 function abrirSubmeterEvidencia(meta) {
-    document.getElementById('submeterMetaId').value = meta.id;
-    document.getElementById('submeterTituloMeta').innerHTML = `<i class="fa fa-paper-plane text-warning me-2"></i>Submeter: ${meta.titulo}`;
-    document.getElementById('submeterDescEvidencia').textContent = `${meta.desc} (Tipo: ${meta.tipo.toUpperCase()})`;
-    document.getElementById('submeterTextoInput').value = meta.texto;
-    
+    document.getElementById('submeterMetaId').value = meta.id || '';
+    document.getElementById('submeterTituloMeta').textContent = 'Submeter: ' + (meta.titulo || '');
+    document.getElementById('submeterDescEvidencia').textContent = (meta.desc || '') + ' (Tipo: ' + String(meta.tipo || '').toUpperCase() + ')';
+    document.getElementById('submeterTextoInput').value = meta.texto || '';
+
     const linkContainer = document.getElementById('submeterLinkContainer');
-    const linkInput = document.getElementById('submeterLinkInput');
+    const linkInput     = document.getElementById('submeterLinkInput');
     const fileContainer = document.getElementById('submeterFicheiroContainer');
-    const fileInput = document.getElementById('submeterFicheiroInput');
-    
-    // Reset validations and values
-    linkInput.value = meta.link;
+    const fileInput     = document.getElementById('submeterFicheiroInput');
+    const fileAtualDiv  = document.getElementById('submeterFicheiroAtual');
+
+    linkInput.value = meta.link || '';
     fileInput.value = '';
-    
+    fileAtualDiv.textContent = '';
+
     if (meta.tipo === 'link') {
         linkContainer.style.display = 'block';
         linkInput.required = true;
         fileContainer.style.display = 'none';
         fileInput.required = false;
     } else if (meta.tipo === 'ficheiro') {
-        linkContainer.style.display = 'block'; 
+        linkContainer.style.display = 'block';
         linkInput.required = false;
         fileContainer.style.display = 'block';
-        
-        // Se já tiver ficheiro enviado, não torna obrigatório enviar outro
+
         if (meta.path) {
             fileInput.required = false;
-            document.getElementById('submeterFicheiroAtual').innerHTML = `<i class="fa fa-file me-1"></i>Ficheiro atual: <a href="/incubadora_ispsn/${meta.path}" target="_blank" class="fw-bold text-warning">Ver Ficheiro</a>`;
+            fileAtualDiv.textContent = 'Já existe um comprovativo submetido anteriormente.';
         } else {
             fileInput.required = true;
-            document.getElementById('submeterFicheiroAtual').textContent = '';
         }
     } else {
-        // Apenas texto
         linkContainer.style.display = 'none';
         linkInput.required = false;
         fileContainer.style.display = 'none';
         fileInput.required = false;
     }
-    
+
     new bootstrap.Modal(document.getElementById('modalSubmeterEvidencia')).show();
 }
 </script>
