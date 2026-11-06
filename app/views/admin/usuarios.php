@@ -177,6 +177,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         </button>
                         <?php if ($u['id'] != $_SESSION['usuario_id']): ?>
                         <form method="post" action="/incubadora_ispsn/app/controllers/usuario_action.php" style="display:inline">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="mudar_estado">
                             <input type="hidden" name="id_usuario" value="<?= $u['id'] ?>">
                             <input type="hidden" name="estado" value="<?= $u['activo'] ? 0 : 1 ?>">
@@ -196,6 +197,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content modal-content-custom">
                         <form method="post" action="/incubadora_ispsn/app/controllers/usuario_action.php">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="editar_usuario">
                             <input type="hidden" name="id_usuario" value="<?= $u['id'] ?>">
                             <div class="modal-header-custom">
@@ -254,6 +256,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/usuario_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_usuario">
                 <div class="modal-header-custom">
                     <h5 class="modal-title fw-bold"><i class="fa fa-user-plus me-2"></i>Novo Utilizador</h5>

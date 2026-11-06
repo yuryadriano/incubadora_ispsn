@@ -2,6 +2,11 @@
 // app/controllers/usuario_action.php
 require_once __DIR__ . '/../../config/auth.php';
 obrigarPerfil(['admin','superadmin']);
+csrf_verificar();
+
+$perfilLogado  = $_SESSION['usuario_perfil'] ?? '';
+$idLogado      = (int)($_SESSION['usuario_id'] ?? 0);
+$perfisValidos = ['utilizador', 'mentor', 'funcionario', 'admin', 'superadmin'];
 
 $action   = $_POST['action'] ?? '';
 $redirect = $_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/usuarios.php';
@@ -15,6 +20,18 @@ if ($action === 'criar_usuario') {
     $email = trim($_POST['email'] ?? '');
     $perfil= $_POST['perfil'] ?? 'utilizador';
     $tipo  = $_POST['tipo_utilizador'] ?? 'estudante';
+
+    if (!in_array($perfil, $perfisValidos, true)) {
+        $_SESSION['flash_erro'] = "Perfil de utilizador inválido.";
+        header("Location: $redirect");
+        exit;
+    }
+
+    if ($perfil === 'superadmin' && $perfilLogado !== 'superadmin') {
+        $_SESSION['flash_erro'] = "Apenas um Super Admin pode criar contas com perfil Super Admin.";
+        header("Location: $redirect");
+        exit;
+    }
 
     if ($nome && filter_var($email, FILTER_VALIDATE_EMAIL)) {
         // Verificar se email já existe
@@ -46,13 +63,25 @@ if ($action === 'mudar_estado') {
     $estado    = (int)($_POST['estado'] ?? 0);
     
     // Nao permitir desactivar a si proprio ou ao superadmin principal
-    if ($idUsuario == $_SESSION['usuario_id']) {
+    if ($idUsuario == $idLogado) {
         $_SESSION['flash_erro'] = "Não pode desactivar a sua própria conta.";
     } else {
-        $stmt = $mysqli->prepare("UPDATE usuarios SET activo=? WHERE id=?");
-        $stmt->bind_param('ii', $estado, $idUsuario);
-        $stmt->execute();
-        $_SESSION['flash_ok'] = "Estado do utilizador actualizado.";
+        $stmtAlvo = $mysqli->prepare("SELECT perfil FROM usuarios WHERE id = ? LIMIT 1");
+        $stmtAlvo->bind_param('i', $idUsuario);
+        $stmtAlvo->execute();
+        $alvo = $stmtAlvo->get_result()->fetch_assoc();
+        $stmtAlvo->close();
+
+        if (!$alvo) {
+            $_SESSION['flash_erro'] = "Utilizador não encontrado.";
+        } elseif ($alvo['perfil'] === 'superadmin' && $perfilLogado !== 'superadmin') {
+            $_SESSION['flash_erro'] = "Apenas um Super Admin pode alterar ou desactivar uma conta Super Admin.";
+        } else {
+            $stmt = $mysqli->prepare("UPDATE usuarios SET activo=? WHERE id=?");
+            $stmt->bind_param('ii', $estado, $idUsuario);
+            $stmt->execute();
+            $_SESSION['flash_ok'] = "Estado do utilizador actualizado.";
+        }
     }
     header("Location: $redirect");
     exit;
@@ -65,14 +94,34 @@ if ($action === 'editar_usuario') {
     $perfil= $_POST['perfil'] ?? 'utilizador';
     $tipo  = $_POST['tipo_utilizador'] ?? 'estudante';
 
+    if (!in_array($perfil, $perfisValidos, true)) {
+        $_SESSION['flash_erro'] = "Perfil de utilizador inválido.";
+        header("Location: $redirect");
+        exit;
+    }
+
     if ($idUsuario && $nome && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        // Ignorar o proprio superadmin se quem ta a editar é root? Vamos ser simples.
-        $stmt = $mysqli->prepare("UPDATE usuarios SET nome=?, email=?, perfil=?, tipo_utilizador=? WHERE id=?");
-        $stmt->bind_param('ssssi', $nome, $email, $perfil, $tipo, $idUsuario);
-        if ($stmt->execute()) {
-            $_SESSION['flash_ok'] = "Dados do utilizador actualizados.";
+        $stmtAlvo = $mysqli->prepare("SELECT perfil FROM usuarios WHERE id = ? LIMIT 1");
+        $stmtAlvo->bind_param('i', $idUsuario);
+        $stmtAlvo->execute();
+        $alvo = $stmtAlvo->get_result()->fetch_assoc();
+        $stmtAlvo->close();
+
+        if (!$alvo) {
+            $_SESSION['flash_erro'] = "Utilizador não encontrado.";
+        } elseif (($alvo['perfil'] === 'superadmin' || $perfil === 'superadmin') && $perfilLogado !== 'superadmin') {
+            $_SESSION['flash_erro'] = "Apenas um Super Admin pode editar ou atribuir o perfil Super Admin.";
+        } elseif ($idUsuario === $idLogado && $perfil !== $alvo['perfil']) {
+            $_SESSION['flash_erro'] = "Não é permitido alterar o próprio perfil.";
         } else {
-            $_SESSION['flash_erro'] = "Erro ao actualizar utilizador: O e-mail pode já estar em uso.";
+            // Ignorar o proprio superadmin se quem ta a editar é root? Vamos ser simples.
+            $stmt = $mysqli->prepare("UPDATE usuarios SET nome=?, email=?, perfil=?, tipo_utilizador=? WHERE id=?");
+            $stmt->bind_param('ssssi', $nome, $email, $perfil, $tipo, $idUsuario);
+            if ($stmt->execute()) {
+                $_SESSION['flash_ok'] = "Dados do utilizador actualizados.";
+            } else {
+                $_SESSION['flash_erro'] = "Erro ao actualizar utilizador: O e-mail pode já estar em uso.";
+            }
         }
     }
     header("Location: $redirect");
