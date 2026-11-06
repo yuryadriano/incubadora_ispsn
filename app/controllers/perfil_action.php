@@ -2,6 +2,7 @@
 // app/controllers/perfil_action.php
 require_once __DIR__ . '/../../config/auth.php';
 obrigarLogin();
+csrf_verificar();
 
 $action = $_POST['action'] ?? '';
 $idUsuario = (int)$_SESSION['usuario_id'];

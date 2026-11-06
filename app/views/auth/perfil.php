@@ -69,6 +69,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             </div>
             <div class="card-body-custom">
                 <form action="/incubadora_ispsn/app/controllers/perfil_action.php" method="post">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="atualizar_perfil">
                     <div class="mb-3">
                         <label class="form-label-custom">Nome Completo</label>
@@ -92,6 +93,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             </div>
             <div class="card-body-custom">
                 <form action="/incubadora_ispsn/app/controllers/perfil_action.php" method="post">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="atualizar_senha">
                     <div class="mb-3">
                         <label class="form-label-custom">Senha Atual</label>
