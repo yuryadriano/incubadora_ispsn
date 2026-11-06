@@ -750,6 +750,7 @@ function configModal(id, nome) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="POST" action="/incubadora_ispsn/app/controllers/mentor_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_tarefa">
                 <input type="hidden" name="id_projeto" id="modal_id_projeto_tarefa">
                 
@@ -795,6 +796,7 @@ function configModal(id, nome) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="POST" action="/incubadora_ispsn/app/controllers/mentor_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="agendar_reuniao">
                 <input type="hidden" name="id_projeto" id="modal_id_projeto_reuniao">
                 

@@ -513,6 +513,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 
                                 <?php if ($t['validada_mentor'] == 0): ?>
                                 <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST" class="m-0">
+                                    <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="atualizar_estado_tarefa">
                                     <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
                                     <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-tarefas">
@@ -796,6 +797,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_tarefa">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -842,6 +844,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="avaliar_progresso">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -894,6 +897,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form action="/incubadora_ispsn/app/controllers/mentor_action.php" method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="agendar_reuniao">
                 <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">

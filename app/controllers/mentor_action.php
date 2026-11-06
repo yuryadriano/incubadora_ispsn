@@ -2,6 +2,7 @@
 // app/controllers/mentor_action.php
 require_once __DIR__ . '/../../config/auth.php';
 obrigarPerfil(['mentor', 'admin', 'superadmin']);
+csrf_verificar();
 
 $idUsuario = (int)$_SESSION['usuario_id'];
 $action    = $_POST['action'] ?? '';

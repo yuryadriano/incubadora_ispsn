@@ -215,6 +215,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="POST" action="/incubadora_ispsn/app/controllers/mentor_action.php" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="enviar_relatorio">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/mentor/relatorios.php">
                 
