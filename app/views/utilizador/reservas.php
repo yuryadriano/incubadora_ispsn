@@ -2,10 +2,11 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarLogin();
 
-$realPerfil = $_SESSION['usuario_perfil'] ?? 'utilizador';
+$realPerfil     = $_SESSION['usuario_perfil'] ?? 'utilizador';
 $isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
+$isAdminPreview = ($isAdminOrSuper && !empty($_GET['id_usuario']));
 
-if ($isAdminOrSuper && !empty($_GET['id_usuario'])) {
+if ($isAdminPreview) {
     $idUsuario = (int)$_GET['id_usuario'];
     $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ? LIMIT 1");
     if ($stmtU) {
@@ -24,117 +25,183 @@ $paginaActiva = 'reservas';
 $tituloPagina = 'Reservas de Espaço';
 
 // Buscar espaços disponíveis
-$espacos = $mysqli->query("SELECT * FROM espacos WHERE status = 'disponivel' ORDER BY tipo, nome")->fetch_all(MYSQLI_ASSOC);
+$resEsp  = $mysqli->query("SELECT * FROM espacos WHERE status = 'disponivel' ORDER BY tipo, nome");
+$espacos = $resEsp ? $resEsp->fetch_all(MYSQLI_ASSOC) : [];
 
-// Buscar minhas reservas
+// Buscar reservas do utilizador
 $stmt = $mysqli->prepare("
-    SELECT r.*, e.nome as espaco_nome, e.tipo as espaco_tipo 
-    FROM reservas_espaco r 
-    JOIN espacos e ON e.id = r.id_espaco 
-    WHERE r.id_usuario = ? 
+    SELECT r.*, e.nome AS espaco_nome, e.tipo AS espaco_tipo
+    FROM reservas_espaco r
+    JOIN espacos e ON e.id = r.id_espaco
+    WHERE r.id_usuario = ?
     ORDER BY r.data_reserva DESC, r.hora_inicio DESC
 ");
 $stmt->bind_param('i', $idUsuario);
 $stmt->execute();
 $minhasReservas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+$numConfirmadas = count(array_filter($minhasReservas, fn($r) => ($r['status'] ?? '') === 'confirmada'));
+$flashOk   = $_SESSION['flash_ok']   ?? ''; unset($_SESSION['flash_ok']);
+$flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
 
 include __DIR__ . '/../partials/_layout.php';
 ?>
 
-<div class="page-header">
-    <div>
-        <div class="page-header-title">Coworking & Espaços</div>
-        <div class="page-header-sub">Reserve o seu lugar para trabalhar ou reunir com a sua equipa.</div>
-    </div>
-    <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovaReserva">
-        <i class="fa fa-calendar-plus me-1"></i> Nova Reserva
-    </button>
-</div>
+<div class="std-painel">
 
-<div class="row g-4">
-    <!-- MINHAS RESERVAS -->
-    <div class="col-lg-8">
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa fa-clock-rotate-left"></i> O Meu Histórico de Reservas</div>
-            </div>
-            <div class="card-body-custom p-0">
-                <div class="table-responsive">
-                    <table class="table-custom">
-                        <thead>
-                            <tr>
-                                <th>Espaço</th>
-                                <th>Data</th>
-                                <th>Horário</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if(empty($minhasReservas)): ?>
-                                <tr><td colspan="5" class="text-center py-4">Ainda não fez nenhuma reserva.</td></tr>
-                            <?php else: ?>
-                                <?php foreach($minhasReservas as $r): 
-                                    $statusClass = ($r['status'] == 'confirmada' ? 'success' : ($r['status'] == 'pendente' ? 'warning' : 'danger'));
-                                ?>
-                                <tr>
-                                    <td>
-                                        <div class="fw-bold"><?= htmlspecialchars($r['espaco_nome']) ?></div>
-                                        <small class="text-muted"><?= ucfirst($r['espaco_tipo']) ?></small>
-                                    </td>
-                                    <td><?= date('d/m/Y', strtotime($r['data_reserva'])) ?></td>
-                                    <td><?= substr($r['hora_inicio'],0,5) ?> - <?= substr($r['hora_fim'],0,5) ?></td>
-                                    <td>
-                                        <span class="badge bg-<?= $statusClass ?>-subtle text-<?= $statusClass ?> px-3 py-2 rounded-pill" style="font-size:0.7rem">
-                                            <?= strtoupper($r['status']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if($r['status'] == 'pendente'): ?>
-                                            <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" onsubmit="return confirm('Cancelar esta reserva?')">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="action" value="gestao_reserva">
-                                                <input type="hidden" name="id_reserva" value="<?= $r['id'] ?>">
-                                                <input type="hidden" name="novo_status" value="cancelada">
-                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0"><i class="fa fa-trash"></i></button>
-                                            </form>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+    <?php if ($flashOk): ?>
+        <div class="alert-custom alert-success mb-3" role="status">
+            <i class="fa-solid fa-check-circle" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($flashOk, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
+    <?php if ($flashErro): ?>
+        <div class="alert-custom alert-danger mb-3" role="alert">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <span><?= htmlspecialchars($flashErro, ENT_QUOTES, 'UTF-8') ?></span>
+        </div>
+    <?php endif; ?>
+
+    <header class="sp-header">
+        <div class="sp-header-top">
+            <div class="sp-kicker">Infraestrutura &amp; Coworking</div>
+            <span class="sp-chip <?= $numConfirmadas > 0 ? 'sp-chip-ok' : 'sp-chip-neutral' ?> sp-num">
+                <?= (int)$numConfirmadas ?> reserva<?= $numConfirmadas !== 1 ? 's' : '' ?> confirmada<?= $numConfirmadas !== 1 ? 's' : '' ?>
+            </span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="sp-title">Reservas de Espaço</h1>
+                <div class="sp-meta-row mt-1">
+                    <span>Salas de reunião, auditório e postos de trabalho na incubadora.</span>
                 </div>
             </div>
+            <?php if (!$isAdminPreview): ?>
+                <button type="button" class="sp-btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovaReserva">
+                    <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i>
+                    <span>Nova Reserva</span>
+                </button>
+            <?php endif; ?>
+        </div>
+    </header>
+
+    <div class="row g-4 align-items-start">
+        <!-- HISTÓRICO DE RESERVAS -->
+        <div class="col-lg-8">
+            <section class="sp-surface-primary">
+                <div class="sp-card-head">
+                    <div class="sp-card-head-title">
+                        <span class="sp-icon-badge" aria-hidden="true"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                        <div>
+                            <div class="sp-kicker">Registo de Pedidos</div>
+                            <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Histórico de Reservas</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <?php if (empty($minhasReservas)): ?>
+                    <div class="sp-empty-line">
+                        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                        <span>Ainda não existem reservas registadas para esta conta.</span>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="sp-table">
+                            <thead>
+                                <tr>
+                                    <th>Espaço</th>
+                                    <th>Data</th>
+                                    <th>Horário</th>
+                                    <th>Estado</th>
+                                    <?php if (!$isAdminPreview): ?>
+                                        <th class="text-end">Ações</th>
+                                    <?php endif; ?>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($minhasReservas as $r):
+                                    $stR = (string)($r['status'] ?? '');
+                                    $chipR = 'sp-chip-neutral';
+                                    if ($stR === 'confirmada') {
+                                        $chipR = 'sp-chip-ok';
+                                    } elseif ($stR === 'pendente') {
+                                        $chipR = 'sp-chip-warn';
+                                    } elseif ($stR === 'cancelada' || $stR === 'rejeitada') {
+                                        $chipR = 'sp-chip-err';
+                                    }
+                                ?>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold"><?= htmlspecialchars((string)$r['espaco_nome'], ENT_QUOTES, 'UTF-8') ?></div>
+                                            <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
+                                                <?= htmlspecialchars(ucfirst((string)$r['espaco_tipo']), ENT_QUOTES, 'UTF-8') ?>
+                                            </div>
+                                        </td>
+                                        <td class="sp-num"><?= date('d/m/Y', strtotime((string)$r['data_reserva'])) ?></td>
+                                        <td class="sp-num"><?= htmlspecialchars(substr((string)$r['hora_inicio'], 0, 5) . ' – ' . substr((string)$r['hora_fim'], 0, 5), ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td>
+                                            <span class="sp-chip <?= $chipR ?>">
+                                                <?= htmlspecialchars(ucfirst($stR), ENT_QUOTES, 'UTF-8') ?>
+                                            </span>
+                                        </td>
+                                        <?php if (!$isAdminPreview): ?>
+                                            <td class="text-end">
+                                                <?php if ($stR === 'pendente'): ?>
+                                                    <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" class="d-inline" onsubmit="return confirm('Cancelar esta reserva?')">
+                                                        <?= csrf_field() ?>
+                                                        <input type="hidden" name="action" value="gestao_reserva">
+                                                        <input type="hidden" name="id_reserva" value="<?= (int)$r['id'] ?>">
+                                                        <input type="hidden" name="novo_status" value="cancelada">
+                                                        <button type="submit" class="sp-btn-secondary py-1 px-2 text-danger" style="min-height: 32px; font-size: var(--sp-fs-xs);">
+                                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                            <span>Cancelar</span>
+                                                        </button>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <span style="color: var(--sp-text-muted);">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </section>
+        </div>
+
+        <!-- REGRAS & LOCALIZAÇÃO -->
+        <div class="col-lg-4">
+            <aside class="sp-surface-aside">
+                <div class="sp-aside-block">
+                    <span class="sp-aside-icon" aria-hidden="true"><i class="fa-solid fa-building-circle-check"></i></span>
+                    <div class="sp-aside-body">
+                        <div class="sp-kicker mb-1">Regras de Utilização</div>
+                        <ul class="ps-3 mb-0" style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                            <li class="mb-1">Solicite a reserva com antecedência mínima de 24 horas.</li>
+                            <li class="mb-1">Duração máxima de 4 horas por pedido.</li>
+                            <li>Em caso de impedimento, cancele o pedido pendente.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="sp-aside-block">
+                    <span class="sp-aside-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>
+                    <div class="sp-aside-body">
+                        <div class="sp-kicker mb-1">Localização &amp; Horário</div>
+                        <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
+                            Piso 1 do Edifício Principal · Atendimento das 08h00 às 18h00.
+                        </div>
+                    </div>
+                </div>
+            </aside>
         </div>
     </div>
 
-    <!-- INFO DO ESPAÇO -->
-    <div class="col-lg-4">
-        <div class="card-custom bg-primary text-white mb-4">
-            <div class="card-body-custom">
-                <h5 class="fw-bold mb-3"><i class="fa fa-building-circle-check"></i> Regras de Utilização</h5>
-                <ul class="list-unstyled small mb-0" style="opacity:0.9">
-                    <li class="mb-2"><i class="fa fa-check-circle me-2"></i> Reservas devem ser feitas com 24h de antecedência.</li>
-                    <li class="mb-2"><i class="fa fa-check-circle me-2"></i> O tempo máximo por reserva é de 4 horas.</li>
-                    <li class="mb-2"><i class="fa fa-check-circle me-2"></i> Mantenha o silêncio nas áreas de coworking.</li>
-                    <li><i class="fa fa-check-circle me-2"></i> Em caso de não comparência, cancele a reserva.</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="card-custom">
-            <div class="card-header-custom">
-                <div class="card-title-custom"><i class="fa fa-map-location-dot"></i> Onde Estamos?</div>
-            </div>
-            <div class="card-body-custom">
-                <p class="small text-muted mb-0">Localize-se no Piso 1 do Edifício Principal. O nosso recepcionista está disponível das 08h às 18h para lhe dar acesso aos espaços.</p>
-            </div>
-        </div>
-    </div>
 </div>
 
+<?php if (!$isAdminPreview): ?>
 <!-- MODAL NOVA RESERVA -->
 <div class="modal fade" id="modalNovaReserva" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -142,19 +209,19 @@ include __DIR__ . '/../partials/_layout.php';
             <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="solicitar_reserva">
-                <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/utilizador/reservas.php">
                 
                 <div class="modal-header-custom">
-                    <h5 class="modal-title fw-bold"><i class="fa fa-bookmark me-2"></i> Reservar Espaço</h5>
+                    <h5 class="modal-title fw-bold m-0"><i class="fa-solid fa-bookmark me-2" aria-hidden="true"></i>Solicitar Reserva de Espaço</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body-custom">
                     <div class="mb-3">
-                        <label class="form-label-custom">Escolha o Espaço *</label>
+                        <label class="form-label-custom">Espaço *</label>
                         <select name="id_espaco" class="form-select form-control-custom" required>
                             <option value="">Selecione...</option>
-                            <?php foreach($espacos as $e): ?>
-                                <option value="<?= $e['id'] ?>"><?= $e['nome'] ?> (<?= ucfirst($e['tipo']) ?>)</option>
+                            <?php foreach ($espacos as $e): ?>
+                                <option value="<?= (int)$e['id'] ?>"><?= htmlspecialchars((string)$e['nome'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars(ucfirst((string)$e['tipo']), ENT_QUOTES, 'UTF-8') ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -174,7 +241,7 @@ include __DIR__ . '/../partials/_layout.php';
                     </div>
                     <div class="mb-0">
                         <label class="form-label-custom">Objetivo da Reserva</label>
-                        <textarea name="objetivo" class="form-control-custom" rows="2" placeholder="Ex: Reunião de equipa para discutir MVP"></textarea>
+                        <textarea name="objetivo" class="form-control-custom" rows="2" placeholder="Ex: Reunião de equipa para desenvolvimento do MVP"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer-custom">
@@ -185,5 +252,6 @@ include __DIR__ . '/../partials/_layout.php';
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <?php include __DIR__ . '/../partials/_layout_end.php'; ?>
