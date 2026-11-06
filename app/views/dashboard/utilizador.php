@@ -47,6 +47,7 @@ if ($isAdminOrSuper) {
 
 // salvar comentário
 if (
+    !$isAdminOrSuper &&
     $_SERVER['REQUEST_METHOD'] === 'POST' &&
     isset($_POST['novo_comentario'], $_POST['id_projeto'])
 ) {
@@ -557,7 +558,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                 </div>
             </div>
         </div>
-        <?php else: ?>
+        <?php elseif (!$isAdminOrSuper): ?>
         <div class="hero-btns mt-3">
             <button class="hbtn hbtn-primary" data-bs-toggle="modal" data-bs-target="#modalProjeto"><i class="fa fa-plus"></i>Submeter Ideia</button>
         </div>
@@ -676,6 +677,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
 
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 text-start">
                                 <?php if ($est === 'activa' || $est === 'reprovada'): ?>
+                                    <?php if (!$isAdminOrSuper): ?>
                                     <button type="button" class="btn btn-warning btn-sm fw-bold px-4 py-2 text-dark rounded-3" style="font-size:0.75rem; border:none;" 
                                             onclick="abrirSubmeterEvidencia(<?= htmlspecialchars(json_encode([
                                                 'id' => $m['id'],
@@ -688,6 +690,7 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
                                             ])) ?>)">
                                         <i class="fa fa-paper-plane me-1"></i>Submeter Evidência
                                     </button>
+                                    <?php endif; ?>
                                 <?php elseif ($est === 'em_avaliacao'): ?>
                                     <div class="text-info small fw-semibold" style="font-size:0.78rem;"><i class="fa fa-clock me-1"></i>Evidência submetida em <?= date('d/m/Y H:i', strtotime($m['evidencia_em'])) ?>. Aguarda avaliação do mentor.</div>
                                 <?php elseif ($est === 'concluida'): ?>
@@ -802,12 +805,15 @@ $faseLabel    = strtoupper(str_replace('_', ' ', $fase));
     <div style="font-size:3.5rem; color:#D97706; opacity:0.7; margin-bottom:20px;"><i class="fa fa-diagram-project"></i></div>
     <h4 style="font-weight:800; color:#1C1917; margin-bottom:8px;">Ainda sem projeto submetido</h4>
     <p style="color:#9CA3AF; font-size:0.88rem; max-width:380px; margin:0 auto 24px;">O ecossistema da Incubadora do ISPSN vai acompanhar a sua startup da ideia até ao financiamento. Comece agora.</p>
+    <?php if (!$isAdminOrSuper): ?>
     <button class="hbtn hbtn-primary" style="margin:0 auto;" data-bs-toggle="modal" data-bs-target="#modalProjeto">
         <i class="fa fa-plus"></i> Submeter Primeira Ideia
     </button>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
+<?php if (!$isAdminOrSuper): ?>
 <!-- ══ MODAL SUBMETER PROJETO ══ -->
 <div class="modal fade" id="modalProjeto" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -959,6 +965,7 @@ function abrirSubmeterEvidencia(meta) {
     new bootstrap.Modal(document.getElementById('modalSubmeterEvidencia')).show();
 }
 </script>
+<?php endif; ?>
 
 <?php
 require_once __DIR__ . '/../partials/_layout_end.php';
