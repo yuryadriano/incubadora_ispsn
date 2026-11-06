@@ -27,11 +27,16 @@ if ($action === 'save_pub') {
     $status    = limpar($_POST['status']);
     
     $urlImagem = '';
-    if (isset($_FILES['imagem']) && $_FILES['imagem']['error'] === 0) {
-        $ext = pathinfo($_FILES['imagem']['name'], PATHINFO_EXTENSION);
-        $nomeImg = "pub_" . time() . "." . $ext;
+    if (!empty($_FILES['imagem']['name'])) {
+        $erroUp = '';
+        $ext = validar_upload($_FILES['imagem'], 'imagem', 5 * 1024 * 1024, $erroUp);
+        if ($ext === false) {
+            $_SESSION['flash_erro'] = "Imagem de capa inválida: $erroUp";
+            header("Location: /incubadora_ispsn/app/views/admin/website.php"); exit;
+        }
+        $nomeImg = "pub_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
         $destino = __DIR__ . "/../../assets/img/blog/" . $nomeImg;
-        if (!is_dir(dirname($destino))) mkdir(dirname($destino), 0777, true);
+        if (!is_dir(dirname($destino))) mkdir(dirname($destino), 0755, true);
         if (move_uploaded_file($_FILES['imagem']['tmp_name'], $destino)) {
             $urlImagem = "/incubadora_ispsn/assets/img/blog/" . $nomeImg;
         }
@@ -40,13 +45,24 @@ if ($action === 'save_pub') {
     $galeriaUrls = [];
     if (isset($_FILES['galeria']) && !empty($_FILES['galeria']['name'][0])) {
         foreach ($_FILES['galeria']['name'] as $k => $val) {
-            if ($_FILES['galeria']['error'][$k] === 0) {
-                $ext = pathinfo($_FILES['galeria']['name'][$k], PATHINFO_EXTENSION);
-                $nomeImg = "pub_gal_" . time() . "_$k." . $ext;
-                $destino = __DIR__ . "/../../assets/img/blog/" . $nomeImg;
-                if (move_uploaded_file($_FILES['galeria']['tmp_name'][$k], $destino)) {
-                    $galeriaUrls[] = "/incubadora_ispsn/assets/img/blog/" . $nomeImg;
-                }
+            if ($val === '') continue;
+            $itemGaleria = [
+                'name'     => $_FILES['galeria']['name'][$k] ?? '',
+                'tmp_name' => $_FILES['galeria']['tmp_name'][$k] ?? '',
+                'size'     => $_FILES['galeria']['size'][$k] ?? 0,
+                'error'    => $_FILES['galeria']['error'][$k] ?? UPLOAD_ERR_NO_FILE,
+            ];
+            $erroUp = '';
+            $ext = validar_upload($itemGaleria, 'imagem', 5 * 1024 * 1024, $erroUp);
+            if ($ext === false) {
+                $_SESSION['flash_erro'] = "Imagem da galeria inválida: $erroUp";
+                header("Location: /incubadora_ispsn/app/views/admin/website.php"); exit;
+            }
+            $nomeImg = "pub_gal_" . time() . "_{$k}_" . bin2hex(random_bytes(4)) . "." . $ext;
+            $destino = __DIR__ . "/../../assets/img/blog/" . $nomeImg;
+            if (!is_dir(dirname($destino))) mkdir(dirname($destino), 0755, true);
+            if (move_uploaded_file($itemGaleria['tmp_name'], $destino)) {
+                $galeriaUrls[] = "/incubadora_ispsn/assets/img/blog/" . $nomeImg;
             }
         }
     }
@@ -81,11 +97,16 @@ if ($action === 'save_galeria') {
     $titulo    = limpar($_POST['titulo']);
     $descricao = limpar($_POST['descricao']);
     
-    if (isset($_FILES['imagem']) && $_FILES['imagem']['error'] === 0) {
-        $ext = pathinfo($_FILES['imagem']['name'], PATHINFO_EXTENSION);
-        $nomeImg = "gal_" . time() . "." . $ext;
+    if (!empty($_FILES['imagem']['name'])) {
+        $erroUp = '';
+        $ext = validar_upload($_FILES['imagem'], 'imagem', 5 * 1024 * 1024, $erroUp);
+        if ($ext === false) {
+            $_SESSION['flash_erro'] = "Imagem inválida: $erroUp";
+            header("Location: /incubadora_ispsn/app/views/admin/website.php"); exit;
+        }
+        $nomeImg = "gal_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
         $destino = __DIR__ . "/../../assets/img/galeria/" . $nomeImg;
-        if (!is_dir(dirname($destino))) mkdir(dirname($destino), 0777, true);
+        if (!is_dir(dirname($destino))) mkdir(dirname($destino), 0755, true);
         
         if (move_uploaded_file($_FILES['imagem']['tmp_name'], $destino)) {
             $url = "/incubadora_ispsn/assets/img/galeria/" . $nomeImg;

@@ -7,12 +7,9 @@ require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../utils/GeminiAI.php';
 obrigarLogin();
 
-// ── Verificação CSRF (todos os POST excepto AJAX JSON) ──
-$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) || 
-          str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
-if (!$isAjax) {
-    csrf_verificar();
-}
+// ── Verificação CSRF ──
+$isAjax = false;
+csrf_verificar();
 
 $perfil    = $_SESSION['usuario_perfil'] ?? 'utilizador';
 $idUsuario = (int)$_SESSION['usuario_id'];
@@ -770,13 +767,19 @@ if ($action === 'atualizar_estado_tarefa') {
             if ($novoStatus === 'concluida') {
                 $evidenciaPath = null;
                 // Processar upload de arquivo de evidência
-                if (isset($_FILES['evidencia_ficheiro']) && $_FILES['evidencia_ficheiro']['error'] === UPLOAD_ERR_OK) {
+                if (!empty($_FILES['evidencia_ficheiro']['name'])) {
                     $file = $_FILES['evidencia_ficheiro'];
-                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-                    $novoNome = "evid_" . $idTarefa . "_" . time() . "_" . uniqid() . "." . $ext;
+                    $erroUp = '';
+                    $ext = validar_upload($file, 'documento', 10 * 1024 * 1024, $erroUp);
+                    if ($ext === false) {
+                        $_SESSION['flash_erro'] = "Ficheiro de evidência inválido: $erroUp";
+                        header("Location: $redirect");
+                        exit;
+                    }
+                    $novoNome = "evid_" . $idTarefa . "_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
                     $folder = __DIR__ . "/../../uploads/evidencias/";
                     if (!is_dir($folder)) {
-                        mkdir($folder, 0777, true);
+                        mkdir($folder, 0755, true);
                     }
                     if (move_uploaded_file($file['tmp_name'], $folder . $novoNome)) {
                         $evidenciaPath = "uploads/evidencias/" . $novoNome;

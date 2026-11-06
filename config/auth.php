@@ -137,3 +137,82 @@ function enviarNotificacao($idUsuario, $titulo, $mensagem, $tipo = 'info') {
 
     return $executado;
 }
+
+/**
+ * Valida um ficheiro de upload por erro, tamanho, extensão em minúsculas (lista branca) e MIME real (finfo).
+ *
+ * @param array  $file     Array do ficheiro ($_FILES['campo'])
+ * @param string $contexto 'imagem' ou 'documento'
+ * @param int    $maxBytes Tamanho máximo permitido em bytes (default: 10 MB)
+ * @param string &$erro    Mensagem de erro detalhada em caso de falha
+ * @return string|false    Extensão segura validada (em minúsculas) ou false se inválido
+ */
+function validar_upload(array $file, string $contexto = 'documento', int $maxBytes = 10485760, string &$erro = ''): string|false {
+    if (!isset($file['error']) || $file['error'] !== UPLOAD_ERR_OK) {
+        $erro = 'Erro no envio do ficheiro.';
+        return false;
+    }
+
+    $tmpPath = $file['tmp_name'] ?? '';
+    if ($tmpPath === '' || !is_file($tmpPath)) {
+        $erro = 'Ficheiro temporário inválido.';
+        return false;
+    }
+
+    $size = isset($file['size']) ? (int)$file['size'] : (int)@filesize($tmpPath);
+    if ($size <= 0 || $size > $maxBytes) {
+        $erro = 'Tamanho do ficheiro inválido ou excede o limite de ' . round($maxBytes / 1048576) . ' MB.';
+        return false;
+    }
+
+    $nomeOriginal = (string)($file['name'] ?? '');
+    $ext = strtolower(pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+
+    $mapaImagens = [
+        'jpg'  => ['image/jpeg', 'image/pjpeg'],
+        'jpeg' => ['image/jpeg', 'image/pjpeg'],
+        'png'  => ['image/png'],
+        'webp' => ['image/webp'],
+        'gif'  => ['image/gif'],
+    ];
+
+    $mapaDocumentos = $mapaImagens + [
+        'pdf'  => ['application/pdf'],
+        'doc'  => ['application/msword', 'application/CDFV2', 'application/octet-stream'],
+        'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
+        'xls'  => ['application/vnd.ms-excel', 'application/CDFV2', 'application/octet-stream'],
+        'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip'],
+        'ppt'  => ['application/vnd.ms-powerpoint', 'application/CDFV2', 'application/octet-stream'],
+        'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip'],
+        'zip'  => ['application/zip', 'application/x-zip-compressed', 'multipart/x-zip'],
+        'txt'  => ['text/plain'],
+    ];
+
+    $mapaPermitido = ($contexto === 'imagem') ? $mapaImagens : $mapaDocumentos;
+
+    if ($ext === '' || !isset($mapaPermitido[$ext])) {
+        $erro = 'Extensão de ficheiro não permitida.';
+        return false;
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeReal = $finfo ? (string)finfo_file($finfo, $tmpPath) : '';
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    if ($mimeReal === '' || stripos($mimeReal, 'php') !== false || !in_array($mimeReal, $mapaPermitido[$ext], true)) {
+        $erro = 'O conteúdo real do ficheiro (' . ($mimeReal ?: 'desconhecido') . ') não corresponde à extensão .' . $ext . '.';
+        return false;
+    }
+
+    // Rejeitar qualquer payload com código PHP embutido (ex.: polyglot JPEG/GIF/TXT com <?php)
+    $amostra = (string)@file_get_contents($tmpPath, false, null, 0, 65536);
+    if (stripos($amostra, '<?php') !== false || stripos($amostra, '<?=') !== false) {
+        $erro = 'Conteúdo potencialmente executável detetado no ficheiro.';
+        return false;
+    }
+
+    return $ext;
+}
+

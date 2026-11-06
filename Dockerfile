@@ -34,13 +34,34 @@ RUN echo '<?php header("Location: /incubadora_ispsn/public/website/"); exit;' > 
 COPY . /var/www/html/
 
 # 6. Definir Permissões (Crucial para uploads)
-# Garantir que as pastas de imagens tenham permissões de escrita para o Apache
+# Garantir que as pastas de imagens e uploads existam e tenham permissões de escrita para o Apache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html \
+    && mkdir -p /var/www/html/uploads/pitches \
+    && mkdir -p /var/www/html/uploads/projetos \
+    && mkdir -p /var/www/html/uploads/evidencias \
+    && mkdir -p /var/www/html/uploads/metas \
+    && mkdir -p /var/www/html/uploads/relatorios \
     && mkdir -p /var/www/html/assets/img/blog \
     && mkdir -p /var/www/html/assets/img/galeria \
+    && chown -R www-data:www-data /var/www/html/uploads /var/www/html/assets/img \
+    && chmod -R 775 /var/www/html/uploads \
     && chmod -R 775 /var/www/html/assets/img/blog \
     && chmod -R 775 /var/www/html/assets/img/galeria
+
+# Bloquear execução de PHP e scripts nas pastas de upload ao nível do Apache
+RUN printf '%s\n' \
+    '<DirectoryMatch "^/var/www/html/(incubadora_ispsn/)?(uploads|assets/img/(blog|galeria))">' \
+    '    Options -ExecCGI -Indexes' \
+    '    AllowOverride None' \
+    '    php_admin_flag engine off' \
+    '    <FilesMatch "\.(?i:php[0-9]?|phtml|phar|inc|pl|py|cgi|sh)$">' \
+    '        SetHandler none' \
+    '        Require all denied' \
+    '    </FilesMatch>' \
+    '</DirectoryMatch>' \
+    > /etc/apache2/conf-available/no-php-uploads.conf \
+    && a2enconf no-php-uploads
 
 # 7. Configuração Adicional do PHP (Opcional)
 # Se necessário, você pode adicionar um php.ini personalizado

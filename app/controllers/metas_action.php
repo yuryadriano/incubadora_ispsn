@@ -191,11 +191,17 @@ if ($action === 'submeter_evidencia') {
             $evidenciaPath = null;
             
             // Upload de ficheiro
-            if (isset($_FILES['evidencia_ficheiro']) && $_FILES['evidencia_ficheiro']['error'] === UPLOAD_ERR_OK) {
-                $ext = pathinfo($_FILES['evidencia_ficheiro']['name'], PATHINFO_EXTENSION);
-                $novoNome = "meta_" . $idMetaProjeto . "_" . time() . "_" . uniqid() . "." . $ext;
+            if (!empty($_FILES['evidencia_ficheiro']['name'])) {
+                $erroUp = '';
+                $ext = validar_upload($_FILES['evidencia_ficheiro'], 'documento', 10 * 1024 * 1024, $erroUp);
+                if ($ext === false) {
+                    $_SESSION['flash_erro'] = "Ficheiro de evidência inválido: $erroUp";
+                    header("Location: $redirect");
+                    exit;
+                }
+                $novoNome = "meta_" . $idMetaProjeto . "_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
                 $folder = __DIR__ . "/../../uploads/metas/";
-                if (!is_dir($folder)) mkdir($folder, 0777, true);
+                if (!is_dir($folder)) mkdir($folder, 0755, true);
                 
                 if (move_uploaded_file($_FILES['evidencia_ficheiro']['tmp_name'], $folder . $novoNome)) {
                     $evidenciaPath = "uploads/metas/" . $novoNome;

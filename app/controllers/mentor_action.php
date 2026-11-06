@@ -135,11 +135,12 @@ if ($action === 'enviar_relatorio') {
 
     if ($idProjeto > 0 && !empty($titulo) && isset($_FILES['ficheiro_relatorio'])) {
         $file = $_FILES['ficheiro_relatorio'];
-        
-        if ($file['error'] === 0) {
-            $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-            $nomeFicheiro = "rel_" . time() . "_" . uniqid() . "." . $ext;
+        $erroUp = '';
+        $ext = validar_upload($file, 'documento', 10 * 1024 * 1024, $erroUp);
+        if ($ext !== false) {
+            $nomeFicheiro = "rel_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $ext;
             $uploadDir = __DIR__ . '/../../uploads/relatorios/';
+            if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
             
             if (move_uploaded_file($file['tmp_name'], $uploadDir . $nomeFicheiro)) {
                 $stmt = $mysqli->prepare("
@@ -158,7 +159,7 @@ if ($action === 'enviar_relatorio') {
                 $_SESSION['flash_erro'] = "Erro ao mover o ficheiro para a pasta de destino.";
             }
         } else {
-            $_SESSION['flash_erro'] = "Erro no upload do ficheiro.";
+            $_SESSION['flash_erro'] = "Ficheiro de relatório inválido: $erroUp";
         }
     } else {
         $_SESSION['flash_erro'] = "Dados incompletos para o envio do relatório.";
