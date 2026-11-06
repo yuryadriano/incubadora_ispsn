@@ -6,13 +6,25 @@ obrigarLogin();
 $tituloPagina = 'O Meu Perfil';
 $paginaActiva = 'perfil';
 
-$idUsuario = (int)$_SESSION['usuario_id'];
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'utilizador';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
+
+if ($isAdminOrSuper && !empty($_GET['id_usuario'])) {
+    $idUsuario = (int)$_GET['id_usuario'];
+} else {
+    $idUsuario = (int)$_SESSION['usuario_id'];
+}
 
 // Obter dados atuais atualizados
 $stmt = $mysqli->prepare("SELECT nome, email, perfil, tipo_utilizador, criado_em FROM usuarios WHERE id = ?");
 $stmt->bind_param('i', $idUsuario);
 $stmt->execute();
 $usuario = $stmt->get_result()->fetch_assoc();
+
+if ($isAdminOrSuper && !empty($_GET['id_usuario']) && $usuario) {
+    $nomeUsuario = $usuario['nome'];
+    $perfil = 'utilizador';
+}
 
 // Flash messages
 $flashOk   = $_SESSION['flash_ok']   ?? ''; unset($_SESSION['flash_ok']);

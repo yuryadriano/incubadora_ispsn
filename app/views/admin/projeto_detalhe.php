@@ -297,9 +297,15 @@ require_once __DIR__ . '/../partials/_layout.php';
 <!-- PAGE HEADER -->
 <div class="page-header">
     <div>
+        <?php if (($perfil ?? '') === 'utilizador'): ?>
+        <a href="<?= htmlspecialchars($hrefPainelEstudante ?? '/incubadora_ispsn/public/index.php', ENT_QUOTES, 'UTF-8') ?>" class="btn-ghost" style="margin-bottom:10px;font-size:0.82rem">
+            <i class="fa fa-arrow-left"></i> Voltar ao Painel
+        </a>
+        <?php else: ?>
         <a href="/incubadora_ispsn/app/views/admin/projetos.php" class="btn-ghost" style="margin-bottom:10px;font-size:0.82rem">
             <i class="fa fa-arrow-left"></i> Voltar à lista
         </a>
+        <?php endif; ?>
         <div class="page-header-title"><?= htmlspecialchars($projeto['titulo']) ?></div>
         <div class="page-header-sub d-flex align-items-center gap-2 mt-1">
             <?php
@@ -532,7 +538,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         </div>
                     </div>
                     <div class="col-md-4 text-md-end d-flex flex-column justify-content-center align-items-md-end gap-2">
-                        <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php" class="btn-primary-custom text-center" style="background:#d97706; border-color:#d97706; padding: 10px 20px; font-size:0.82rem; text-decoration:none; color:#fff; border-radius: 8px;">
+                        <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php<?= htmlspecialchars($qsEstudante ?? '', ENT_QUOTES, 'UTF-8') ?>" class="btn-primary-custom text-center" style="background:#d97706; border-color:#d97706; padding: 10px 20px; font-size:0.82rem; text-decoration:none; color:#fff; border-radius: 8px;">
                             <i class="fa fa-paper-plane me-1"></i> Submeter Evidências
                         </a>
                     </div>

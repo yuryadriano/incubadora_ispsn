@@ -7,11 +7,32 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarLogin();
 
-$perfil       = $perfil ?? $_SESSION['usuario_perfil'] ?? 'utilizador';
+$realPerfilSessao = $_SESSION['usuario_perfil'] ?? 'utilizador';
+if (in_array($realPerfilSessao, ['admin', 'superadmin'], true) && !empty($_GET['id_usuario']) && ($perfil ?? '') !== 'mentor') {
+    $idCandPrev = (int)$_GET['id_usuario'];
+    $stmtPrev = $mysqli->prepare("SELECT id, nome, perfil FROM usuarios WHERE id = ? LIMIT 1");
+    if ($stmtPrev) {
+        $stmtPrev->bind_param('i', $idCandPrev);
+        $stmtPrev->execute();
+        $uPrev = $stmtPrev->get_result()->fetch_assoc();
+        $stmtPrev->close();
+        if ($uPrev && ($uPrev['perfil'] ?? '') === 'utilizador') {
+            $idUsuario   = (int)$uPrev['id'];
+            $nomeUsuario = $uPrev['nome'];
+            $perfil      = 'utilizador';
+        }
+    }
+}
+
+$perfil       = $perfil ?? $realPerfilSessao;
 $nomeUsuario  = $nomeUsuario ?? $_SESSION['usuario_nome'] ?? 'Utilizador';
 $idUsuario    = $idUsuario ?? (int)($_SESSION['usuario_id'] ?? 0);
 
-$isSimulando = false;
+$isSimulando = ($perfil === 'utilizador' && in_array($realPerfilSessao, ['admin', 'superadmin'], true) && $idUsuario > 0);
+$qsEstudante = $isSimulando ? ('?id_usuario=' . (int)$idUsuario) : '';
+$hrefPainelEstudante = $isSimulando
+    ? ('/incubadora_ispsn/app/views/dashboard/utilizador.php' . $qsEstudante)
+    : '/incubadora_ispsn/public/index.php';
 
 // Contar notificações não lidas
 $naoLidas = 0;
@@ -31,11 +52,11 @@ $tituloPagina = $tituloPagina ?? 'Painel';
 // Menus por perfil
 $menus = [
     'utilizador' => [
-        ['icon'=>'fa-house',           'label'=>'Painel Geral',     'href'=>'/incubadora_ispsn/public/index.php',            'id'=>'dashboard'],
-        ['icon'=>'fa-rocket',          'label'=>'Minha Startup',    'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php','id'=>'projetos'],
-        ['icon'=>'fa-bookmark',        'label'=>'Reservas de Espaço','href'=>'/incubadora_ispsn/app/views/utilizador/reservas.php','id'=>'reservas'],
-        ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php',    'id'=>'ranking'],
-        ['icon'=>'fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php',   'id'=>'perfil'],
+        ['icon'=>'fa-house',           'label'=>'Painel Geral',     'href'=>$hrefPainelEstudante,                                              'id'=>'dashboard'],
+        ['icon'=>'fa-rocket',          'label'=>'Minha Startup',    'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php' . $qsEstudante,'id'=>'projetos'],
+        ['icon'=>'fa-bookmark',        'label'=>'Reservas de Espaço','href'=>'/incubadora_ispsn/app/views/utilizador/reservas.php' . $qsEstudante,  'id'=>'reservas'],
+        ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php' . $qsEstudante,        'id'=>'ranking'],
+        ['icon'=>'fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php' . $qsEstudante,          'id'=>'perfil'],
     ],
     'admin' => [
         ['icon'=>'fa-house',           'label'=>'Comando Central',  'href'=>'/incubadora_ispsn/public/index.php',             'id'=>'dashboard'],
@@ -137,7 +158,7 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <!-- Global Stylesheet -->
-<link rel="stylesheet" href="/incubadora_ispsn/assets/css/global.css">
+<link rel="stylesheet" href="/incubadora_ispsn/assets/css/global.css?v=<?= @filemtime(__DIR__ . '/../../../assets/css/global.css') ?: '2' ?>">
 </head>
 <body>
 <script>
@@ -209,6 +230,12 @@ if (document.documentElement.classList.contains('dark-mode')) {
 
     <!-- Footer sidebar -->
     <div class="sidebar-footer">
+        <?php if (!empty($isSimulando)): ?>
+        <a href="/incubadora_ispsn/public/index.php" class="nav-item mb-1" style="color: #FBBF24;">
+            <i class="fa-solid fa-arrow-left nav-icon"></i>
+            <span>Voltar ao Painel Admin</span>
+        </a>
+        <?php endif; ?>
         <a href="/incubadora_ispsn/public/logout.php" class="nav-item logout-item">
             <i class="fa fa-right-from-bracket nav-icon"></i>
             <span>Terminar Sessão</span>
