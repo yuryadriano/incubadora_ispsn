@@ -73,6 +73,7 @@ include __DIR__ . '/../partials/_layout.php';
                                     <td>
                                         <?php if($r['status'] == 'pendente'): ?>
                                             <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" onsubmit="return confirm('Cancelar esta reserva?')">
+                                                <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="gestao_reserva">
                                                 <input type="hidden" name="id_reserva" value="<?= $r['id'] ?>">
                                                 <input type="hidden" name="novo_status" value="cancelada">
@@ -120,6 +121,7 @@ include __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="solicitar_reserva">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
                 

@@ -306,12 +306,14 @@ $reservasPendentes = $mysqli->query("
                                     <td class="pe-4 text-end">
                                         <div class="d-flex justify-content-end gap-2">
                                             <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
+                                                <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="gestao_reserva">
                                                 <input type="hidden" name="id_reserva" value="<?= $rp['id'] ?>">
                                                 <input type="hidden" name="novo_status" value="confirmada">
                                                 <button type="submit" class="btn btn-sm btn-success rounded-pill px-3">Confirmar</button>
                                             </form>
                                             <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
+                                                <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="gestao_reserva">
                                                 <input type="hidden" name="id_reserva" value="<?= $rp['id'] ?>">
                                                 <input type="hidden" name="novo_status" value="cancelada">
@@ -360,6 +362,7 @@ $reservasPendentes = $mysqli->query("
 <div class="modal fade" id="modalNovoEspaco" tabindex="-1">
     <div class="modal-dialog">
         <form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST" class="modal-content">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="adicionar_espaco">
             <div class="modal-header">
                 <h5 class="modal-title">Registar Novo Espaço</h5>
@@ -447,6 +450,7 @@ $reservasPendentes = $mysqli->query("
                     <td class="text-end">
                         ${isOcupado && !item.check_in_at 
                             ? `<form action="/incubadora_ispsn/app/controllers/reserva_action.php" method="POST">
+                                <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="check_in">
                                 <input type="hidden" name="id_reserva" value="${item.id_reserva}">
                                 <button type="submit" class="btn btn-sm btn-dark rounded-3 px-3 shadow-sm" style="font-size:0.75rem">
