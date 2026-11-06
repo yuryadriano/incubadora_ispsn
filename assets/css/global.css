@@ -745,3 +745,384 @@ body.dark-mode .table-custom tbody td {
 body.dark-mode .alert {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* ================================================================
+   PAINEL DO ESTUDANTE (.std-painel) — Tokens & Componentes Editoriais
+   Escopo estrito: nenhuma regra afeta elementos fora de .std-painel
+   ================================================================ */
+.std-painel {
+  /* Superfícies */
+  --sp-bg:             #FDFAF5;
+  --sp-surface:        #FFFFFF;
+  --sp-surface-muted:  #F5F2EB;
+
+  /* Bordas (1px) */
+  --sp-border:         #E7E2D8;
+  --sp-border-strong:  #D6CFC2;
+
+  /* Texto (3 níveis — todos com contraste WCAG AA >= 4.5:1) */
+  --sp-text:           #18181B;
+  --sp-text-sec:       #52525B;
+  --sp-text-muted:     #6E6E77;
+
+  /* Destaque institucional Âmbar (contraste AA >= 5.0:1 sobre claro) */
+  --sp-accent:         #B45309;
+  --sp-accent-bg:      #FFFBEB;
+  --sp-btn-bg:         #B45309;
+  --sp-btn-fg:         #FFFFFF;
+  --sp-btn-hover:      #92400E;
+
+  /* Semânticas: ok / aviso / erro */
+  --sp-ok-text:        #065F46;
+  --sp-ok-bg:          #ECFDF5;
+  --sp-ok-border:      #A7F3D0;
+  --sp-warn-text:      #92400E;
+  --sp-warn-bg:        #FFFBEB;
+  --sp-warn-border:    #FDE68A;
+  --sp-err-text:       #991B1B;
+  --sp-err-bg:         #FEF2F2;
+  --sp-err-border:     #FECACA;
+
+  /* Tipografia (apenas Inter + stack ui-monospace nativa) */
+  --sp-font-sans:      'Inter', system-ui, -apple-system, sans-serif;
+  --sp-font-mono:      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sp-fs-xs:          0.75rem;     /* 12px */
+  --sp-fs-sm:          0.8125rem;   /* 13px */
+  --sp-fs-base:        0.9375rem;   /* 15px */
+  --sp-fs-md:          1.0625rem;   /* 17px */
+  --sp-fs-lg:          1.25rem;     /* 20px */
+  --sp-fs-xl:          1.5rem;      /* 24px */
+
+  /* Escala de espaçamento 4/8px */
+  --sp-space-1:        4px;
+  --sp-space-2:        8px;
+  --sp-space-3:        12px;
+  --sp-space-4:        16px;
+  --sp-space-6:        24px;
+  --sp-space-8:        32px;
+  --sp-space-12:       48px;
+
+  /* Raios (6px / 10px) e sombra única */
+  --sp-radius-sm:      6px;
+  --sp-radius:         10px;
+  --sp-shadow:         0 1px 3px rgba(24, 24, 27, 0.06), 0 1px 2px rgba(24, 24, 27, 0.04);
+
+  max-width: 1080px;
+  font-family: var(--sp-font-sans);
+  color: var(--sp-text);
+  font-size: var(--sp-fs-base);
+  line-height: 1.55;
+}
+
+body.dark-mode .std-painel,
+html.dark-mode .std-painel {
+  --sp-bg:             #0F111A;
+  --sp-surface:        #181B28;
+  --sp-surface-muted:  #212536;
+  --sp-border:         #2D3247;
+  --sp-border-strong:  #3E4560;
+  --sp-text:           #F8FAFC;
+  --sp-text-sec:       #CBD5E1;
+  --sp-text-muted:     #94A3B8;
+  --sp-accent:         #FBBF24;
+  --sp-accent-bg:      rgba(217, 119, 6, 0.16);
+  --sp-btn-bg:         #F59E0B;
+  --sp-btn-fg:         #18181B;
+  --sp-btn-hover:      #FBBF24;
+  --sp-ok-text:        #6EE7B7;
+  --sp-ok-bg:          rgba(16, 185, 129, 0.14);
+  --sp-ok-border:      rgba(16, 185, 129, 0.35);
+  --sp-warn-text:      #FCD34D;
+  --sp-warn-bg:        rgba(245, 158, 11, 0.14);
+  --sp-warn-border:    rgba(245, 158, 11, 0.35);
+  --sp-err-text:       #FCA5A5;
+  --sp-err-bg:         rgba(239, 68, 68, 0.14);
+  --sp-err-border:     rgba(239, 68, 68, 0.35);
+  --sp-shadow:         0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Números tabulares e códigos do sistema */
+.std-painel .sp-num {
+  font-variant-numeric: tabular-nums;
+}
+.std-painel .sp-code {
+  font-family: var(--sp-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--sp-fs-sm);
+}
+
+/* Barra fina de leitura (modo de impersonação Admin/SuperAdmin) */
+.std-painel .sp-read-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-2) var(--sp-space-4);
+  margin-bottom: var(--sp-space-6);
+  background: var(--sp-surface-muted);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-text-sec);
+}
+.std-painel .sp-read-select {
+  min-height: 44px;
+  padding: var(--sp-space-2) var(--sp-space-3);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-text);
+  background-color: var(--sp-surface);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-sm);
+}
+
+/* Cabeçalho editorial ("Onde estou?") */
+.std-painel .sp-header {
+  padding-bottom: var(--sp-space-6);
+  margin-bottom: var(--sp-space-6);
+  border-bottom: 1px solid var(--sp-border);
+}
+.std-painel .sp-kicker {
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sp-text-muted);
+  margin-bottom: var(--sp-space-1);
+}
+.std-painel .sp-title {
+  font-size: var(--sp-fs-xl);
+  font-weight: 700;
+  color: var(--sp-text);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin: 0;
+}
+.std-painel .sp-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-space-3);
+  margin-top: var(--sp-space-2);
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-text-sec);
+}
+
+/* Stepper horizontal de fases (<ol>) */
+.std-painel .sp-stepper {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-space-2);
+  padding: var(--sp-space-4) 0 0;
+  margin: var(--sp-space-4) 0 0;
+  border-top: 1px solid var(--sp-border);
+}
+.std-painel .sp-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  font-size: var(--sp-fs-xs);
+  font-weight: 500;
+  color: var(--sp-text-muted);
+}
+.std-painel .sp-step + .sp-step::before {
+  content: '/';
+  color: var(--sp-border-strong);
+  margin-right: var(--sp-space-1);
+}
+.std-painel .sp-step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sp-border-strong);
+  display: inline-block;
+}
+.std-painel .sp-step.is-done {
+  color: var(--sp-ok-text);
+}
+.std-painel .sp-step.is-done .sp-step-dot {
+  background: var(--sp-ok-text);
+}
+.std-painel .sp-step[aria-current="step"] {
+  color: var(--sp-accent);
+  font-weight: 700;
+}
+.std-painel .sp-step[aria-current="step"] .sp-step-dot {
+  background: var(--sp-accent);
+  box-shadow: 0 0 0 3px var(--sp-accent-bg);
+}
+
+/* Secções e as 2 únicas superfícies com caixa/sombra */
+.std-painel .sp-section-label {
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sp-text-muted);
+  margin-bottom: var(--sp-space-3);
+}
+.std-painel .sp-surface-primary {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-shadow);
+  padding: var(--sp-space-6);
+  margin-bottom: var(--sp-space-6);
+}
+.std-painel .sp-surface-aside {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-shadow);
+  padding: var(--sp-space-4) var(--sp-space-6);
+}
+.std-painel .sp-aside-block {
+  padding: var(--sp-space-4) 0;
+  border-bottom: 1px solid var(--sp-border);
+}
+.std-painel .sp-aside-block:first-child {
+  padding-top: var(--sp-space-1);
+}
+.std-painel .sp-aside-block:last-child {
+  padding-bottom: var(--sp-space-1);
+  border-bottom: none;
+}
+
+/* Linhas de lista editorial (metas secundárias e tarefas, sem cards) */
+.std-painel .sp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--sp-space-6);
+  border-top: 1px solid var(--sp-border);
+}
+.std-painel .sp-list-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-space-3);
+  padding: var(--sp-space-3) 0;
+  border-bottom: 1px solid var(--sp-border);
+  font-size: var(--sp-fs-sm);
+}
+
+/* Chips de estado (contraste AA) */
+.std-painel .sp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-1);
+  padding: 2px var(--sp-space-2);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-xs);
+  font-weight: 600;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.std-painel .sp-chip-ok {
+  color: var(--sp-ok-text);
+  background: var(--sp-ok-bg);
+  border-color: var(--sp-ok-border);
+}
+.std-painel .sp-chip-warn {
+  color: var(--sp-warn-text);
+  background: var(--sp-warn-bg);
+  border-color: var(--sp-warn-border);
+}
+.std-painel .sp-chip-err {
+  color: var(--sp-err-text);
+  background: var(--sp-err-bg);
+  border-color: var(--sp-err-border);
+}
+.std-painel .sp-chip-neutral {
+  color: var(--sp-text-sec);
+  background: var(--sp-surface-muted);
+  border-color: var(--sp-border);
+}
+
+/* Botões (alvo mínimo de toque 44px, 1 primário por ecrã) e links */
+.std-painel .sp-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-space-2);
+  min-height: 44px;
+  padding: var(--sp-space-2) var(--sp-space-4);
+  background: var(--sp-btn-bg);
+  color: var(--sp-btn-fg);
+  border: 1px solid transparent;
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.std-painel .sp-btn-primary:hover {
+  background: var(--sp-btn-hover);
+  color: var(--sp-btn-fg);
+}
+.std-painel .sp-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-space-2);
+  min-height: 44px;
+  padding: var(--sp-space-2) var(--sp-space-4);
+  background: transparent;
+  color: var(--sp-text);
+  border: 1px solid var(--sp-border-strong);
+  border-radius: var(--sp-radius-sm);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.std-painel .sp-btn-secondary:hover {
+  background: var(--sp-surface-muted);
+  color: var(--sp-text);
+}
+.std-painel .sp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-1);
+  min-height: 44px;
+  color: var(--sp-accent);
+  font-size: var(--sp-fs-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.std-painel .sp-link:hover {
+  text-decoration: underline;
+  color: var(--sp-accent);
+}
+
+/* Foco visível acessível */
+.std-painel .sp-btn-primary:focus-visible,
+.std-painel .sp-btn-secondary:focus-visible,
+.std-painel .sp-link:focus-visible,
+.std-painel .sp-read-select:focus-visible {
+  outline: 2px solid var(--sp-accent);
+  outline-offset: 2px;
+}
+
+/* Estado vazio compacto (1 linha de 40px) */
+.std-painel .sp-empty-line {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: var(--sp-space-2) 0;
+  font-size: var(--sp-fs-sm);
+  color: var(--sp-text-muted);
+  border-bottom: 1px solid var(--sp-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .std-painel *,
+  .std-painel *::before,
+  .std-painel *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
