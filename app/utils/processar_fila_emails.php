@@ -1,5 +1,6 @@
 <?php
 // app/utils/processar_fila_emails.php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('Apenas CLI.'); }
 
 /**
  * Script CLI para processar a fila de e-mails de forma assíncrona.

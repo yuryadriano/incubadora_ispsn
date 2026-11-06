@@ -1,4 +1,5 @@
 <?php
+if (PHP_SAPI !== 'cli') { http_response_code(403); exit('Apenas CLI.'); }
 require_once __DIR__ . '/../config/config.php';
 
 echo "Iniciando o seeding...\n";
