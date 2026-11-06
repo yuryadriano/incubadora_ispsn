@@ -1,12 +1,10 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
 
-// Cache apenas em GET (formulário de candidatura)
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300, stale-if-error=3600');
-    header('CDN-Cache-Control: public, max-age=300, stale-while-revalidate=300, stale-if-error=86400');
-    header('Vary: Accept-Encoding');
-}
+// Impedir cache público de páginas com token CSRF / sessão
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('CDN-Cache-Control: no-store');
+header('Pragma: no-cache');
 
 // Verificar se há processo aberto
 $processo = null;
@@ -15,6 +13,10 @@ if ($res) $processo = $res->fetch_assoc();
 
 $erro = '';
 $sucesso = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verificar();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     $tipo_candidato   = limpar($_POST['tipo_candidato'] ?? 'estudante');
@@ -34,10 +36,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     $diferencial     = limpar($_POST['diferencial'] ?? '');
     $area_tematica    = limpar($_POST['area_tematica'] ?? 'tecnologia');
     $id_processo      = (int)$processo['id'];
-    $ip               = $_SERVER['REMOTE_ADDR'] ?? '';
+    $remoteAddr       = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip               = $remoteAddr;
+    if ($remoteAddr !== '' && !filter_var($remoteAddr, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $hops = array_reverse(array_map('trim', explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])));
+            foreach ($hops as $hop) {
+                if (filter_var($hop, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                    $ip = $hop;
+                    break;
+                }
+            }
+        } elseif (!empty($_SERVER['HTTP_X_REAL_IP']) && filter_var(trim($_SERVER['HTTP_X_REAL_IP']), FILTER_VALIDATE_IP)) {
+            $ip = trim($_SERVER['HTTP_X_REAL_IP']);
+        }
+    }
+
+    // Rate limit por IP: máximo 5 submissões na última hora
+    $stmtRl = $mysqli->prepare("SELECT COUNT(*) AS total FROM candidaturas WHERE ip_submissao = ? AND criado_em >= (NOW() - INTERVAL 1 HOUR)");
+    $stmtRl->bind_param('s', $ip);
+    $stmtRl->execute();
+    $totalRecentes = (int)($stmtRl->get_result()->fetch_assoc()['total'] ?? 0);
+    $stmtRl->close();
 
     // Validações
-    if (strlen($nome) < 3) $erro = 'Nome muito curto.';
+    if ($totalRecentes >= 5) {
+        http_response_code(429);
+        $erro = 'Limite de submissões excedido (máximo de 5 candidaturas por hora). Por favor, aguarde antes de tentar novamente.';
+    } elseif (strlen($nome) < 3) $erro = 'Nome muito curto.';
     elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $erro = 'Email inválido.';
     elseif ($tipo_candidato === 'estudante' && strlen($numero_estudante) < 5) $erro = 'Número de estudante inválido.';
     elseif ($tipo_candidato === 'estudante' && !preg_match('/@ispsn\.org$/i', $email)) $erro = 'Por favor, use o seu e-mail institucional (@ispsn.org).';
@@ -262,6 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
         </div>
 
         <form method="post" id="candidaturaForm" novalidate>
+            <?= csrf_field() ?>
 
             <!-- PASSO 1: Dados Pessoais -->
             <div class="form-section active" id="section1">

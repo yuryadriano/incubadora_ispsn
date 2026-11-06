@@ -104,7 +104,7 @@ if ($ultimoProjeto) {
 
     /* ── 3. TERMO DE INCUBAÇÃO ── */
     $stmtTermo = $mysqli->prepare("
-        SELECT id, codigo_termo, tipo_contrato, duracao_meses, estado, assinado_em, criado_em
+        SELECT *
         FROM termos_incubacao
         WHERE id_projeto = ? AND estado IN ('gerado', 'pendente_assinatura', 'assinado')
         ORDER BY criado_em DESC LIMIT 1
@@ -118,7 +118,7 @@ if ($ultimoProjeto) {
 
     /* ── 4. ÚLTIMA AVALIAÇÃO OFICIAL (para estado aprovado / rejeitado / em_avaliacao) ── */
     $stmtAv = $mysqli->prepare("
-        SELECT pontuacao_total, decisao, observacoes, avaliado_em
+        SELECT pontuacao_total, observacoes, avaliado_em
         FROM avaliacoes
         WHERE id_projeto = ?
         ORDER BY avaliado_em DESC LIMIT 1
@@ -162,7 +162,7 @@ if ($ultimoProjeto) {
 
     /* ── 6. TAREFAS DO MENTOR ── */
     $stmtT = $mysqli->prepare("
-        SELECT id, titulo, descricao, data_limite, status, validada_mentor
+        SELECT *
         FROM tarefas
         WHERE id_projeto = ?
         ORDER BY status ASC, data_limite ASC
@@ -176,7 +176,7 @@ if ($ultimoProjeto) {
 
     /* ── 7. PRÓXIMAS REUNIÕES AGENDADAS ── */
     $stmtR = $mysqli->prepare("
-        SELECT r.id, r.titulo, r.data_reuniao, r.duracao_min, r.local_link, u.nome AS mentor_nome
+        SELECT r.*, u.nome AS mentor_nome
         FROM reunioes r
         JOIN usuarios u ON u.id = r.id_mentor
         WHERE r.id_projeto = ? AND r.data_reuniao >= NOW() AND r.status = 'agendada'
@@ -191,7 +191,7 @@ if ($ultimoProjeto) {
 
     /* ── 8. ÚLTIMA SESSÃO DE MENTORIA REALIZADA ── */
     $stmtS = $mysqli->prepare("
-        SELECT s.data_sessao, s.topicos, s.proximos_passos, u.nome AS mentor_nome
+        SELECT s.*, u.nome AS mentor_nome
         FROM sessoes_mentoria s
         JOIN mentorias m ON m.id = s.id_mentoria
         JOIN mentores mt ON mt.id = m.id_mentor
@@ -210,7 +210,7 @@ if ($ultimoProjeto) {
 /* ── 9. RESERVAS DE ESPAÇO DO UTILIZADOR ── */
 $minhasReservasPainel = [];
 $stmtRes = $mysqli->prepare("
-    SELECT r.id, r.data_reserva, r.hora_inicio, r.hora_fim, r.status, e.nome AS espaco_nome
+    SELECT r.*, e.nome AS espaco_nome, e.tipo AS espaco_tipo
     FROM reservas_espaco r
     JOIN espacos e ON e.id = r.id_espaco
     WHERE r.id_usuario = ?
@@ -846,9 +846,12 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <div class="sp-num" style="font-size: var(--sp-fs-xs); color: var(--sp-accent);">
                                 Próxima reunião: <?= htmlspecialchars($dataReuniao, ENT_QUOTES, 'UTF-8') ?>
                             </div>
-                            <?php if (!empty($proxReuniao['local_link'])): ?>
+                            <?php
+                            $localOuLink = trim((string)($proxReuniao['local'] ?? ($proxReuniao['link_reuniao'] ?? '')));
+                            if ($localOuLink !== ''):
+                            ?>
                                 <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-sec);">
-                                    Local/Link: <?= htmlspecialchars((string)$proxReuniao['local_link'], ENT_QUOTES, 'UTF-8') ?>
+                                    Local/Link: <?= htmlspecialchars($localOuLink, ENT_QUOTES, 'UTF-8') ?>
                                 </div>
                             <?php endif; ?>
                         <?php elseif ($ultimaSessao):
