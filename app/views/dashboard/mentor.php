@@ -860,6 +860,7 @@ function validarMeta(id, decisao) {
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 14px;">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="validar_evidencia">
                 <input type="hidden" name="id_meta_projeto" id="validarMetaId">
                 <input type="hidden" name="decisao" id="validarDecisao">

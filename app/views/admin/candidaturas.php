@@ -722,6 +722,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     ?>
                     <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php"
                         style="margin: 0;">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="toggle_processo">
                         <input type="hidden" name="id_processo" value="<?= $procSelObj['id'] ?>">
                         <button type="submit"
@@ -737,6 +738,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 
             <?php if ($id_processo_sel && ($contFases['rastreio_pitch'] ?? 0) > 0): ?>
                 <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" style="margin: 0;">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="triagem_automatica">
                     <input type="hidden" name="id_processo" value="<?= $id_processo_sel ?>">
                     <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -1204,6 +1206,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                             <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php"
                                                 style="margin:0;"
                                                 onsubmit="return confirm('Tem a certeza que deseja eliminar DEFINITIVAMENTE esta candidatura? Esta acção não pode ser desfeita.')">
+                                                <?= csrf_field() ?>
                                                 <input type="hidden" name="action" value="remover_candidatura">
                                                 <input type="hidden" name="id_cand" value="<?= $c['id'] ?>">
                                                 <input type="hidden" name="redirect"
@@ -1235,6 +1238,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <button class="btn-close btn-close-white" onclick="fecharModal('modalAvaliarPitch')"></button>
         </div>
         <form method="post" action="/incubadora_ispsn/app/controllers/candidatura_action.php" id="formAvaliarPitch">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="avaliar_pitch_candidatura">
             <input type="hidden" name="id_cand" id="avaliarIdCand">
             <input type="hidden" name="redirect" value="?processo=<?= $id_processo_sel ?>&fase=<?= $filtro_fase ?>">

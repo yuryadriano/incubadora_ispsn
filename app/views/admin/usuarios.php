@@ -76,6 +76,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/convite_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="enviar_convite">
                 <input type="hidden" name="perfil" value="mentor">
                 <div class="modal-header-custom">

@@ -219,6 +219,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         <p class="small text-white-50 mb-3" style="font-size:0.8rem;">Selecione uma startup e a fase para inicializar e ativar todas as metas correspondentes em simultâneo.</p>
         
         <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" class="row g-3 align-items-end m-0">
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="inicializar_e_activar_todas">
             <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
             
@@ -319,6 +320,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                             <i class="fa fa-edit"></i>
                                         </button>
                                         <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Deseja eliminar esta meta padrão? Ela deixará de aparecer em futuras inicializações.')" class="m-0">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="eliminar_meta_padrao">
                                             <input type="hidden" name="id_meta_padrao" value="<?= $mp['id'] ?>">
                                             <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -492,6 +494,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <p class="text-muted mb-0 small" style="font-size: 0.78rem;">Esta startup completou 100% das metas de <strong><?= strtoupper($faseActual) ?></strong>. Está apta a evoluir.</p>
             </div>
             <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" class="m-0">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="mudar_fase">
                 <input type="hidden" name="id_projeto" value="<?= $idProjetoSel ?>">
                 <input type="hidden" name="fase" value="<?= $proxInfo['id'] ?>">
@@ -516,6 +519,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 <div class="d-flex gap-2 mb-4">
     <?php if ($contEstados['nao_inicializada'] > 0): ?>
     <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+        <?= csrf_field() ?>
         <input type="hidden" name="action" value="inicializar_metas">
         <input type="hidden" name="id_projeto" value="<?= $idProjetoSel ?>">
         <input type="hidden" name="fase" value="<?= $faseSel ?>">
@@ -527,6 +531,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <?php endif; ?>
     <?php if ($contEstados['inactiva'] > 0 && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
     <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Activar TODAS as metas inactivas desta fase?')">
+        <?= csrf_field() ?>
         <input type="hidden" name="action" value="activar_todas_fase">
         <input type="hidden" name="id_projeto" value="<?= $idProjetoSel ?>">
         <input type="hidden" name="fase" value="<?= $faseSel ?>">
@@ -604,6 +609,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <button class="btn btn-outline-danger btn-sm fw-bold w-100" style="border-radius:8px;" onclick="validarMeta(<?= $m['id'] ?>, 'reprovar')"><i class="fa fa-rotate-left me-1"></i>Devolver</button>
             <?php elseif ($estado === 'activa' && in_array($_SESSION['usuario_perfil'], ['superadmin', 'admin'])): ?>
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php" onsubmit="return confirm('Desactivar esta meta?')">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="desactivar_meta">
                 <input type="hidden" name="id_meta_projeto" value="<?= $m['id'] ?>">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
@@ -626,6 +632,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="validar_evidencia">
                 <input type="hidden" name="id_meta_projeto" id="validarMetaId">
                 <input type="hidden" name="decisao" id="validarDecisao">
@@ -661,6 +668,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="activar_meta">
                 <input type="hidden" name="id_meta_projeto" id="activarMetaId">
                 <input type="hidden" name="id_projeto" id="activarIdProjeto" value="0">
@@ -705,6 +713,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_meta_padrao">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">
                 
@@ -782,6 +791,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="editar_meta_padrao">
                 <input type="hidden" name="id_meta_padrao" id="editarMetaId">
                 <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>">

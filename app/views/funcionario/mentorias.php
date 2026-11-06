@@ -241,6 +241,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <td><small class="text-muted"><?= $m['data_fim']    ? date('d/m/Y', strtotime($m['data_fim']))    : '—' ?></small></td>
                 <td>
                     <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php" style="margin:0">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="mudar_estado_mentoria">
                         <input type="hidden" name="id_mentoria" value="<?= $m['id'] ?>">
                         <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/funcionario/mentorias.php">
@@ -264,6 +265,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post" action="/incubadora_ispsn/app/controllers/mentoria_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_mentoria">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/funcionario/mentorias.php">
                 <div class="modal-header-custom">

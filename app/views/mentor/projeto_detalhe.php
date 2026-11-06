@@ -501,6 +501,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     </button>
                                     <?php if ($t['validada_mentor'] == 0): ?>
                                         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="m-0">
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="validar_tarefa_mentor">
                                             <input type="hidden" name="id_tarefa" value="<?= $t['id'] ?>">
                                             <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-tarefas">
@@ -722,6 +723,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     </div>
                     <div class="p-3 bg-white border-top">
                         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="enviar_mensagem">
                             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                             <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-chat">
@@ -961,6 +963,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg" style="border-radius: 14px; border:none; background:#fff;">
             <form method="post" action="/incubadora_ispsn/app/controllers/metas_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="validar_evidencia">
                 <input type="hidden" name="id_meta_projeto" id="validarMetaId">
                 <input type="hidden" name="decisao" id="validarDecisao">

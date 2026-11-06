@@ -483,6 +483,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <form method="post" action="/incubadora_ispsn/app/controllers/incubacao_action.php">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="assinar_termo">
                 <input type="hidden" name="id_termo" id="assinarTermoId">
                 <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/superadmin.php">

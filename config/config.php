@@ -192,6 +192,26 @@ function csrf_field(): string {
 }
 
 function csrf_verificar(): void {
+    if (empty($_POST)) {
+        $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $postMaxRaw    = trim((string)ini_get('post_max_size'));
+        $postMaxBytes  = 0;
+        if ($postMaxRaw !== '' && $postMaxRaw !== '0') {
+            if (function_exists('ini_parse_quantity')) {
+                $postMaxBytes = ini_parse_quantity($postMaxRaw);
+            } else {
+                $unit = strtolower(substr($postMaxRaw, -1));
+                $postMaxBytes = (int)$postMaxRaw;
+                if ($unit === 'g') $postMaxBytes *= 1073741824;
+                elseif ($unit === 'm') $postMaxBytes *= 1048576;
+                elseif ($unit === 'k') $postMaxBytes *= 1024;
+            }
+        }
+        if ($postMaxBytes > 0 && $contentLength > $postMaxBytes) {
+            http_response_code(413);
+            die('<div style="font-family:sans-serif;text-align:center;padding:60px"><h2>&#x26A0;&#xFE0F; Ficheiro Demasiado Grande</h2><p>O tamanho do envio excede o limite máximo permitido pelo servidor (' . htmlspecialchars($postMaxRaw, ENT_QUOTES, 'UTF-8') . '). Por favor, reduza o tamanho do ficheiro e tente novamente.</p><a href="javascript:history.back()" style="display:inline-block;margin-top:20px;padding:10px 24px;background:#D97706;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;">Voltar</a></div>');
+        }
+    }
     $token     = $_POST['_csrf_token'] ?? '';
     $esperado  = $_SESSION['_csrf_token'] ?? '';
     if (!$token || !$esperado || !hash_equals($esperado, $token)) {

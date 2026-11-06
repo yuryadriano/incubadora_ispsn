@@ -262,6 +262,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 ?>
                                 <li>
                                     <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php">
+                                        <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="mudar_estado">
                                         <input type="hidden" name="id_projeto" value="<?= $p['id'] ?>">
                                         <input type="hidden" name="estado" value="<?= $est ?>">

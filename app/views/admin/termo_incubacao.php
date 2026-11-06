@@ -146,6 +146,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <p class="small text-muted">A assinatura deste termo mudará o estado do projecto para <strong>Incubado</strong> e inicializará as metas da fase de Ideação.</p>
                         
                         <form action="/incubadora_ispsn/app/controllers/incubacao_action.php" method="POST" class="needs-validation" novalidate>
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="assinar_termo">
                             <input type="hidden" name="id_termo" value="<?php echo $idTermo; ?>">
                             <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?php echo $idTermo; ?>">
@@ -173,6 +174,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                     <div class="card-body">
                         <p class="small text-muted">A revogação invalida o termo e altera o histórico de incubação.</p>
                         <form action="/incubadora_ispsn/app/controllers/incubacao_action.php" method="POST" onsubmit="return confirm('Tem a certeza que deseja revogar este termo? Esta acção é irreversível.')">
+                            <?= csrf_field() ?>
                             <input type="hidden" name="action" value="revogar_termo">
                             <input type="hidden" name="id_termo" value="<?php echo $idTermo; ?>">
                             <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?php echo $idTermo; ?>">
