@@ -190,10 +190,15 @@ if (document.documentElement.classList.contains('dark-mode')) {
 
     <!-- Navegação -->
     <nav class="sidebar-nav">
-        <?php foreach ($itemsMenu as $item): ?>
+        <?php foreach ($itemsMenu as $item):
+            $iconClass = trim($item['icon']);
+            if (!preg_match('/\b(fa-solid|fa-regular|fa-brands)\b/', $iconClass)) {
+                $iconClass = 'fa-solid ' . $iconClass;
+            }
+        ?>
         <a href="<?= $item['href'] ?>"
            class="nav-item <?= ($paginaActiva === $item['id']) ? 'active' : '' ?>">
-            <i class="<?= $item['icon'] ?> nav-icon"></i>
+            <i class="<?= htmlspecialchars($iconClass, ENT_QUOTES, 'UTF-8') ?> nav-icon"></i>
             <span><?= $item['label'] ?></span>
             <?php if ($item['id'] === 'projetos' && $perfil !== 'utilizador'): ?>
                 <!-- badge dinâmico pode ir aqui -->
