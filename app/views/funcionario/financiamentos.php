@@ -37,6 +37,7 @@ $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
 
 // Salvar novo financiamento
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'criar_financiamento') {
+    csrf_verificar();
     $idProjeto  = (int)($_POST['id_projeto']        ?? 0);
     $fonte      = trim($_POST['fonte']               ?? '');
     $montante   = (float)($_POST['montante_aprovado']?? 0);
@@ -230,6 +231,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="post">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="criar_financiamento">
                 <div class="modal-header-custom">
                     <h5 class="modal-title fw-bold"><i class="fa fa-money-bill-wave me-2"></i>Registar Financiamento</h5>

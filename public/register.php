@@ -63,6 +63,9 @@ if ($perfilConvite === 'mentor') {
 }
 
 // ── Processar registo ────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verificar();
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado && $convite) {
     $nome             = limpar($_POST['nome'] ?? '');
     $email            = strtolower(limpar($_POST['email'] ?? ''));
@@ -364,6 +367,7 @@ input[readonly]{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;}
     </div>
 
     <form method="post">
+        <?= csrf_field() ?>
         <input type="hidden" name="token_convite" value="<?= htmlspecialchars($token) ?>">
 
         <div class="form-group">

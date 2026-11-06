@@ -37,6 +37,11 @@ if ($isAdminOrSuper) {
 
 // Lógica de salvar perfil de mentor (caso idMentor == 0)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'completar_perfil') {
+    csrf_verificar();
+    if ($isAdminOrSuper) {
+        http_response_code(403);
+        die('Acesso negado: ação exclusiva para o perfil mentor.');
+    }
     $esp  = trim($_POST['especialidade'] ?? '');
     $bio  = trim($_POST['bio'] ?? '');
     $link = trim($_POST['linkedin'] ?? '');
@@ -190,6 +195,11 @@ $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
 
 // Lógica de salvar sessão (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'registar_sessao') {
+    csrf_verificar();
+    if ($isAdminOrSuper) {
+        http_response_code(403);
+        die('Acesso negado: ação exclusiva para o perfil mentor.');
+    }
     $idMentoria = (int)$_POST['id_mentoria'];
     $dataSessao = $_POST['data_sessao'];
     $duracao    = (int)$_POST['duracao_min'];
@@ -280,6 +290,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         Preencha o formulário abaixo para começar a mentorar projetos.
                     </p>
                     <form method="POST">
+                        <?= csrf_field() ?>
                         <input type="hidden" name="action" value="completar_perfil">
                         <div class="mb-3">
                             <label class="form-label-custom">Sua Especialidade *</label>
@@ -678,6 +689,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content modal-content-custom">
             <form method="POST">
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="registar_sessao">
                 <input type="hidden" name="id_mentoria" id="modal_id_mentoria">
                 
