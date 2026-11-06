@@ -47,7 +47,7 @@ $menus = [
         ['icon'=>'fa-star',            'label'=>'Avaliações',       'href'=>'/incubadora_ispsn/app/views/admin/avaliacoes.php','id'=>'avaliacoes'],
         ['icon'=>'fa-users',           'label'=>'Utilizadores',     'href'=>'/incubadora_ispsn/app/views/admin/usuarios.php', 'id'=>'usuarios'],
         ['icon'=>'fa-chart-bar',       'label'=>'KPIs Globais',     'href'=>'/incubadora_ispsn/app/views/admin/kpis.php',     'id'=>'kpis'],
-        ['icon'=>'fa-file-chart-line', 'label'=>'Impacto',          'href'=>'/incubadora_ispsn/app/views/admin/relatorios.php','id'=>'relatorios'],
+        ['icon'=>'fa-chart-line',      'label'=>'Impacto',          'href'=>'/incubadora_ispsn/app/views/admin/relatorios.php','id'=>'relatorios'],
         ['icon'=>'fa-globe',           'label'=>'Ver Website',      'href'=>'/incubadora_ispsn/public/website/',                     'id'=>'website'],
         ['icon'=>'fa-screwdriver-wrench','label'=>'Gestão Website',   'href'=>'/incubadora_ispsn/app/views/admin/website.php',        'id'=>'gestao_website'],
         ['icon'=>'fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php',           'id'=>'perfil'],
@@ -79,7 +79,7 @@ $menus = [
         ['icon'=>'fa-money-bill-wave', 'label'=>'Financiamentos',   'href'=>'/incubadora_ispsn/app/views/funcionario/financiamentos.php','id'=>'financiamentos'],
         // ── Análise ────────────────────────
         ['icon'=>'fa-chart-bar',       'label'=>'KPIs Globais',     'href'=>'/incubadora_ispsn/app/views/admin/kpis.php',            'id'=>'kpis'],
-        ['icon'=>'fa-file-chart-line', 'label'=>'Impacto',          'href'=>'/incubadora_ispsn/app/views/admin/relatorios.php',      'id'=>'relatorios'],
+        ['icon'=>'fa-chart-line',      'label'=>'Impacto',          'href'=>'/incubadora_ispsn/app/views/admin/relatorios.php',      'id'=>'relatorios'],
         // ── Administração ──────────────────
         ['icon'=>'fa-users',           'label'=>'Utilizadores',     'href'=>'/incubadora_ispsn/app/views/admin/usuarios.php',        'id'=>'usuarios'],
         // ── Website ────────────────────────
@@ -172,7 +172,7 @@ if (document.documentElement.classList.contains('dark-mode')) {
                         <button class="btn-ghost btn-sm p-0" onclick="marcarLidas()" style="font-size:0.7rem; color:var(--primary)">Limpar</button>
                     </li>
                     <div id="notif-list" style="max-height:300px; overflow-y:auto;">
-                        <li class="p-4 text-center text-muted small">Carregando...</li>
+                        <li class="p-4 text-center text-muted small">A carregar...</li>
                     </div>
                 </ul>
             </div>
@@ -256,7 +256,7 @@ if (document.documentElement.classList.contains('dark-mode')) {
                         <button class="btn-ghost btn-sm p-0" onclick="marcarLidas()" style="font-size:0.7rem; color:var(--primary); background:none; border:none;">Limpar todas</button>
                     </li>
                     <div id="notif-list-topbar" style="max-height:300px; overflow-y:auto;">
-                        <li class="p-4 text-center text-muted small">Carregando...</li>
+                        <li class="p-4 text-center text-muted small">A carregar...</li>
                     </div>
                 </ul>
             </div>
