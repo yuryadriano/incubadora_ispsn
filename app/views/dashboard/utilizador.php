@@ -290,21 +290,6 @@ if ($meuProjeto) {
             }
         }
     }
-
-    // Histórico recente de estados + comentários
-    $stmtHist = $mysqli->prepare("
-        SELECT estado_novo AS titulo, motivo AS detalhe, data_mudanca AS data_ev, 'estado' AS tipo_ev
-        FROM historico_estados
-        WHERE id_projeto = ?
-        ORDER BY data_mudanca DESC
-        LIMIT 4
-    ");
-    if ($stmtHist) {
-        $stmtHist->bind_param('i', $idP);
-        $stmtHist->execute();
-        $feedEventos = array_merge($feedEventos, $stmtHist->get_result()->fetch_all(MYSQLI_ASSOC));
-        $stmtHist->close();
-    }
 }
 
 // Reservas ativas do estudante
