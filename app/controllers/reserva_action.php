@@ -13,6 +13,10 @@ if ($action === 'solicitar_reserva') {
     $horaInicio  = $_POST['hora_inicio'];
     $horaFim     = $_POST['hora_fim'];
     $objetivo    = trim($_POST['objetivo'] ?? '');
+    $idAlvoReserva = $idUsuario;
+    if (in_array($_SESSION['usuario_perfil'] ?? '', ['admin', 'superadmin'], true) && !empty($_POST['id_usuario_alvo'])) {
+        $idAlvoReserva = (int)$_POST['id_usuario_alvo'];
+    }
 
     // 1. Validar se o horário está disponível
     $check = $mysqli->prepare("
@@ -39,7 +43,7 @@ if ($action === 'solicitar_reserva') {
         INSERT INTO reservas_espaco (id_espaco, id_usuario, data_reserva, hora_inicio, hora_fim, objetivo, status)
         VALUES (?, ?, ?, ?, ?, ?, 'pendente')
     ");
-    $stmt->bind_param('iissss', $idEspaco, $idUsuario, $dataReserva, $horaInicio, $horaFim, $objetivo);
+    $stmt->bind_param('iissss', $idEspaco, $idAlvoReserva, $dataReserva, $horaInicio, $horaFim, $objetivo);
     
     if ($stmt->execute()) {
         $_SESSION['flash_ok'] = "Reserva solicitada! Aguarde a confirmação da recepção.";
@@ -83,8 +87,19 @@ if ($action === 'gestao_reserva') {
         $stmt = $mysqli->prepare("UPDATE reservas_espaco SET status = ? WHERE id = ?");
         $stmt->bind_param('si', $novoStatus, $idReserva);
         $stmt->execute();
-        $_SESSION['flash_ok'] = "O status da reserva foi atualizado.";
+        $_SESSION['flash_ok'] = "O estado da reserva foi atualizado.";
+    } elseif ($novoStatus === 'cancelada') {
+        $stmt = $mysqli->prepare("UPDATE reservas_espaco SET status = 'cancelada' WHERE id = ? AND id_usuario = ? AND status = 'pendente'");
+        $stmt->bind_param('ii', $idReserva, $idUsuario);
+        $stmt->execute();
+        if ($stmt->affected_rows > 0) {
+            $_SESSION['flash_ok'] = "Reserva pendente cancelada com sucesso.";
+        }
     }
-    header("Location: " . ($_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/gestao_espacos.php'));
+    $redir = $_POST['redirect'] ?? '/incubadora_ispsn/app/views/admin/gestao_espacos.php';
+    if (!str_starts_with($redir, '/incubadora_ispsn/')) {
+        $redir = '/incubadora_ispsn/app/views/utilizador/reservas.php';
+    }
+    header("Location: " . $redir);
     exit;
 }

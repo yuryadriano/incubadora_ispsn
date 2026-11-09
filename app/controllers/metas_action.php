@@ -172,6 +172,7 @@ if ($action === 'submeter_evidencia') {
     $evidenciaLink  = trim($_POST['evidencia_link'] ?? '');
     
     if ($idMetaProjeto > 0) {
+        $isAdminEvid = in_array($perfil, ['admin', 'superadmin'], true) ? 1 : 0;
         // Verificar que a meta é do projecto do estudante e está activa
         $stmt = $mysqli->prepare("
             SELECT mp.*, p.criado_por, p.titulo as proj_titulo, mpd.titulo as meta_titulo
@@ -180,9 +181,9 @@ if ($action === 'submeter_evidencia') {
             JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
             LEFT JOIN membros_projeto memb ON memb.id_projeto = p.id AND memb.id_usuario = ?
             WHERE mp.id = ? AND mp.estado IN ('activa','reprovada')
-            AND (p.criado_por = ? OR memb.id_usuario IS NOT NULL)
+            AND (p.criado_por = ? OR memb.id_usuario IS NOT NULL OR ? = 1)
         ");
-        $stmt->bind_param('iii', $idUsuario, $idMetaProjeto, $idUsuario);
+        $stmt->bind_param('iiii', $idUsuario, $idMetaProjeto, $idUsuario, $isAdminEvid);
         $stmt->execute();
         $meta = $stmt->get_result()->fetch_assoc();
         $stmt->close();

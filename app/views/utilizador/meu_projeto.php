@@ -291,67 +291,54 @@ require_once __DIR__ . '/../partials/_layout.php';
         }
 
         $isIncubadoOuGrad = in_array($estadoRaw, ['incubado', 'fundo_investimento', 'concluido'], true);
+        $userQuerySuffix  = $isAdminOrSuper ? ('&id_usuario=' . (int)$idUsuario) : '';
         $selfRedirectBase = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php';
         ?>
 
-        <!-- ══ CABEÇALHO DO DOSSIÊ DA STARTUP ══ -->
-        <header class="std-hero-card">
-            <div class="sp-header-top">
-                <div class="sp-kicker">
-                    <i class="fa-solid fa-rocket me-1" style="color:#D97706;"></i>
-                    Minha Startup · Dossiê do Projecto<?php if ($isIncubadoOuGrad): ?> · Fase Actual: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?><?php endif; ?>
-                </div>
-                <span class="sp-chip <?= $chipClass ?>">
-                    <i class="fa-solid <?= $chipIcon ?>" aria-hidden="true"></i>
+        <!-- ══ CABEÇALHO DO DOSSIÊ DA STARTUP (NAVY + AMBER HERO) ══ -->
+        <header class="std-command-hero">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 position-relative" style="z-index:2;">
+                <span class="std-live-pill" style="background: rgba(245,158,11,0.2); color: #FCD34D; border: 1px solid rgba(245,158,11,0.45);">
+                    <span class="std-live-dot" style="background: #FBBF24;"></span>
                     <span><?= htmlspecialchars($estadoLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                </span>
+                <span class="std-live-pill" style="background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.15);">
+                    <i class="fa-solid fa-rocket" style="color:#FBBF24;"></i>
+                    <span>Fase: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?> · <?= (int)$pontos ?> SP</span>
                 </span>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <h1 class="sp-title"><?= htmlspecialchars((string)$projeto['titulo'], ENT_QUOTES, 'UTF-8') ?></h1>
-                <div class="d-flex align-items-center flex-wrap gap-2">
-                    <?php if ($isIncubadoOuGrad): ?>
-                        <div class="sp-metrics-box">
-                            <span class="sp-num fw-semibold">
-                                <i class="fa-solid fa-list-check me-1" style="color: var(--sp-accent);" aria-hidden="true"></i>
-                                <?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> metas validadas
-                            </span>
-                            <?php if ($pontos > 0): ?>
-                                <span style="color: var(--sp-border-strong);" aria-hidden="true">|</span>
-                                <span class="sp-code fw-bold" style="color: var(--sp-accent);">
-                                    <i class="fa-solid fa-trophy me-1" aria-hidden="true"></i><?= (int)$pontos ?> SP
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!$isAdminOrSuper): ?>
-                        <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalEditarProposta">
-                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
-                            <span>Editar Proposta</span>
-                        </button>
-                    <?php endif; ?>
+            <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 position-relative" style="z-index:2;">
+                <div>
+                    <h1 style="font-size: 1.65rem; font-weight: 800; color: #FFFFFF; margin: 4px 0 8px;">
+                        <?= htmlspecialchars((string)$projeto['titulo'], ENT_QUOTES, 'UTF-8') ?>
+                    </h1>
+                    <div class="d-flex flex-wrap align-items-center gap-3" style="font-size: 0.8rem; color: #CBD5E1;">
+                        <?php if ($dataCriacao !== ''): ?>
+                            <span><i class="fa-regular fa-calendar me-1" style="color:#34D399;"></i>Submetido em <?= htmlspecialchars($dataCriacao, ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php endif; ?>
+                        <?php if (!empty($projeto['area_tematica'])): ?>
+                            <span><i class="fa-solid fa-layer-group me-1" style="color:#FBBF24;"></i>Área: <?= htmlspecialchars(ucfirst((string)$projeto['area_tematica']), ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php endif; ?>
+                        <?php if ($tipoLabel !== ''): ?>
+                            <span><i class="fa-solid fa-tag me-1" style="color:#38BDF8;"></i><?= htmlspecialchars($tipoLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
-
-            <div class="sp-meta-row">
-                <?php if ($dataCriacao !== ''): ?>
-                    <span class="sp-meta-pill sp-num">
-                        <i class="fa-regular fa-calendar" aria-hidden="true"></i>
-                        <span>Submetido em <?= htmlspecialchars($dataCriacao, ENT_QUOTES, 'UTF-8') ?></span>
-                    </span>
-                <?php endif; ?>
-                <?php if (!empty($projeto['area_tematica'])): ?>
-                    <span class="sp-meta-pill">
-                        <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-                        <span>Área: <?= htmlspecialchars(ucfirst((string)$projeto['area_tematica']), ENT_QUOTES, 'UTF-8') ?></span>
-                    </span>
-                <?php endif; ?>
-                <?php if ($tipoLabel !== ''): ?>
-                    <span class="sp-meta-pill">
-                        <i class="fa-solid fa-tag" aria-hidden="true"></i>
-                        <span><?= htmlspecialchars($tipoLabel, ENT_QUOTES, 'UTF-8') ?></span>
-                    </span>
-                <?php endif; ?>
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <button type="button" class="std-hero-btn std-hero-btn-amber" data-bs-toggle="modal" data-bs-target="#modalEditarProposta">
+                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                        <span>Editar Proposta</span>
+                    </button>
+                    <button type="button" class="std-hero-btn" data-bs-toggle="modal" data-bs-target="#modalDoc">
+                        <i class="fa-solid fa-upload" aria-hidden="true"></i>
+                        <span>Carregar Ficheiro</span>
+                    </button>
+                    <button type="button" class="std-hero-btn" data-bs-toggle="modal" data-bs-target="#modalAddMembro">
+                        <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                        <span>Convidar Equipa</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -413,13 +400,41 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <?php endif; ?>
 
                         <?php if (!empty($projeto['solucao'])): ?>
-                            <div class="p-3 mb-0" style="background: var(--sp-ok-bg); border: 1px solid var(--sp-ok-border); border-left: 4px solid var(--sp-ok-text); border-radius: var(--sp-radius-sm);">
+                            <div class="p-3 mb-3" style="background: var(--sp-ok-bg); border: 1px solid var(--sp-ok-border); border-left: 4px solid var(--sp-ok-text); border-radius: var(--sp-radius-sm);">
                                 <div class="sp-kicker mb-1" style="color: var(--sp-ok-text);">Solução Proposta</div>
                                 <div style="font-size: var(--sp-fs-sm); color: var(--sp-text);">
                                     <?= nl2br(htmlspecialchars((string)$projeto['solucao'], ENT_QUOTES, 'UTF-8')) ?>
                                 </div>
                             </div>
                         <?php endif; ?>
+
+                        <!-- Consultor Estratégico IA -->
+                        <div class="p-3 rounded-3 mt-3" style="background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(59,130,246,0.06)); border: 1px solid var(--sp-accent-border);">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                <div class="fw-bold" style="color: var(--sp-accent); font-size: 0.92rem;">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Consultor Estratégico IA (Gemini)
+                                </div>
+                                <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="m-0">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="action" value="gerar_analise_ia">
+                                    <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
+                                    <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=proposta' . $userQuerySuffix, ENT_QUOTES, 'UTF-8') ?>">
+                                    <button type="submit" class="sp-btn-primary py-1 px-3" style="min-height: 32px; font-size: 0.76rem;">
+                                        <i class="fa-solid fa-robot"></i>
+                                        <span><?= !empty($projeto['feedback_ia']) ? 'Atualizar Diagnóstico IA' : 'Gerar Diagnóstico IA' ?></span>
+                                    </button>
+                                </form>
+                            </div>
+                            <?php if (!empty($projeto['feedback_ia'])): ?>
+                                <div style="font-size: 0.85rem; line-height: 1.6; color: var(--sp-text);">
+                                    <?= nl2br(htmlspecialchars((string)$projeto['feedback_ia'], ENT_QUOTES, 'UTF-8')) ?>
+                                </div>
+                            <?php else: ?>
+                                <div style="font-size: 0.82rem; color: var(--sp-text-sec);">
+                                    Clique em <strong>"Gerar Diagnóstico IA"</strong> para analisar pontos fortes, riscos e sugestões estratégicas para a sua proposta.
+                                </div>
+                            <?php endif; ?>
+                        </div>
                     </section>
                 </div>
 
@@ -434,12 +449,10 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-md);">Equipa</h2>
                                 </div>
                             </div>
-                            <?php if (!$isAdminOrSuper): ?>
-                                <button type="button" class="sp-btn-secondary py-1 px-2" style="min-height: 34px; font-size: var(--sp-fs-xs);" data-bs-toggle="modal" data-bs-target="#modalAddMembro">
-                                    <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-                                    <span>Adicionar</span>
-                                </button>
-                            <?php endif; ?>
+                            <button type="button" class="sp-btn-secondary py-1 px-2" style="min-height: 34px; font-size: var(--sp-fs-xs);" data-bs-toggle="modal" data-bs-target="#modalAddMembro">
+                                <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                                <span>Adicionar</span>
+                            </button>
                         </div>
 
                         <?php if (empty($membros)): ?>
@@ -542,7 +555,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                 $lblM  = 'Devolvida';
                             }
                             $prazoM = !empty($m['data_limite']) ? date('d/m/Y', strtotime((string)$m['data_limite'])) : '';
-                            $canSubmit = (!$isAdminOrSuper) && ($estM === 'activa' || $estM === 'reprovada');
+                            $canSubmit = ($estM === 'activa' || $estM === 'reprovada');
                             $payloadM = json_encode([
                                 'id'     => (int)$m['id'],
                                 'titulo' => (string)$m['meta_titulo'],
@@ -643,12 +656,10 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Documentos do Projecto</h2>
                         </div>
                     </div>
-                    <?php if (!$isAdminOrSuper): ?>
-                        <button type="button" class="sp-btn-primary" data-bs-toggle="modal" data-bs-target="#modalDoc">
-                            <i class="fa-solid fa-upload" aria-hidden="true"></i>
-                            <span>Carregar Documento</span>
-                        </button>
-                    <?php endif; ?>
+                    <button type="button" class="sp-btn-primary" data-bs-toggle="modal" data-bs-target="#modalDoc">
+                        <i class="fa-solid fa-upload" aria-hidden="true"></i>
+                        <span>Carregar Documento</span>
+                    </button>
                 </div>
 
                 <?php if (empty($documentos)): ?>
@@ -759,18 +770,16 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <?php endif; ?>
                         </div>
 
-                        <?php if (!$isAdminOrSuper): ?>
-                            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
-                                <?= csrf_field() ?>
-                                <input type="hidden" name="action" value="enviar_mensagem">
-                                <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
-                                <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=comunicacao', ENT_QUOTES, 'UTF-8') ?>">
-                                <input type="text" name="mensagem" class="form-control-custom" placeholder="Escrever mensagem..." required>
-                                <button type="submit" class="sp-btn-primary px-3" aria-label="Enviar mensagem">
-                                    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
-                                </button>
-                            </form>
-                        <?php endif; ?>
+                        <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="enviar_mensagem">
+                            <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
+                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=comunicacao' . $userQuerySuffix, ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="text" name="mensagem" class="form-control-custom" placeholder="Escrever mensagem..." required>
+                            <button type="submit" class="sp-btn-primary px-3" aria-label="Enviar mensagem">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                            </button>
+                        </form>
                     </section>
                 </div>
             </div>
@@ -790,7 +799,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         }
         </script>
 
-        <?php if (!$isAdminOrSuper): ?>
+        <!-- MODAIS INTERATIVOS DA STARTUP -->
             <!-- MODAL: EDITAR PROPOSTA -->
             <div class="modal fade" id="modalEditarProposta" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -799,7 +808,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="editar_proposta">
                             <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
-                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=proposta', ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=proposta' . $userQuerySuffix, ENT_QUOTES, 'UTF-8') ?>">
                             <div class="modal-header-custom d-flex justify-content-between align-items-center">
                                 <h5 class="modal-title fw-bold m-0"><i class="fa-solid fa-pen-to-square me-2 text-warning"></i>Actualizar Proposta</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1026,7 +1035,6 @@ require_once __DIR__ . '/../partials/_layout.php';
                 new bootstrap.Modal(document.getElementById('modalSubmeterEvidencia')).show();
             }
             </script>
-        <?php endif; ?>
 
     <?php endif; ?>
 

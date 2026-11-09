@@ -85,6 +85,10 @@ if ($action === 'criar_projeto') {
         }
 
         if (empty($_SESSION['flash_erro'])) {
+            $idCriador = $idUsuario;
+            if (in_array($perfil, ['admin', 'superadmin'], true) && !empty($_POST['id_usuario_alvo'])) {
+                $idCriador = (int)$_POST['id_usuario_alvo'];
+            }
             // id_responsavel = o próprio criador por defeito
             // Todos os projetos novos iniciam como 'submetido'
             $stmt = $mysqli->prepare("
@@ -92,16 +96,16 @@ if ($action === 'criar_projeto') {
                     (titulo, tipo, descricao, problema, solucao, area_tematica, estado, id_responsavel, criado_por, pitch_path)
                 VALUES (?, ?, ?, ?, ?, ?, 'submetido', ?, ?, ?)
             ");
-            $stmt->bind_param('ssssssiiis',
+            $stmt->bind_param('ssssssiis',
                 $titulo, $tipo, $descricao, $problema, $solucao,
-                $area_tematica, $idUsuario, $idUsuario, $pitch_path
+                $area_tematica, $idCriador, $idCriador, $pitch_path
             );
 
             if ($stmt->execute()) {
             $idNovoProjeto = $mysqli->insert_id;
             // Adicionar criador como membro
             $s2 = $mysqli->prepare("INSERT IGNORE INTO membros_projeto (id_projeto, id_usuario, papel) VALUES (?,?,'Líder')");
-            $s2->bind_param('ii', $idNovoProjeto, $idUsuario);
+            $s2->bind_param('ii', $idNovoProjeto, $idCriador);
             $s2->execute();
 
             // Notificação interna para admins
@@ -792,7 +796,10 @@ if ($action === 'gerar_analise_ia') {
 
         $_SESSION['flash_ok'] = "Análise da Inteligência Artificial concluída!";
     }
-    header("Location: /incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=$idProjeto");
+    $finalRedirectIa = (!empty($_POST['redirect']) && str_starts_with($_POST['redirect'], '/incubadora_ispsn/'))
+        ? $_POST['redirect']
+        : "/incubadora_ispsn/app/views/admin/projeto_detalhe.php?id=$idProjeto";
+    header("Location: $finalRedirectIa");
     exit;
 }
 
@@ -816,16 +823,17 @@ if ($action === 'atualizar_estado_tarefa') {
     $evidenciaNota = trim($_POST['evidencia_nota'] ?? '');
 
     if ($idTarefa > 0) {
-        // Garantir que a tarefa pertence ao projeto do estudante/membro
+        // Garantir que a tarefa pertence ao projeto do estudante/membro (ou admin/superadmin)
+        $isAdminAct = in_array($perfil, ['admin', 'superadmin'], true) ? 1 : 0;
         $checkPerm = $mysqli->prepare("
             SELECT t.id, t.id_projeto 
             FROM tarefas t 
             JOIN projetos p ON p.id = t.id_projeto 
             LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id AND mp.id_usuario = ?
-            WHERE t.id = ? AND (p.criado_por = ? OR mp.id_usuario IS NOT NULL)
+            WHERE t.id = ? AND (p.criado_por = ? OR mp.id_usuario IS NOT NULL OR ? = 1)
             LIMIT 1
         ");
-        $checkPerm->bind_param('iii', $idUsuario, $idTarefa, $idUsuario);
+        $checkPerm->bind_param('iiii', $idUsuario, $idTarefa, $idUsuario, $isAdminAct);
         $checkPerm->execute();
         $tarefaValida = $checkPerm->get_result()->fetch_assoc();
         $checkPerm->close();

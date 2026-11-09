@@ -42,21 +42,41 @@ require_once __DIR__ . '/../partials/_layout.php';
     <?php if ($flashErro): ?><div class="alert-custom alert-danger mb-4"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
 
     <!-- PAGE HEADER -->
-    <div class="page-header">
-        <div>
-            <div class="page-header-title">
-                <i class="fa fa-user-circle me-2" style="color:var(--primary)"></i>
-                <?= $isAdminPreview ? 'Ficha de Perfil do Estudante' : 'Configurações de Conta' ?>
+    <?php if ($perfil === 'utilizador'): ?>
+        <header class="std-command-hero">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 position-relative" style="z-index:2;">
+                <span class="std-live-pill" style="background: rgba(245,158,11,0.2); color: #FCD34D; border: 1px solid rgba(245,158,11,0.45);">
+                    <i class="fa-solid fa-user-shield" style="color: #FBBF24;"></i>
+                    <span>Identidade &amp; Segurança ISPSN</span>
+                </span>
+                <span class="std-live-pill" style="background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.14);">
+                    <span>Conta Ativa · <?= htmlspecialchars(ucfirst((string)($usuario['tipo_utilizador'] ?? 'Estudante')), ENT_QUOTES, 'UTF-8') ?></span>
+                </span>
             </div>
-            <div class="page-header-sub">
-                <?= $isAdminPreview ? 'Dados registados na conta do estudante (modo de leitura).' : 'Gerencie as suas informações pessoais e credenciais de segurança.' ?>
+            <h1 style="font-size: 1.65rem; font-weight: 800; color: #FFFFFF; margin: 4px 0 4px; position-relative; z-index:2;">
+                <?= htmlspecialchars($usuario['nome'] ?? 'Perfil do Empreendedor', ENT_QUOTES, 'UTF-8') ?>
+            </h1>
+            <div style="font-size: 0.84rem; color: #CBD5E1; position-relative; z-index:2;">
+                Gestão de credenciais académicas, dados de contacto e segurança da conta na Incubadora.
+            </div>
+        </header>
+    <?php else: ?>
+        <div class="page-header">
+            <div>
+                <div class="page-header-title">
+                    <i class="fa fa-user-circle me-2" style="color:var(--primary)"></i>
+                    Configurações de Conta
+                </div>
+                <div class="page-header-sub">
+                    Gerencie as suas informações pessoais e credenciais de segurança.
+                </div>
             </div>
         </div>
-    </div>
+    <?php endif; ?>
 
     <div class="row g-4">
         <!-- INFO BÁSICA -->
-        <div class="<?= $isAdminPreview ? 'col-lg-6' : 'col-md-4' ?>">
+        <div class="col-md-4">
             <div class="card-custom h-100">
                 <div class="card-body-custom text-center py-5">
                     <div style="width:80px;height:80px;border-radius:50%;background:var(--primary);color:#fff;
@@ -139,6 +159,50 @@ require_once __DIR__ . '/../partials/_layout.php';
                 </div>
             </div>
 
+        </div>
+        <?php else: ?>
+        <div class="col-md-8 d-flex flex-column gap-4">
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="card-title-custom"><i class="fa-solid fa-rocket"></i> Startups &amp; Participações deste Estudante</div>
+                </div>
+                <div class="card-body-custom">
+                    <?php
+                    $stmtPUser = $mysqli->prepare("
+                        SELECT id, titulo, estado, fase, pontos, criado_em
+                        FROM projetos
+                        WHERE criado_por = ?
+                        ORDER BY criado_em DESC
+                    ");
+                    $stmtPUser->bind_param('i', $idUsuario);
+                    $stmtPUser->execute();
+                    $projsUser = $stmtPUser->get_result()->fetch_all(MYSQLI_ASSOC);
+                    $stmtPUser->close();
+                    ?>
+                    <?php if (empty($projsUser)): ?>
+                        <div class="sp-empty-line">
+                            <i class="fa-regular fa-folder-open"></i>
+                            <span>Este estudante ainda não submeteu projetos como líder.</span>
+                        </div>
+                    <?php else: ?>
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($projsUser as $pu): ?>
+                                <div class="p-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
+                                    <div>
+                                        <div class="fw-bold"><?= htmlspecialchars((string)$pu['titulo'], ENT_QUOTES, 'UTF-8') ?></div>
+                                        <div style="font-size: 0.76rem; color: var(--sp-text-muted);">
+                                            Fase: <?= htmlspecialchars(ucfirst((string)$pu['fase']), ENT_QUOTES, 'UTF-8') ?> · Estado: <?= htmlspecialchars(ucfirst((string)$pu['estado']), ENT_QUOTES, 'UTF-8') ?> · <?= (int)$pu['pontos'] ?> SP
+                                        </div>
+                                    </div>
+                                    <a href="/incubadora_ispsn/app/views/dashboard/utilizador.php?id_projeto=<?= (int)$pu['id'] ?>&id_usuario=<?= (int)$idUsuario ?>" class="sp-btn-primary py-1 px-3" style="min-height: 32px; font-size: 0.76rem;">
+                                        Abrir no Painel →
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
         <?php endif; ?>
     </div>

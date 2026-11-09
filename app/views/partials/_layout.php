@@ -277,6 +277,220 @@ body.dark-mode .std-preview-select {
   background: #1E293B; color: #F8FAFC; border-color: #4F46E5;
 }
 
+/* Hero / Command Center Dinâmico da Startup (Contraste Navy + Amber SaaS) */
+.std-command-hero {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 62%, #292524 100%);
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 26px 30px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+  color: #F8FAFC;
+}
+.std-command-hero::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -60px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, rgba(59, 130, 246, 0.08) 55%, transparent 72%);
+  pointer-events: none;
+}
+.std-command-hero::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #F59E0B 0%, #10B981 50%, #3B82F6 100%);
+}
+.std-hero-glass {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 18px;
+  backdrop-filter: blur(8px);
+}
+.std-hero-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: 10px;
+  font-size: 0.82rem; font-weight: 700; text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.09); color: #F8FAFC;
+  cursor: pointer; transition: all 0.18s ease;
+}
+.std-hero-btn:hover {
+  background: rgba(255, 255, 255, 0.18); color: #FFFFFF;
+  transform: translateY(-2px);
+}
+.std-hero-btn-amber {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  border-color: #FBBF24; color: #0F172A;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+.std-hero-btn-amber:hover {
+  background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+  color: #0F172A;
+}
+
+/* KPI Cards Interativos Clicáveis */
+.std-kpi-interactive {
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.std-kpi-interactive:hover {
+  transform: translateY(-4px);
+  border-color: var(--sp-accent) !important;
+  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.12);
+}
+
+/* Stepper Circular Conectado & Interativo (Jornada de Maturidade) */
+.std-journey-wrap {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-shadow);
+  padding: 22px 26px;
+  margin-bottom: 22px;
+}
+.std-journey-track {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  margin: 22px 0 18px;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+.std-journey-track::before {
+  content: '';
+  position: absolute;
+  top: 23px;
+  left: 40px;
+  right: 40px;
+  height: 4px;
+  background: var(--sp-border);
+  z-index: 1;
+  border-radius: 4px;
+}
+.std-journey-node {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 105px;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.18s ease;
+}
+.std-journey-node:hover { transform: translateY(-3px); }
+.std-journey-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--sp-surface);
+  border: 3px solid var(--sp-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: var(--sp-text-muted);
+  margin-bottom: 9px;
+  transition: all 0.25s ease;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+.std-journey-node.is-done .std-journey-circle {
+  background: #10B981;
+  border-color: #10B981;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.std-journey-node.is-current .std-journey-circle {
+  background: #D97706;
+  border-color: #F59E0B;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.2), 0 6px 16px rgba(217, 119, 6, 0.35);
+}
+.std-journey-node.is-selected .std-journey-circle {
+  outline: 3px solid #3B82F6;
+  outline-offset: 3px;
+}
+.std-journey-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--sp-text);
+  line-height: 1.2;
+}
+.std-journey-sub {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--sp-text-muted);
+  margin-top: 2px;
+}
+.std-journey-drawer {
+  background: var(--sp-surface-muted);
+  border: 1px solid var(--sp-border);
+  border-left: 4px solid var(--sp-accent);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+/* Catálogo Interativo de Espaços & Pódio de Ranking */
+.std-space-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+.std-space-card {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.std-space-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--sp-accent);
+  box-shadow: var(--sp-shadow);
+}
+.std-podium-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.std-podium-card {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: 16px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--sp-shadow);
+  transition: transform 0.2s ease;
+}
+.std-podium-card:hover { transform: translateY(-4px); }
+.std-podium-card.rank-1 {
+  border-top: 4px solid #F59E0B;
+  background: linear-gradient(180deg, var(--sp-warn-bg) 0%, var(--sp-surface) 65%);
+}
+.std-podium-card.rank-2 { border-top: 4px solid #94A3B8; }
+.std-podium-card.rank-3 { border-top: 4px solid #D97706; }
+
 /* Hero / Cabeçalho Dinâmico da Startup */
 .std-hero-card {
   background: var(--sp-surface);
@@ -608,8 +822,8 @@ if (document.documentElement.classList.contains('dark-mode')) {
                     <i class="fa-solid fa-eye"></i>
                 </span>
                 <div>
-                    <div style="font-weight:700; font-size:0.86rem;">Modo de leitura: a pré-visualizar o painel de <strong><?= htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8') ?></strong></div>
-                    <div style="font-size:0.75rem; opacity:0.85;">Visualização de Administrador · Navegação sincronizada em todas as abas</div>
+                    <div style="font-weight:700; font-size:0.86rem;">Modo de Inspecção &amp; Interação: a operar no módulo de <strong><?= htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8') ?></strong></div>
+                    <div style="font-size:0.75rem; opacity:0.85;">Controlo total ativo · Todas as ferramentas, modais, simulador e abas estão habilitados</div>
                 </div>
             </div>
             <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
