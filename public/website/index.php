@@ -1,4 +1,5 @@
 <?php
+define('NO_SESSION', true);
 require_once __DIR__ . '/../../config/config.php';
 
 // Headers de cache — permite Cloudflare e browsers cachear a página pública

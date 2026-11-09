@@ -168,7 +168,7 @@ class GeradorPDF {
         
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true);
+        $options->set('isRemoteEnabled', false);
         
         $context = stream_context_create([
             'http' => ['timeout' => 5],
@@ -189,7 +189,7 @@ class GeradorPDF {
         
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true);
+        $options->set('isRemoteEnabled', false);
         
         $context = stream_context_create([
             'http' => ['timeout' => 5],

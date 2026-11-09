@@ -23,6 +23,11 @@ services:
     image: mariadb:10.11
     container_name: incubadora_db
     restart: always
+    command: >
+      --wait-timeout=60
+      --interactive-timeout=60
+      --max-connections=200
+      --innodb-lock-wait-timeout=10
     environment:
       - MYSQL_DATABASE=imcubadora_ispsn
       - MYSQL_USER=incubadora_user
@@ -31,6 +36,11 @@ services:
     volumes:
       - incubadora_db_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - incubadora_network
 

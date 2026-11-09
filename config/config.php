@@ -8,36 +8,33 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
-define('ASSET_VERSION', '2026062403');
+define('ASSET_VERSION', '2026110901');
+
+// Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
+@ini_set('default_socket_timeout', '5');
+@ini_set('mysqlnd.net_read_timeout', '8');
 
 // Configuração resiliente ultra-rápida (compatível com Cloudflare, evita 504 Gateway Timeout)
-$maxTries = 4;
+$maxTries = 3;
 $connected = false;
 $mysqli = null;
 
 for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
-    if (function_exists('mysqli_init')) {
-        $mysqli = @mysqli_init();
-        if ($mysqli) {
-            @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
-            $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    $mysqli = @mysqli_init();
+    if ($mysqli) {
+        @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+        if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
+            @$mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
         }
+        $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     }
-    
-    // Fallback para mysqli_connect padrão se real_connect oscilar
-    if (!$connected || !$mysqli || $mysqli->connect_errno) {
-        $mysqli = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($mysqli && !mysqli_connect_errno()) {
-            $connected = true;
-        }
-    }
-    
+
     if ($connected && $mysqli && !$mysqli->connect_errno) {
         break;
     }
-    
+
     if ($attempt < $maxTries) {
-        usleep(250000); // 0.25 segundos de micro-espera (máximo 1s total)
+        usleep(150000); // 0.15s entre tentativas (máximo 0.3s de espera total)
     }
 }
 
@@ -57,22 +54,28 @@ if (!$connected || !$mysqli || $mysqli->connect_errno) {
 }
 
 $mysqli->set_charset('utf8mb4');
-@$mysqli->query("SET SESSION innodb_lock_wait_timeout = 10");
+@$mysqli->query("SET SESSION innodb_lock_wait_timeout = 5");
 
-// Guarda para reconectar automaticamente se a conexão oscilar no meio do script
+// Guarda para reconectar com timeout estrito se a conexão oscilar no meio do script
 function ensure_db_connection() {
     global $mysqli;
     if (!$mysqli || !@$mysqli->ping()) {
-        $mysqli = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+        $mysqli = @mysqli_init();
         if ($mysqli) {
-            $mysqli->set_charset('utf8mb4');
-            @$mysqli->query("SET SESSION innodb_lock_wait_timeout = 10");
+            @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+            if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
+                @$mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
+            }
+            if (@$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME)) {
+                $mysqli->set_charset('utf8mb4');
+                @$mysqli->query("SET SESSION innodb_lock_wait_timeout = 5");
+            }
         }
     }
     return $mysqli;
 }
 
-if (session_status() === PHP_SESSION_NONE) {
+if (!defined('NO_SESSION') && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
     $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
             || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
     session_set_cookie_params([
@@ -81,11 +84,11 @@ if (session_status() === PHP_SESSION_NONE) {
         'samesite' => 'Lax',
     ]);
     session_start();
-}
 
-// Inicializar token CSRF imediatamente se não existir
-if (empty($_SESSION['_csrf_token'])) {
-    $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    // Inicializar token CSRF imediatamente se não existir
+    if (empty($_SESSION['_csrf_token'])) {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    }
 }
 
 // Helper para fecho antecipado manual em endpoints pesados
@@ -116,6 +119,10 @@ if (isset($_GET['run_migrations']) && $_GET['run_migrations'] === '1' && ($isAut
  * Executado sob demanda se uma consulta falhar por tabela inexistente.
  */
 function garantirTabelasConvocatorias(?mysqli $db = null): bool {
+    static $jaVerificado = false;
+    if ($jaVerificado) return true;
+    $jaVerificado = true;
+
     global $mysqli;
     $db = $db ?? $mysqli;
     if (!$db) return false;
@@ -153,21 +160,8 @@ function garantirTabelasConvocatorias(?mysqli $db = null): bool {
             KEY `idx_hist_data` (`alterado_em`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        @$db->query("ALTER TABLE `candidaturas` 
-        MODIFY COLUMN `estado` ENUM(
-            'pendente',
-            'em_analise',
-            'selecionado',
-            'rejeitado',
-            'convite_enviado',
-            'registado',
-            'convocado',
-            'validado_presencial',
-            'ausente',
-            'recusou',
-            'reprovado_reuniao'
-        ) COLLATE utf8mb4_unicode_ci DEFAULT 'pendente'");
-
+        // NOTA: ALTER TABLE sobre `candidaturas` removido do ciclo HTTP para evitar Exclusive Metadata Locks (504 Gateway Timeout).
+        // Qualquer migração de coluna em `candidaturas` corre exclusivamente via update_schema.php.
         return true;
     } catch (Throwable $e) {
         error_log("Erro ao auto-criar tabelas de convocatórias: " . $e->getMessage());

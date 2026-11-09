@@ -1,4 +1,5 @@
 <?php
+define('NO_SESSION', true);
 require_once __DIR__ . '/../../config/config.php';
 
 // Headers de cache para conteúdo de notícias

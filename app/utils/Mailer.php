@@ -14,6 +14,11 @@ class Mailer {
     }
 
     public static function sendImmediate($to, $subject, $body, &$error = "", $attachmentPath = null) {
+        if (!defined('MAIL_PASS') || trim((string)MAIL_PASS) === '' || !defined('MAIL_HOST') || trim((string)MAIL_HOST) === '') {
+            $error = 'Credenciais SMTP (MAIL_PASS/MAIL_HOST) não configuradas no ambiente.';
+            return false;
+        }
+
         $mail = new PHPMailer(true);
 
         try {

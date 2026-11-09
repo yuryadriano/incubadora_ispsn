@@ -18,13 +18,13 @@ RUN apt-get update \
        libfreetype6-dev \
        libicu-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl
+    && docker-php-ext-install -j$(nproc) gd mysqli pdo_mysql zip intl opcache
 
 # 4. Configurar o Servidor Web (Apache)
-# Habilitar o mod_rewrite para URLs amigáveis
-RUN a2enmod rewrite
+# Habilitar o mod_rewrite e headers
+RUN a2enmod rewrite headers
 
-# Truque de compatibilidade para caminhos fixos /incubadora_ispsn/
+# Compatibilidade para caminhos fixos /incubadora_ispsn/
 RUN ln -s /var/www/html /var/www/html/incubadora_ispsn
 
 # Criar um index.php na raiz que redireciona para o website público
@@ -42,6 +42,7 @@ RUN chown -R www-data:www-data /var/www/html \
     && mkdir -p /var/www/html/uploads/evidencias \
     && mkdir -p /var/www/html/uploads/metas \
     && mkdir -p /var/www/html/uploads/relatorios \
+    && mkdir -p /var/www/html/uploads/termos \
     && mkdir -p /var/www/html/assets/img/blog \
     && mkdir -p /var/www/html/assets/img/galeria \
     && chown -R www-data:www-data /var/www/html/uploads /var/www/html/assets/img \
@@ -63,9 +64,44 @@ RUN printf '%s\n' \
     > /etc/apache2/conf-available/no-php-uploads.conf \
     && a2enconf no-php-uploads
 
-# 7. Configuração Adicional do PHP (Opcional)
-# Se necessário, você pode adicionar um php.ini personalizado
-# COPY php.ini /usr/local/etc/php/conf.d/
+# 7. Tuning do Apache MPM Prefork e Timeouts (Prevenção definitiva de 504 Gateway Timeout)
+RUN printf '%s\n' \
+    'ServerTokens Prod' \
+    'ServerSignature Off' \
+    'TimeOut 30' \
+    'KeepAlive On' \
+    'MaxKeepAliveRequests 100' \
+    'KeepAliveTimeout 3' \
+    '<IfModule mpm_prefork_module>' \
+    '    StartServers             4' \
+    '    MinSpareServers          3' \
+    '    MaxSpareServers          8' \
+    '    MaxRequestWorkers       50' \
+    '    MaxConnectionsPerChild 400' \
+    '</IfModule>' \
+    > /etc/apache2/conf-available/mpm-tuning.conf \
+    && a2enconf mpm-tuning
+
+# 8. Configuração de Produção do PHP + OPcache + Limpeza de Sessões
+RUN printf '%s\n' \
+    'max_execution_time = 25' \
+    'max_input_time = 25' \
+    'default_socket_timeout = 5' \
+    'mysqlnd.net_read_timeout = 8' \
+    'memory_limit = 256M' \
+    'post_max_size = 20M' \
+    'upload_max_filesize = 16M' \
+    'expose_php = Off' \
+    'session.gc_probability = 1' \
+    'session.gc_divisor = 100' \
+    'session.gc_maxlifetime = 7200' \
+    'opcache.enable = 1' \
+    'opcache.memory_consumption = 128' \
+    'opcache.interned_strings_buffer = 16' \
+    'opcache.max_accelerated_files = 4000' \
+    'opcache.revalidate_freq = 2' \
+    'opcache.fast_shutdown = 1' \
+    > /usr/local/etc/php/conf.d/zz-production.ini
 
 # O Apache expõe a porta 80 por padrão
 EXPOSE 80

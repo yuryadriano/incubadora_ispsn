@@ -158,50 +158,67 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <!-- Global Stylesheet -->
-<link rel="stylesheet" href="/incubadora_ispsn/assets/css/global.css?v=<?= @filemtime(__DIR__ . '/../../../assets/css/global.css') ?: '3' ?>">
+<link rel="stylesheet" href="/incubadora_ispsn/assets/css/global.css?v=<?= @filemtime(__DIR__ . '/../../../assets/css/global.css') ?: ASSET_VERSION ?>">
+<?php
+// Libertar imediatamente o lock de ficheiro de sessão em pedidos GET quando não há mensagens flash pendentes para limpar
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && empty($_SESSION['flash_ok'])
+    && empty($_SESSION['flash_erro'])
+    && empty($_SESSION['flash_aviso'])
+    && empty($_SESSION['convite_link'])
+    && empty($_SESSION['wa_redirect'])
+    && function_exists('close_session_early')) {
+    close_session_early();
+}
+?>
 <?php if ($perfil === 'utilizador'): ?>
 <style>
-/* Sistema Visual do Módulo do Estudante (.std-painel) */
+/* ══════════════════════════════════════════════════════════════════
+   SISTEMA VISUAL MODERNO DO MÓDULO DO ESTUDANTE (SaaS Dashboard)
+   Alinhado com os painéis de Mentor e Admin + suporte Dark Mode
+   ══════════════════════════════════════════════════════════════════ */
 .std-painel {
-  --sp-bg:             #FDFAF5;
-  --sp-surface:        #FFFFFF;
-  --sp-surface-muted:  #F7F4ED;
-  --sp-surface-tint:   #FCF9F2;
-  --sp-border:         #E6E0D4;
-  --sp-border-strong:  #D4CBB8;
-  --sp-text:           #18181B;
-  --sp-text-sec:       #4B5563;
-  --sp-text-muted:     #6B7280;
-  --sp-accent:         #B45309;
-  --sp-accent-strong:  #92400E;
-  --sp-accent-bg:      #FEF3C7;
+  --sp-bg:             var(--bg, #F8FAFC);
+  --sp-surface:        var(--surface, #FFFFFF);
+  --sp-surface-muted:  var(--surface-2, #F1F5F9);
+  --sp-surface-tint:   #FFFBEB;
+  --sp-border:         var(--border, #E2E8F0);
+  --sp-border-strong:  #CBD5E1;
+  --sp-text:           var(--text-primary, #0F172A);
+  --sp-text-sec:       var(--text-secondary, #475569);
+  --sp-text-muted:     var(--text-muted, #64748B);
+  --sp-accent:         #D97706;
+  --sp-accent-strong:  #B45309;
+  --sp-accent-bg:      rgba(217, 119, 6, 0.12);
   --sp-accent-border:  #F59E0B;
-  --sp-btn-bg:         #B45309;
+  --sp-blue:           #3B82F6;
+  --sp-blue-bg:        rgba(59, 130, 246, 0.12);
+  --sp-purple:         #8B5CF6;
+  --sp-purple-bg:      rgba(139, 92, 246, 0.12);
+  --sp-btn-bg:         #D97706;
   --sp-btn-fg:         #FFFFFF;
-  --sp-btn-hover:      #92400E;
-  --sp-ok-text:        #065F46;
+  --sp-btn-hover:      #B45309;
+  --sp-ok-text:        #059669;
   --sp-ok-bg:          #ECFDF5;
   --sp-ok-border:      #A7F3D0;
-  --sp-warn-text:      #92400E;
+  --sp-warn-text:      #B45309;
   --sp-warn-bg:        #FFFBEB;
   --sp-warn-border:    #FDE68A;
-  --sp-err-text:       #991B1B;
+  --sp-err-text:       #DC2626;
   --sp-err-bg:         #FEF2F2;
   --sp-err-border:     #FECACA;
   --sp-font-sans:      'Inter', system-ui, -apple-system, sans-serif;
   --sp-font-mono:      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --sp-fs-xs:          0.75rem;
   --sp-fs-sm:          0.84375rem;
-  --sp-fs-base:        0.9375rem;
-  --sp-fs-md:          1.0625rem;
+  --sp-fs-base:        0.925rem;
+  --sp-fs-md:          1.05rem;
   --sp-fs-lg:          1.2rem;
   --sp-fs-xl:          1.55rem;
-  --sp-radius-sm:      8px;
-  --sp-radius:         14px;
-  --sp-shadow:         0 2px 8px rgba(24, 24, 27, 0.05), 0 1px 2px rgba(24, 24, 27, 0.04);
+  --sp-radius-sm:      10px;
+  --sp-radius:         16px;
+  --sp-shadow:         0 4px 16px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.03);
 
-  max-width: 1180px;
-  margin: 0 auto;
   font-family: var(--sp-font-sans);
   color: var(--sp-text);
   font-size: var(--sp-fs-base);
@@ -209,12 +226,12 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 }
 body.dark-mode .std-painel,
 html.dark-mode .std-painel {
-  --sp-bg:             #0F111A;
-  --sp-surface:        #181B28;
-  --sp-surface-muted:  #202434;
-  --sp-surface-tint:   #1C2030;
-  --sp-border:         #2D3247;
-  --sp-border-strong:  #3E4560;
+  --sp-bg:             #0F172A;
+  --sp-surface:        #1E293B;
+  --sp-surface-muted:  #0F172A;
+  --sp-surface-tint:   rgba(245, 158, 11, 0.1);
+  --sp-border:         #334155;
+  --sp-border-strong:  #475569;
   --sp-text:           #F8FAFC;
   --sp-text-sec:       #CBD5E1;
   --sp-text-muted:     #94A3B8;
@@ -223,86 +240,143 @@ html.dark-mode .std-painel {
   --sp-accent-bg:      rgba(245, 158, 11, 0.16);
   --sp-accent-border:  rgba(245, 158, 11, 0.45);
   --sp-btn-bg:         #F59E0B;
-  --sp-btn-fg:         #18181B;
+  --sp-btn-fg:         #0F172A;
   --sp-btn-hover:      #FBBF24;
-  --sp-ok-text:        #6EE7B7;
+  --sp-ok-text:        #34D399;
   --sp-ok-bg:          rgba(16, 185, 129, 0.14);
   --sp-ok-border:      rgba(16, 185, 129, 0.35);
   --sp-warn-text:      #FCD34D;
   --sp-warn-bg:        rgba(245, 158, 11, 0.14);
   --sp-warn-border:    rgba(245, 158, 11, 0.35);
-  --sp-err-text:       #FCA5A5;
+  --sp-err-text:       #F87171;
   --sp-err-bg:         rgba(239, 68, 68, 0.14);
   --sp-err-border:     rgba(239, 68, 68, 0.35);
-  --sp-shadow:         0 4px 14px rgba(0, 0, 0, 0.35);
+  --sp-shadow:         0 8px 24px rgba(0, 0, 0, 0.35);
 }
 .std-painel .sp-num { font-variant-numeric: tabular-nums; }
 .std-painel .sp-code { font-family: var(--sp-font-mono); font-variant-numeric: tabular-nums; font-size: var(--sp-fs-sm); }
-.std-painel .sp-read-bar {
+
+/* Barra de Pré-visualização Admin (Estilo Indigo SaaS igual ao Painel de Mentor) */
+.std-preview-banner {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-  padding: 12px 18px; margin-bottom: 20px; background: var(--sp-warn-bg);
-  border: 1px solid var(--sp-warn-border); border-left: 4px solid var(--sp-accent-border);
-  border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm); color: var(--sp-text); box-shadow: var(--sp-shadow);
+  padding: 12px 20px; margin-bottom: 22px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border: 1px solid #C7D2FE; border-left: 4px solid #4F46E5;
+  border-radius: 12px; color: #312E81; font-size: 0.85rem;
+  box-shadow: 0 2px 10px rgba(79, 70, 229, 0.08);
 }
-.std-painel .sp-read-bar-left { display: flex; align-items: center; gap: 10px; }
-.std-painel .sp-read-icon {
-  width: 32px; height: 32px; border-radius: 8px; background: var(--sp-accent-bg); color: var(--sp-accent);
-  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+body.dark-mode .std-preview-banner {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.18), rgba(67, 56, 202, 0.12));
+  border-color: rgba(99, 102, 241, 0.4); color: #E0E7FF;
 }
-.std-painel .sp-read-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
-.std-painel .sp-read-select {
-  min-height: 40px; padding: 6px 12px; font-size: var(--sp-fs-sm); font-weight: 500;
-  color: var(--sp-text); background-color: var(--sp-surface); border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius-sm);
+.std-preview-select {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid #A5B4FC;
+  background: #FFFFFF; color: #1E1B4B; font-size: 0.82rem; font-weight: 600; cursor: pointer;
 }
+body.dark-mode .std-preview-select {
+  background: #1E293B; color: #F8FAFC; border-color: #4F46E5;
+}
+
+/* Hero / Cabeçalho Dinâmico da Startup */
+.std-hero-card {
+  background: var(--sp-surface);
+  border: 1px solid var(--sp-border);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-shadow);
+  padding: 24px 28px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.std-hero-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(90deg, #D97706 0%, #F59E0B 45%, #3B82F6 100%);
+}
+.std-live-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.std-live-dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  animation: stdPulseDot 2s infinite;
+}
+@keyframes stdPulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+/* Pipeline Stepper Interativo */
+.std-pipeline {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--sp-border);
+}
+.std-pipe-step {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 11px;
+  background: var(--sp-surface-muted); border: 1px solid var(--sp-border);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.std-pipe-step.is-done {
+  background: var(--sp-ok-bg); border-color: var(--sp-ok-border); color: var(--sp-ok-text);
+}
+.std-pipe-step.is-active {
+  background: var(--sp-warn-bg); border-color: var(--sp-accent-border); color: var(--sp-warn-text);
+  box-shadow: 0 2px 10px rgba(217, 119, 6, 0.12);
+}
+.std-pipe-icon {
+  width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 800;
+  background: rgba(100, 116, 139, 0.15); color: var(--sp-text-muted);
+}
+.std-pipe-step.is-done .std-pipe-icon { background: #10B981; color: #FFFFFF; }
+.std-pipe-step.is-active .std-pipe-icon { background: #D97706; color: #FFFFFF; }
+
+/* Checklist Interativa de Prontidão do Dossiê */
+.std-check-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.std-check-card {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--sp-surface-muted); border: 1px solid var(--sp-border);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.std-check-card:hover { transform: translateY(-2px); border-color: var(--sp-accent-border); }
+.std-check-card.done { background: var(--sp-ok-bg); border-color: var(--sp-ok-border); }
+
+/* Timeline de Atividade em Tempo Real */
+.std-feed-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 11px 0; border-bottom: 1px solid var(--sp-border);
+}
+.std-feed-item:last-child { border-bottom: none; }
+.std-feed-dot {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 0.78rem;
+}
+
+/* Compatibilidade com classes sp-* existentes nas páginas secundárias */
 .std-painel .sp-header {
-  background: var(--sp-surface); border: 1px solid var(--sp-border-strong); border-top: 4px solid var(--sp-accent);
+  background: var(--sp-surface); border: 1px solid var(--sp-border); border-top: 4px solid var(--sp-accent);
   border-radius: var(--sp-radius); box-shadow: var(--sp-shadow); padding: 22px 26px; margin-bottom: 22px;
 }
-.std-painel .sp-header-top {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px;
-}
-.std-painel .sp-kicker {
-  font-size: var(--sp-fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sp-text-muted); margin: 0;
-}
-.std-painel .sp-title {
-  font-size: var(--sp-fs-xl); font-weight: 800; color: var(--sp-text); letter-spacing: -0.02em; line-height: 1.25; margin: 0;
-}
-.std-painel .sp-meta-row {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: var(--sp-fs-sm); color: var(--sp-text-sec);
-}
+.std-painel .sp-header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.std-painel .sp-kicker { font-size: var(--sp-fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sp-text-muted); margin: 0; }
+.std-painel .sp-title { font-size: var(--sp-fs-xl); font-weight: 800; color: var(--sp-text); letter-spacing: -0.02em; line-height: 1.25; margin: 0; }
+.std-painel .sp-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; font-size: var(--sp-fs-sm); color: var(--sp-text-sec); }
 .std-painel .sp-meta-pill {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
-  background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: 6px;
-  font-size: var(--sp-fs-xs); font-weight: 500; color: var(--sp-text-sec);
+  background: var(--sp-surface-muted); border: 1px solid var(--sp-border); border-radius: 8px;
+  font-size: var(--sp-fs-xs); font-weight: 600; color: var(--sp-text-sec);
 }
 .std-painel .sp-meta-pill i { color: var(--sp-accent); }
 .std-painel .sp-metrics-box {
   display: inline-flex; align-items: center; gap: 14px; padding: 7px 14px;
-  background: var(--sp-surface-tint); border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);
-}
-.std-painel .sp-stepper {
-  list-style: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px;
-  padding: 18px 0 0; margin: 18px 0 0; border-top: 1px solid var(--sp-border);
-}
-@media (max-width: 768px) { .std-painel .sp-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.std-painel .sp-step {
-  display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--sp-radius-sm);
-  background: var(--sp-surface-muted); border: 1px solid var(--sp-border); font-size: var(--sp-fs-xs); font-weight: 600; color: var(--sp-text-muted);
-}
-.std-painel .sp-step-dot {
-  width: 20px; height: 20px; border-radius: 50%; background: var(--sp-border-strong); color: var(--sp-surface);
-  display: inline-flex; align-items: center; justify-content: center; font-size: 0.65rem; flex-shrink: 0;
-}
-.std-painel .sp-step.is-done { color: var(--sp-ok-text); background: var(--sp-ok-bg); border-color: var(--sp-ok-border); }
-.std-painel .sp-step.is-done .sp-step-dot { background: var(--sp-ok-text); color: #FFFFFF; }
-.std-painel .sp-step[aria-current="step"] { color: var(--sp-warn-text); background: var(--sp-warn-bg); border-color: var(--sp-accent-border); font-weight: 700; }
-.std-painel .sp-step[aria-current="step"] .sp-step-dot { background: var(--sp-accent); color: #FFFFFF; }
-.std-painel .sp-section-label {
-  display: flex; align-items: center; gap: 8px; font-size: var(--sp-fs-xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.06em; color: var(--sp-text-muted); margin-bottom: 10px;
+  background: var(--sp-surface-tint); border: 1px solid var(--sp-warn-border); border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm);
 }
 .std-painel .sp-surface-primary {
-  background: var(--sp-surface); border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius);
+  background: var(--sp-surface); border: 1px solid var(--sp-border); border-radius: var(--sp-radius);
   box-shadow: var(--sp-shadow); padding: 22px 26px; margin-bottom: 22px;
 }
 .std-painel .sp-card-head {
@@ -311,79 +385,77 @@ html.dark-mode .std-painel {
 }
 .std-painel .sp-card-head-title { display: flex; align-items: center; gap: 12px; }
 .std-painel .sp-icon-badge {
-  width: 38px; height: 38px; border-radius: 10px; background: var(--sp-accent-bg); color: var(--sp-accent);
-  display: inline-flex; align-items: center; justify-content: center; font-size: 0.95rem; flex-shrink: 0;
+  width: 40px; height: 40px; border-radius: 11px; background: var(--sp-accent-bg); color: var(--sp-accent);
+  display: inline-flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;
 }
 .std-painel .sp-surface-aside {
-  background: var(--sp-surface); border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius);
-  box-shadow: var(--sp-shadow); padding: 6px 20px;
+  background: var(--sp-surface); border: 1px solid var(--sp-border); border-radius: var(--sp-radius);
+  box-shadow: var(--sp-shadow); padding: 8px 20px;
 }
-.std-painel .sp-aside-block {
-  display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--sp-border);
-}
+.std-painel .sp-aside-block { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--sp-border); }
 .std-painel .sp-aside-block:last-child { border-bottom: none; }
 .std-painel .sp-aside-icon {
-  width: 34px; height: 34px; border-radius: 8px; background: var(--sp-surface-muted); border: 1px solid var(--sp-border);
-  color: var(--sp-accent); display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px;
+  width: 36px; height: 36px; border-radius: 9px; background: var(--sp-blue-bg);
+  color: var(--sp-blue); display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; flex-shrink: 0; margin-top: 2px;
 }
 .std-painel .sp-aside-body { flex: 1; min-width: 0; }
 .std-painel .sp-list {
   list-style: none; padding: 0; margin: 0 0 22px; background: var(--sp-surface);
-  border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius); box-shadow: var(--sp-shadow); overflow: hidden;
+  border: 1px solid var(--sp-border); border-radius: var(--sp-radius); box-shadow: var(--sp-shadow); overflow: hidden;
 }
 .std-painel .sp-list-row {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
-  padding: 14px 20px; border-bottom: 1px solid var(--sp-border); font-size: var(--sp-fs-sm);
+  padding: 15px 20px; border-bottom: 1px solid var(--sp-border); font-size: var(--sp-fs-sm);
 }
 .std-painel .sp-list-row:last-child { border-bottom: none; }
 .std-painel .sp-chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
-  font-size: var(--sp-fs-xs); font-weight: 600; line-height: 1.4; border: 1px solid transparent; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px;
+  font-size: var(--sp-fs-xs); font-weight: 700; line-height: 1.4; border: 1px solid transparent; white-space: nowrap;
 }
 .std-painel .sp-chip-ok { color: var(--sp-ok-text); background: var(--sp-ok-bg); border-color: var(--sp-ok-border); }
 .std-painel .sp-chip-warn { color: var(--sp-warn-text); background: var(--sp-warn-bg); border-color: var(--sp-warn-border); }
 .std-painel .sp-chip-err { color: var(--sp-err-text); background: var(--sp-err-bg); border-color: var(--sp-err-border); }
 .std-painel .sp-chip-neutral { color: var(--sp-text-sec); background: var(--sp-surface-muted); border-color: var(--sp-border); }
 .std-painel .sp-btn-primary {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px;
-  padding: 8px 18px; background: var(--sp-btn-bg); color: var(--sp-btn-fg); border: 1px solid transparent;
-  border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm); font-weight: 600; text-decoration: none; cursor: pointer;
-}
-.std-painel .sp-btn-primary:hover { background: var(--sp-btn-hover); color: var(--sp-btn-fg); }
-.std-painel .sp-btn-secondary {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px;
-  padding: 7px 15px; background: var(--sp-surface-muted); color: var(--sp-text); border: 1px solid var(--sp-border-strong);
+  padding: 8px 18px; background: var(--sp-btn-bg); color: var(--sp-btn-fg); border: none;
+  border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm); font-weight: 600; text-decoration: none; cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.std-painel .sp-btn-primary:hover { background: var(--sp-btn-hover); color: var(--sp-btn-fg); transform: translateY(-1px); }
+.std-painel .sp-btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px;
+  padding: 7px 15px; background: var(--sp-surface-muted); color: var(--sp-text); border: 1px solid var(--sp-border);
   border-radius: var(--sp-radius-sm); font-size: var(--sp-fs-sm); font-weight: 600; text-decoration: none; cursor: pointer;
 }
 .std-painel .sp-btn-secondary:hover { background: var(--sp-border); color: var(--sp-text); }
 .std-painel .sp-link {
-  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; color: var(--sp-accent);
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; color: var(--sp-accent);
   font-size: var(--sp-fs-sm); font-weight: 600; text-decoration: none;
 }
 .std-painel .sp-link:hover { text-decoration: underline; color: var(--sp-accent-strong); }
 .std-painel .sp-empty-line {
-  display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 18px;
-  font-size: var(--sp-fs-sm); color: var(--sp-text-muted); background: var(--sp-surface);
-  border: 1px solid var(--sp-border); border-radius: var(--sp-radius-sm);
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 14px 18px;
+  font-size: var(--sp-fs-sm); color: var(--sp-text-muted); background: var(--sp-surface-muted);
+  border: 1px dashed var(--sp-border-strong); border-radius: var(--sp-radius-sm);
 }
-/* Abas de navegação interna (Minha Startup) */
 .std-painel .sp-tabs {
   display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
   padding: 6px; margin-bottom: 22px; background: var(--sp-surface);
-  border: 1px solid var(--sp-border-strong); border-radius: var(--sp-radius-sm); box-shadow: var(--sp-shadow);
+  border: 1px solid var(--sp-border); border-radius: 12px; box-shadow: var(--sp-shadow);
 }
 .std-painel .sp-tab-btn {
-  display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px;
-  border-radius: 6px; border: none; background: transparent; color: var(--sp-text-sec);
-  font-size: var(--sp-fs-sm); font-weight: 600; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px;
+  border-radius: 9px; border: none; background: transparent; color: var(--sp-text-sec);
+  font-size: var(--sp-fs-sm); font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s ease;
 }
 .std-painel .sp-tab-btn:hover { background: var(--sp-surface-muted); color: var(--sp-text); }
-.std-painel .sp-tab-btn.active { background: var(--sp-btn-bg); color: var(--sp-btn-fg); }
+.std-painel .sp-tab-btn.active { background: var(--sp-btn-bg); color: var(--sp-btn-fg); box-shadow: 0 2px 8px rgba(217,119,6,0.25); }
 .std-painel .sp-table { width: 100%; border-collapse: collapse; font-size: var(--sp-fs-sm); }
 .std-painel .sp-table th {
   text-align: left; font-size: var(--sp-fs-xs); font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: var(--sp-text-muted); padding: 12px 16px;
-  background: var(--sp-surface-muted); border-bottom: 1px solid var(--sp-border-strong);
+  letter-spacing: 0.05em; color: var(--sp-text-muted); padding: 13px 16px;
+  background: var(--sp-surface-muted); border-bottom: 1px solid var(--sp-border);
 }
 .std-painel .sp-table td {
   padding: 14px 16px; border-bottom: 1px solid var(--sp-border); color: var(--sp-text); vertical-align: middle;
@@ -530,50 +602,51 @@ if (document.documentElement.classList.contains('dark-mode')) {
     <!-- ZONA DE CONTEÚDO — cada página injeta o seu conteúdo aqui -->
     <div class="page-content">
     <?php if (!empty($isSimulando)): ?>
-        <div class="std-painel">
-            <div class="sp-read-bar" role="region" aria-label="Modo de pré-visualização de administrador">
-                <div class="sp-read-bar-left">
-                    <span class="sp-read-icon" aria-hidden="true"><i class="fa-solid fa-eye"></i></span>
-                    <div>
-                        Modo de leitura: a pré-visualizar o painel de <strong><?= htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8') ?></strong>.
-                    </div>
+        <div class="std-preview-banner" role="region" aria-label="Modo de pré-visualização de administrador">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="width:36px; height:36px; border-radius:9px; background:rgba(79,70,229,0.14); color:#4F46E5; display:inline-flex; align-items:center; justify-content:center; font-size:0.95rem; flex-shrink:0;" aria-hidden="true">
+                    <i class="fa-solid fa-eye"></i>
+                </span>
+                <div>
+                    <div style="font-weight:700; font-size:0.86rem;">Modo de leitura: a pré-visualizar o painel de <strong><?= htmlspecialchars($nomeUsuario, ENT_QUOTES, 'UTF-8') ?></strong></div>
+                    <div style="font-size:0.75rem; opacity:0.85;">Visualização de Administrador · Navegação sincronizada em todas as abas</div>
                 </div>
-                <div class="sp-read-actions">
-                    <form method="GET" class="m-0">
-                        <?php foreach ($_GET as $gk => $gv):
-                            if ($gk === 'id_usuario' || !is_scalar($gv)) continue;
+            </div>
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+                <form method="GET" class="m-0">
+                    <?php foreach ($_GET as $gk => $gv):
+                        if ($gk === 'id_usuario' || !is_scalar($gv)) continue;
+                    ?>
+                        <input type="hidden" name="<?= htmlspecialchars((string)$gk, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars((string)$gv, ENT_QUOTES, 'UTF-8') ?>">
+                    <?php endforeach; ?>
+                    <label for="selectEstudanteGlobal" class="visually-hidden">Selecionar estudante</label>
+                    <select id="selectEstudanteGlobal" name="id_usuario" class="std-preview-select" onchange="this.form.submit()">
+                        <?php
+                        $estGlobalList = $mysqli->query("
+                            SELECT u.id, u.nome,
+                                   (SELECT p.titulo FROM projetos p WHERE p.criado_por = u.id ORDER BY p.criado_em DESC LIMIT 1) AS proj_titulo
+                            FROM usuarios u
+                            WHERE u.perfil = 'utilizador' AND u.activo = 1
+                            ORDER BY (proj_titulo IS NULL) ASC, u.nome ASC
+                        ");
+                        if ($estGlobalList):
+                            while ($estG = $estGlobalList->fetch_assoc()):
+                                $selG = ((int)$estG['id'] === (int)$idUsuario) ? 'selected' : '';
+                                $subLbl = !empty($estG['proj_titulo']) ? $estG['proj_titulo'] : 'Sem projecto';
                         ?>
-                            <input type="hidden" name="<?= htmlspecialchars((string)$gk, ENT_QUOTES, 'UTF-8') ?>" value="<?= htmlspecialchars((string)$gv, ENT_QUOTES, 'UTF-8') ?>">
-                        <?php endforeach; ?>
-                        <label for="selectEstudanteGlobal" class="visually-hidden">Selecionar estudante</label>
-                        <select id="selectEstudanteGlobal" name="id_usuario" class="sp-read-select" onchange="this.form.submit()">
-                            <?php
-                            $estGlobalList = $mysqli->query("
-                                SELECT u.id, u.nome,
-                                       (SELECT p.titulo FROM projetos p WHERE p.criado_por = u.id ORDER BY p.criado_em DESC LIMIT 1) AS proj_titulo
-                                FROM usuarios u
-                                WHERE u.perfil = 'utilizador' AND u.activo = 1
-                                ORDER BY (proj_titulo IS NULL) ASC, u.nome ASC
-                            ");
-                            if ($estGlobalList):
-                                while ($estG = $estGlobalList->fetch_assoc()):
-                                    $selG = ((int)$estG['id'] === (int)$idUsuario) ? 'selected' : '';
-                                    $subLbl = !empty($estG['proj_titulo']) ? $estG['proj_titulo'] : 'Sem projecto';
-                            ?>
-                                <option value="<?= (int)$estG['id'] ?>" <?= $selG ?>>
-                                    <?= htmlspecialchars($estG['nome'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars($subLbl, ENT_QUOTES, 'UTF-8') ?>)
-                                </option>
-                            <?php
-                                endwhile;
-                            endif;
-                            ?>
-                        </select>
-                    </form>
-                    <a href="/incubadora_ispsn/public/index.php" class="sp-btn-secondary">
-                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-                        <span>Painel Admin</span>
-                    </a>
-                </div>
+                            <option value="<?= (int)$estG['id'] ?>" <?= $selG ?>>
+                                <?= htmlspecialchars($estG['nome'], ENT_QUOTES, 'UTF-8') ?> — <?= htmlspecialchars($subLbl, ENT_QUOTES, 'UTF-8') ?>
+                            </option>
+                        <?php
+                            endwhile;
+                        endif;
+                        ?>
+                    </select>
+                </form>
+                <a href="/incubadora_ispsn/public/index.php" class="btn-ghost" style="padding:6px 14px; font-size:0.78rem; background:#fff; color:#312E81; border-color:#C7D2FE;">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    <span>Voltar ao Admin</span>
+                </a>
             </div>
         </div>
     <?php endif; ?>

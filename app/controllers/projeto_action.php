@@ -125,6 +125,73 @@ if ($action === 'criar_projeto') {
 }
 
 /* ════════════════════════════════════════════════
+   ACÇÃO: editar_proposta
+   Actualiza os dados da proposta (criador do projecto ou admin/superadmin)
+════════════════════════════════════════════════ */
+if ($action === 'editar_proposta') {
+    $idProjeto     = (int)($_POST['id_projeto'] ?? 0);
+    $titulo        = trim($_POST['titulo'] ?? '');
+    $tipo          = $_POST['tipo'] ?? 'startup_tecnologica';
+    $area_tematica = $_POST['area'] ?? 'tecnologia';
+    $descricao     = trim($_POST['descricao'] ?? '');
+    $problema      = trim($_POST['problema'] ?? '');
+    $solucao       = trim($_POST['solucao'] ?? '');
+
+    $tiposValidos = ['startup_tecnologica', 'negocio_tradicional', 'impacto_social', 'outro'];
+    $areasValidas = ['tecnologia', 'saude', 'educacao', 'agro', 'financas', 'outro'];
+
+    $stmtChk = $mysqli->prepare("SELECT criado_por, pitch_path FROM projetos WHERE id = ? LIMIT 1");
+    $stmtChk->bind_param('i', $idProjeto);
+    $stmtChk->execute();
+    $projOwn = $stmtChk->get_result()->fetch_assoc();
+    $stmtChk->close();
+
+    if (!$projOwn || ($perfil === 'utilizador' && (int)$projOwn['criado_por'] !== $idUsuario)) {
+        $_SESSION['flash_erro'] = 'Permissão negada para editar este projecto.';
+    } elseif (strlen($titulo) < 5) {
+        $_SESSION['flash_erro'] = 'O título deve ter pelo menos 5 caracteres.';
+    } elseif (strlen($descricao) < 20) {
+        $_SESSION['flash_erro'] = 'A descrição deve ter pelo menos 20 caracteres.';
+    } elseif (!in_array($tipo, $tiposValidos, true) || !in_array($area_tematica, $areasValidas, true)) {
+        $_SESSION['flash_erro'] = 'Tipo ou área temática inválida.';
+    } else {
+        $novoPitchPath = (string)($projOwn['pitch_path'] ?? '');
+        if (!empty($_FILES['pitch_ficheiro']['name'])) {
+            $erroPitch = '';
+            $extPitch = validar_upload($_FILES['pitch_ficheiro'], 'documento', 15 * 1024 * 1024, $erroPitch);
+            if ($extPitch === false) {
+                $_SESSION['flash_erro'] = 'Ficheiro de Pitch inválido: ' . $erroPitch;
+                header("Location: $redirect");
+                exit;
+            }
+            $nomePitch = "pitch_proj_{$idProjeto}_" . time() . '_' . bin2hex(random_bytes(4)) . ".{$extPitch}";
+            $dirPitch  = __DIR__ . '/../../uploads/pitches/';
+            if (!is_dir($dirPitch)) {
+                mkdir($dirPitch, 0755, true);
+            }
+            if (move_uploaded_file($_FILES['pitch_ficheiro']['tmp_name'], $dirPitch . $nomePitch)) {
+                $novoPitchPath = 'uploads/pitches/' . $nomePitch;
+            }
+        }
+
+        $stmtUp = $mysqli->prepare("
+            UPDATE projetos
+            SET titulo = ?, tipo = ?, area_tematica = ?, descricao = ?, problema = ?, solucao = ?, pitch_path = ?
+            WHERE id = ?
+        ");
+        $stmtUp->bind_param('sssssssi', $titulo, $tipo, $area_tematica, $descricao, $problema, $solucao, $novoPitchPath, $idProjeto);
+        if ($stmtUp->execute()) {
+            $_SESSION['flash_ok'] = 'Dados da proposta actualizados com sucesso!';
+        } else {
+            $_SESSION['flash_erro'] = 'Erro ao actualizar a proposta.';
+        }
+        $stmtUp->close();
+    }
+    header("Location: $redirect");
+    exit;
+}
+
+/* ════════════════════════════════════════════════
    ACÇÃO: mudar_estado
    Muda o estado de um projecto (apenas admin/superadmin)
 ════════════════════════════════════════════════ */

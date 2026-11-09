@@ -295,9 +295,10 @@ require_once __DIR__ . '/../partials/_layout.php';
         ?>
 
         <!-- ══ CABEÇALHO DO DOSSIÊ DA STARTUP ══ -->
-        <header class="sp-header">
+        <header class="std-hero-card">
             <div class="sp-header-top">
                 <div class="sp-kicker">
+                    <i class="fa-solid fa-rocket me-1" style="color:#D97706;"></i>
                     Minha Startup · Dossiê do Projecto<?php if ($isIncubadoOuGrad): ?> · Fase Actual: <?= htmlspecialchars($faseLabel, ENT_QUOTES, 'UTF-8') ?><?php endif; ?>
                 </div>
                 <span class="sp-chip <?= $chipClass ?>">
@@ -308,20 +309,28 @@ require_once __DIR__ . '/../partials/_layout.php';
 
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <h1 class="sp-title"><?= htmlspecialchars((string)$projeto['titulo'], ENT_QUOTES, 'UTF-8') ?></h1>
-                <?php if ($isIncubadoOuGrad): ?>
-                    <div class="sp-metrics-box">
-                        <span class="sp-num fw-semibold">
-                            <i class="fa-solid fa-list-check me-1" style="color: var(--sp-accent);" aria-hidden="true"></i>
-                            <?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> metas validadas
-                        </span>
-                        <?php if ($pontos > 0): ?>
-                            <span style="color: var(--sp-border-strong);" aria-hidden="true">|</span>
-                            <span class="sp-code fw-bold" style="color: var(--sp-accent);">
-                                <i class="fa-solid fa-trophy me-1" aria-hidden="true"></i><?= (int)$pontos ?> SP
+                <div class="d-flex align-items-center flex-wrap gap-2">
+                    <?php if ($isIncubadoOuGrad): ?>
+                        <div class="sp-metrics-box">
+                            <span class="sp-num fw-semibold">
+                                <i class="fa-solid fa-list-check me-1" style="color: var(--sp-accent);" aria-hidden="true"></i>
+                                <?= (int)$metasValidadasCount ?> de <?= (int)$totalMetasFase ?> metas validadas
                             </span>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
+                            <?php if ($pontos > 0): ?>
+                                <span style="color: var(--sp-border-strong);" aria-hidden="true">|</span>
+                                <span class="sp-code fw-bold" style="color: var(--sp-accent);">
+                                    <i class="fa-solid fa-trophy me-1" aria-hidden="true"></i><?= (int)$pontos ?> SP
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if (!$isAdminOrSuper): ?>
+                        <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalEditarProposta">
+                            <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                            <span>Editar Proposta</span>
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <div class="sp-meta-row">
@@ -782,6 +791,75 @@ require_once __DIR__ . '/../partials/_layout.php';
         </script>
 
         <?php if (!$isAdminOrSuper): ?>
+            <!-- MODAL: EDITAR PROPOSTA -->
+            <div class="modal fade" id="modalEditarProposta" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content modal-content-custom">
+                        <form method="post" action="/incubadora_ispsn/app/controllers/projeto_action.php" enctype="multipart/form-data">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="editar_proposta">
+                            <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
+                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=proposta', ENT_QUOTES, 'UTF-8') ?>">
+                            <div class="modal-header-custom d-flex justify-content-between align-items-center">
+                                <h5 class="modal-title fw-bold m-0"><i class="fa-solid fa-pen-to-square me-2 text-warning"></i>Actualizar Proposta</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body-custom">
+                                <div class="mb-3">
+                                    <label class="form-label-custom">Nome da Startup *</label>
+                                    <input type="text" name="titulo" class="form-control-custom" required value="<?= htmlspecialchars((string)$projeto['titulo'], ENT_QUOTES, 'UTF-8') ?>">
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Tipo *</label>
+                                        <select name="tipo" class="form-control-custom" required>
+                                            <?php foreach ($labelsTipo as $tk => $tl): ?>
+                                                <option value="<?= htmlspecialchars($tk, ENT_QUOTES, 'UTF-8') ?>" <?= (($projeto['tipo'] ?? '') === $tk) ? 'selected' : '' ?>>
+                                                    <?= htmlspecialchars($tl, ENT_QUOTES, 'UTF-8') ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Área Temática</label>
+                                        <select name="area" class="form-control-custom">
+                                            <?php
+                                            $areasMap = ['tecnologia' => 'Tecnologia', 'saude' => 'Saúde', 'educacao' => 'Educação', 'agro' => 'Agronegócio', 'financas' => 'Finanças', 'outro' => 'Outro'];
+                                            foreach ($areasMap as $ak => $al):
+                                            ?>
+                                                <option value="<?= $ak ?>" <?= (($projeto['area_tematica'] ?? '') === $ak) ? 'selected' : '' ?>><?= $al ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label-custom">Descrição Geral *</label>
+                                    <textarea name="descricao" class="form-control-custom" rows="3" required><?= htmlspecialchars((string)($projeto['descricao'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Problema que Resolve</label>
+                                        <textarea name="problema" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['problema'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Solução Proposta</label>
+                                        <textarea name="solucao" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['solucao'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="form-label-custom">Actualizar Pitch Deck (PDF, PPT, PPTX — Opcional)</label>
+                                    <input type="file" name="pitch_ficheiro" class="form-control-custom" accept=".pdf,.ppt,.pptx,.zip">
+                                </div>
+                            </div>
+                            <div class="modal-footer-custom">
+                                <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn-primary-custom"><i class="fa-solid fa-floppy-disk me-1"></i>Guardar Alterações</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- MODAL: ADICIONAR MEMBRO -->
             <div class="modal fade" id="modalAddMembro" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
