@@ -38,14 +38,28 @@ if ($isAdminOrSuper) {
 }
 
 /* ── PROJETO DO ESTUDANTE ── */
-$stmtP = $mysqli->prepare("
-    SELECT p.*, u.nome AS autor_nome, u.email AS autor_email
-    FROM projetos p
-    JOIN usuarios u ON u.id = p.criado_por
-    WHERE p.criado_por = ?
-    ORDER BY p.criado_em DESC LIMIT 1
-");
-$stmtP->bind_param('i', $idUsuario);
+$idProjGet = (int)($_GET['id'] ?? 0);
+if ($idProjGet > 0) {
+    $stmtP = $mysqli->prepare("
+        SELECT p.*, u.nome AS autor_nome, u.email AS autor_email
+        FROM projetos p
+        JOIN usuarios u ON u.id = p.criado_por
+        LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id
+        WHERE p.id = ? AND (p.criado_por = ? OR mp.id_usuario = ?)
+        LIMIT 1
+    ");
+    $stmtP->bind_param('iii', $idProjGet, $idUsuario, $idUsuario);
+} else {
+    $stmtP = $mysqli->prepare("
+        SELECT p.*, u.nome AS autor_nome, u.email AS autor_email
+        FROM projetos p
+        JOIN usuarios u ON u.id = p.criado_por
+        LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id
+        WHERE p.criado_por = ? OR mp.id_usuario = ?
+        ORDER BY p.criado_em DESC LIMIT 1
+    ");
+    $stmtP->bind_param('ii', $idUsuario, $idUsuario);
+}
 $stmtP->execute();
 $projeto = $stmtP->get_result()->fetch_assoc();
 $stmtP->close();
@@ -208,7 +222,7 @@ if ($projeto) {
         FROM mensagens m
         JOIN usuarios u ON u.id = m.id_usuario
         WHERE m.id_projeto = ?
-        ORDER BY m.criado_at ASC
+        ORDER BY m.id ASC
     ");
     if ($stmtMsg) {
         $stmtMsg->bind_param('i', $idProjeto);
@@ -612,16 +626,17 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <?php else: ?>
                     <ul class="sp-list">
                         <?php foreach ($tarefasProjeto as $t):
+                            $idTar   = (int)$t['id'];
                             $valMent = (int)($t['validada_mentor'] ?? 0) === 1;
                             $statusT = (string)($t['status'] ?? '');
                             $conclT  = $valMent || $statusT === 'concluida' || $statusT === 'concluid';
                             $prazoT  = !empty($t['data_limite']) ? date('d/m/Y', strtotime((string)$t['data_limite'])) : '';
                             $chipTar = $valMent ? 'sp-chip-ok' : ($conclT ? 'sp-chip-warn' : 'sp-chip-neutral');
-                            $lblTar  = $valMent ? 'Validada' : ($conclT ? 'Aguardando Validação' : 'Pendente');
+                            $lblTar  = $valMent ? 'Validada (+10 SP)' : ($conclT ? 'Aguardando Validação' : 'Pendente');
                         ?>
                             <li class="sp-list-row">
                                 <div>
-                                    <strong style="color: var(--sp-text); <?= $conclT ? 'text-decoration: line-through; opacity: 0.75;' : '' ?>">
+                                    <strong style="color: var(--sp-text); <?= $valMent ? 'text-decoration: line-through; opacity: 0.75;' : '' ?>">
                                         <?= htmlspecialchars((string)$t['titulo'], ENT_QUOTES, 'UTF-8') ?>
                                     </strong>
                                     <?php if (!empty($t['descricao'])): ?>
@@ -635,7 +650,38 @@ require_once __DIR__ . '/../partials/_layout.php';
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <span class="sp-chip <?= $chipTar ?>"><?= htmlspecialchars($lblTar, ENT_QUOTES, 'UTF-8') ?></span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <?php if (!$valMent): ?>
+                                        <button type="button" class="sp-btn-secondary py-1 px-2" style="min-height: 32px; font-size: 0.76rem;" data-bs-toggle="collapse" data-bs-target="#boxEvidTar<?= $idTar ?>">
+                                            <i class="fa-solid fa-paper-plane"></i> Entregar
+                                        </button>
+                                    <?php endif; ?>
+                                    <span class="sp-chip <?= $chipTar ?>"><?= htmlspecialchars($lblTar, ENT_QUOTES, 'UTF-8') ?></span>
+                                </div>
+                                <?php if (!$valMent): ?>
+                                    <div class="collapse w-100 mt-2" id="boxEvidTar<?= $idTar ?>">
+                                        <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" enctype="multipart/form-data" class="p-3 rounded-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="atualizar_estado_tarefa">
+                                            <input type="hidden" name="id_tarefa" value="<?= $idTar ?>">
+                                            <input type="hidden" name="status" value="concluida">
+                                            <input type="hidden" name="redirect" value="<?= htmlspecialchars($selfRedirectBase . '?tab=metas' . $userQuerySuffix, ENT_QUOTES, 'UTF-8') ?>">
+                                            <div class="row g-2 align-items-end">
+                                                <div class="col-md-5">
+                                                    <label class="form-label-custom" style="font-size:0.74rem;">Ficheiro Comprovativo (Opcional)</label>
+                                                    <input type="file" name="evidencia_ficheiro" class="form-control form-control-sm">
+                                                </div>
+                                                <div class="col-md-5">
+                                                    <label class="form-label-custom" style="font-size:0.74rem;">Resumo da Entrega *</label>
+                                                    <input type="text" name="evidencia_nota" class="form-control form-control-sm" placeholder="O que foi realizado..." required value="<?= htmlspecialchars((string)($t['evidencia_nota'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="submit" class="sp-btn-primary w-100 py-1" style="min-height:32px; font-size:0.76rem;">Submeter</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>
@@ -662,6 +708,18 @@ require_once __DIR__ . '/../partials/_layout.php';
                     </button>
                 </div>
 
+                <?php if (!empty($projeto['pitch_path'])): ?>
+                    <div class="p-3 rounded-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--sp-warn-bg); border: 1px solid var(--sp-warn-border);">
+                        <div>
+                            <div class="fw-bold" style="font-size: 0.9rem;"><i class="fa-solid fa-file-powerpoint me-1" style="color: var(--sp-accent);"></i> Pitch Deck Oficial da Proposta</div>
+                            <div style="font-size: 0.76rem; color: var(--sp-text-sec);">Ficheiro principal submetido com a candidatura</div>
+                        </div>
+                        <a href="/incubadora_ispsn/<?= htmlspecialchars((string)$projeto['pitch_path'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener" class="sp-btn-primary py-1 px-3" style="min-height: 34px; font-size: 0.78rem;">
+                            <i class="fa-solid fa-download"></i> Abrir Pitch Deck
+                        </a>
+                    </div>
+                <?php endif; ?>
+
                 <?php if (empty($documentos)): ?>
                     <div class="sp-empty-line">
                         <i class="fa-regular fa-file" aria-hidden="true"></i>
@@ -675,6 +733,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <th>Título do Documento</th>
                                     <th>Categoria</th>
                                     <th>Submetido por</th>
+                                    <th class="text-end">Ação</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -683,6 +742,13 @@ require_once __DIR__ . '/../partials/_layout.php';
                                         <td class="fw-semibold"><?= htmlspecialchars((string)$doc['titulo'], ENT_QUOTES, 'UTF-8') ?></td>
                                         <td><span class="sp-chip sp-chip-neutral"><?= htmlspecialchars((string)($doc['tipo'] ?? 'Outro'), ENT_QUOTES, 'UTF-8') ?></span></td>
                                         <td style="color: var(--sp-text-sec);"><?= htmlspecialchars((string)($doc['quem_submeteu'] ?? 'Utilizador'), ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td class="text-end">
+                                            <?php if (!empty($doc['path'])): ?>
+                                                <a href="/incubadora_ispsn/<?= htmlspecialchars((string)$doc['path'], ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener" class="sp-btn-secondary py-1 px-2" style="min-height: 30px; font-size: 0.75rem;">
+                                                    <i class="fa-solid fa-download"></i> Abrir
+                                                </a>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
