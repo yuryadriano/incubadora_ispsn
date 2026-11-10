@@ -116,7 +116,7 @@ header('Vary: Accept-Encoding');
     <div class="container">
         <div class="about-grid">
             <div class="about-visual" data-aos="fade-right">
-                <img src="/incubadora_ispsn/assets/img/blog/default.jpg" alt="ISPSN Campus" class="about-img">
+                <img src="<?= htmlspecialchars(resolver_imagem_site(get_config('sobre_imagem', ''), '/incubadora_ispsn/assets/img/ilustracao_criatividade.png')) ?>" alt="ISPSN Campus" class="about-img" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/ilustracao_criatividade.png';">
                 <div class="about-badge">
                     <span>Divisa Oficial</span>
                     <strong>ISPSN</strong>

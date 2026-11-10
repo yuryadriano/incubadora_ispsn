@@ -240,10 +240,11 @@ function limpar($str) {
 // Função para buscar configurações do website
 function get_config($chave, $default = '') {
     global $mysqli;
-    static $config_cache = [];
+    static $config_cache = null;
     
-    if (empty($config_cache)) {
-        $res = $mysqli->query("SELECT chave, valor FROM config_website");
+    if ($config_cache === null) {
+        $config_cache = [];
+        $res = @$mysqli->query("SELECT chave, valor FROM config_website");
         if ($res) {
             while ($r = $res->fetch_assoc()) {
                 $config_cache[$r['chave']] = $r['valor'];
@@ -251,7 +252,26 @@ function get_config($chave, $default = '') {
         }
     }
     
-    return $config_cache[$chave] ?? $default;
+    return (isset($config_cache[$chave]) && trim((string)$config_cache[$chave]) !== '')
+        ? $config_cache[$chave]
+        : $default;
+}
+
+// Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro
+function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png'): string {
+    $url = trim((string)$url);
+    if ($url === '') {
+        return $fallback;
+    }
+    if (preg_match('#^https?://#i', $url)) {
+        return $url;
+    }
+    $cleanRel = preg_replace('#^/?incubadora_ispsn/#', '', ltrim($url, '/'));
+    $fullPath = __DIR__ . '/../' . $cleanRel;
+    if ($cleanRel !== '' && is_file($fullPath)) {
+        return '/incubadora_ispsn/' . $cleanRel;
+    }
+    return $fallback;
 }
 
 // Configurações de E-mail (SMTP)

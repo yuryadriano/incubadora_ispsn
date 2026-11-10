@@ -114,14 +114,15 @@ if ($resS) while ($row = $resS->fetch_assoc()) $sugestoes[] = $row;
         <div class="article-main-grid">
             <!-- Imagem à Esquerda -->
             <div class="article-image-side">
-                <img src="<?= $noticia['imagem'] ?: '/incubadora_ispsn/assets/img/blog/default.jpg' ?>" alt="Capa">
+                <?php $capaNoticia = resolver_imagem_site($noticia['imagem'] ?? '', '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png'); ?>
+                <img src="<?= htmlspecialchars($capaNoticia) ?>" alt="Capa" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';">
             </div>
 
             <!-- Conteúdo à Direita -->
             <div class="article-text-side">
                 <h6>Detalhes da Notícia</h6>
                 <div class="article-body">
-                    <?= nl2br($noticia['conteudo']) ?>
+                    <?= nl2br(htmlspecialchars((string)$noticia['conteudo'])) ?>
                 </div>
                 
                 <div class="mt-5 pt-4 border-top">
@@ -139,9 +140,11 @@ if ($resS) while ($row = $resS->fetch_assoc()) $sugestoes[] = $row;
         <section class="related-section">
             <h4 class="sidebar-title">Outras Notícias</h4>
             <div class="related-grid">
-                <?php foreach ($sugestoes as $s): ?>
-                <a href="noticia.php?id=<?= $s['id'] ?>" class="side-noticia">
-                    <img src="<?= $s['imagem'] ?: '/incubadora_ispsn/assets/img/blog/default.jpg' ?>" class="side-noticia-img">
+                <?php foreach ($sugestoes as $s):
+                    $imgSug = resolver_imagem_site($s['imagem'] ?? '', '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png');
+                ?>
+                <a href="noticia.php?id=<?= (int)$s['id'] ?>" class="side-noticia">
+                    <img src="<?= htmlspecialchars($imgSug) ?>" class="side-noticia-img" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';">
                     <div class="side-noticia-info">
                         <h6><?= htmlspecialchars($s['titulo']) ?></h6>
                         <span><?= date('d/m/Y', strtotime($s['criado_em'])) ?></span>

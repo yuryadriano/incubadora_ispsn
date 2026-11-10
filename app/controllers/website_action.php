@@ -5,6 +5,24 @@ obrigarPerfil(['admin', 'superadmin']);
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 $idAdmin = (int)$_SESSION['usuario_id'];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verificar();
+}
+
+// ── ALTERNAR DESTAQUE DE STARTUP NA VITRINE PÚBLICA ──
+if ($action === 'toggle_destaque_startup') {
+    $idProjeto = (int)($_POST['id_projeto'] ?? 0);
+    if ($idProjeto > 0) {
+        $stmt = $mysqli->prepare("UPDATE projetos SET destaque_publico = 1 - COALESCE(destaque_publico, 0) WHERE id = ?");
+        $stmt->bind_param('i', $idProjeto);
+        $stmt->execute();
+        $stmt->close();
+        $_SESSION['flash_ok'] = "Vitrine de startups atualizada no Website!";
+    }
+    header("Location: /incubadora_ispsn/app/views/admin/website.php");
+    exit;
+}
+
 // ── ATUALIZAR CONFIGURAÇÕES GLOBAIS ──────────
 if ($action === 'update_website') {
     $configs = $_POST['config'] ?? [];

@@ -5,6 +5,26 @@ obrigarPerfil(['admin', 'superadmin']);
 $tituloPagina = 'Gestão do Website';
 $paginaActiva = 'gestao_website';
 
+// Garantir chaves padrão em config_website para edição sincronizada com o site
+$chavesPadraoSite = [
+    ['site_titulo',       'Incubadora Académica ISPSN — Onde as Ideias se Tornam Realidade', 'Hero & Topo',   'text'],
+    ['hero_badge',        'O Futuro Começa Aqui no ISPSN',                                   'Hero & Topo',   'text'],
+    ['hero_subtitulo',    'Aceleramos o talento académico angolano através de mentoria, recursos e um ecossistema focado no sucesso empresarial.', 'Hero & Topo', 'textarea'],
+    ['missao',            'Promover o desenvolvimento das competências profissionais, científicas e tecnológicas dos futuros líderes, através de um ensino superior inovador e de qualidade, fundado nos valores do humanismo e da responsabilidade individual.', 'Institucional', 'textarea'],
+    ['visao',             'Promover ensino de qualidade e rigor no âmbito interdisciplinar, a investigação, a formação avançada e a extensão universitária.', 'Institucional', 'textarea'],
+    ['contacto_email',    'incubadora@ispsn.org',   'Contactos & Redes', 'text'],
+    ['contacto_telefone', '+244 923 000 000',       'Contactos & Redes', 'text'],
+    ['contacto_endereco', 'Huambo, Angola',         'Contactos & Redes', 'text'],
+];
+$stmtSeedCfg = $mysqli->prepare("INSERT IGNORE INTO config_website (chave, valor, grupo, tipo) VALUES (?, ?, ?, ?)");
+if ($stmtSeedCfg) {
+    foreach ($chavesPadraoSite as $cp) {
+        $stmtSeedCfg->bind_param('ssss', $cp[0], $cp[1], $cp[2], $cp[3]);
+        @$stmtSeedCfg->execute();
+    }
+    $stmtSeedCfg->close();
+}
+
 // 1. Buscar Configurações Globais
 $configs = [];
 $resC = $mysqli->query("SELECT * FROM config_website ORDER BY grupo, chave");
@@ -19,6 +39,17 @@ if ($resP) while ($r = $resP->fetch_assoc()) $publicacoes[] = $r;
 $galeria = [];
 $resG = $mysqli->query("SELECT * FROM galeria_website ORDER BY ordem ASC, criado_em DESC");
 if ($resG) while ($r = $resG->fetch_assoc()) $galeria[] = $r;
+
+// 4. Buscar Startups para gestão da Vitrine Pública
+$startupsVitrine = [];
+$resSt = $mysqli->query("
+    SELECT p.id, p.titulo, p.area_tematica, p.fase, p.estado, p.pontos, p.destaque_publico, u.nome AS autor
+    FROM projetos p
+    JOIN usuarios u ON u.id = p.criado_por
+    WHERE p.estado != 'rejeitado'
+    ORDER BY p.destaque_publico DESC, p.pontos DESC, p.criado_em DESC
+");
+if ($resSt) while ($r = $resSt->fetch_assoc()) $startupsVitrine[] = $r;
 
 // Flash messages
 $flash_ok   = $_SESSION['flash_ok'] ?? '';
@@ -74,26 +105,28 @@ require_once __DIR__ . '/../partials/_layout.php';
 <?php if ($flash_erro): ?><div class="alert alert-danger border-0 shadow-sm mb-4"><?= htmlspecialchars($flash_erro) ?></div><?php endif; ?>
 
 <div class="content-hub-tabs">
-    <button class="hub-tab active" onclick="switchTab('config')"><i class="fa fa-sliders"></i> Configurações</button>
-    <button class="hub-tab" onclick="switchTab('blog')"><i class="fa fa-newspaper"></i> Blog & Notícias</button>
-    <button class="hub-tab" onclick="switchTab('galeria')"><i class="fa fa-images"></i> Galeria</button>
+    <button class="hub-tab active" onclick="switchTab('config', event)"><i class="fa fa-sliders"></i> Configurações</button>
+    <button class="hub-tab" onclick="switchTab('startups', event)"><i class="fa fa-rocket"></i> Vitrine Startups</button>
+    <button class="hub-tab" onclick="switchTab('blog', event)"><i class="fa fa-newspaper"></i> Blog &amp; Notícias</button>
+    <button class="hub-tab" onclick="switchTab('galeria', event)"><i class="fa fa-images"></i> Galeria</button>
 </div>
 
 <!-- TAB 1: CONFIGURAÇÕES -->
 <div id="section-config" class="hub-section active">
     <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" enctype="multipart/form-data">
+        <?= csrf_field() ?>
         <input type="hidden" name="action" value="update_website">
         <?php foreach ($configs as $grupo => $itens): ?>
         <div class="config-card">
-            <h5 class="fw-bold mb-4">Secção: <?= $grupo ?></h5>
+            <h5 class="fw-bold mb-4">Secção: <?= htmlspecialchars((string)$grupo) ?></h5>
             <div class="row g-4">
                 <?php foreach ($itens as $c): ?>
                 <div class="col-md-<?= ($c['tipo']==='textarea'||$c['tipo']==='html')?'12':'6' ?>">
-                    <label class="small fw-bold text-uppercase text-muted mb-2"><?= str_replace('_',' ',$c['chave']) ?></label>
+                    <label class="small fw-bold text-uppercase text-muted mb-2"><?= htmlspecialchars(str_replace('_',' ',$c['chave'])) ?></label>
                     <?php if ($c['tipo']==='text'): ?>
-                        <input type="text" name="config[<?= $c['chave'] ?>]" class="form-control rounded-3" value="<?= htmlspecialchars($c['valor']) ?>">
+                        <input type="text" name="config[<?= htmlspecialchars($c['chave']) ?>]" class="form-control rounded-3" value="<?= htmlspecialchars((string)$c['valor']) ?>">
                     <?php elseif ($c['tipo']==='textarea'||$c['tipo']==='html'): ?>
-                        <textarea name="config[<?= $c['chave'] ?>]" class="form-control rounded-3" rows="3"><?= htmlspecialchars($c['valor']) ?></textarea>
+                        <textarea name="config[<?= htmlspecialchars($c['chave']) ?>]" class="form-control rounded-3" rows="3"><?= htmlspecialchars((string)$c['valor']) ?></textarea>
                     <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
@@ -104,30 +137,73 @@ require_once __DIR__ . '/../partials/_layout.php';
     </form>
 </div>
 
-<!-- TAB 2: BLOG/NOTÍCIAS -->
+<!-- TAB 2: VITRINE DE STARTUPS -->
+<div id="section-startups" class="hub-section">
+    <div class="config-card">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="fw-bold mb-1">Startups na Vitrine Pública do Website</h5>
+                <p class="text-muted small mb-0">Marque as startups que devem aparecer em primeiro lugar na secção "Startups &amp; Inovação" da página inicial.</p>
+            </div>
+        </div>
+        <div class="pub-list">
+            <?php foreach ($startupsVitrine as $sv):
+                $emDestaque = (int)($sv['destaque_publico'] ?? 0) === 1;
+            ?>
+            <div class="pub-list-item">
+                <div class="pub-list-info">
+                    <div class="pub-list-title">
+                        <?= htmlspecialchars($sv['titulo']) ?>
+                        <?php if ($emDestaque): ?>
+                            <span class="badge bg-warning text-dark ms-2"><i class="fa fa-star me-1"></i>Em Destaque no Site</span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="pub-list-meta">
+                        Líder: <?= htmlspecialchars($sv['autor']) ?> · Fase: <?= htmlspecialchars(ucfirst((string)$sv['fase'])) ?> · <?= (int)$sv['pontos'] ?> SP
+                    </div>
+                </div>
+                <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" class="m-0">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="toggle_destaque_startup">
+                    <input type="hidden" name="id_projeto" value="<?= (int)$sv['id'] ?>">
+                    <button type="submit" class="btn btn-sm <?= $emDestaque ? 'btn-warning fw-bold' : 'btn-outline-secondary' ?> rounded-pill px-3">
+                        <i class="fa fa-star me-1"></i> <?= $emDestaque ? 'Destacada' : 'Destacar no Site' ?>
+                    </button>
+                </form>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 3: BLOG/NOTÍCIAS -->
 <div id="section-blog" class="hub-section">
     <div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">Feed de Publicações</h5><button class="btn btn-dark btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalPublicacao"><i class="fa fa-plus me-1"></i> Nova Publicação</button></div>
     <div class="pub-list">
-        <?php foreach ($publicacoes as $p): ?>
+        <?php foreach ($publicacoes as $p):
+            $imgPubAdm = resolver_imagem_site($p['imagem'] ?? '', '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png');
+        ?>
         <div class="pub-list-item">
-            <img src="<?= $p['imagem'] ?: '/incubadora_ispsn/assets/img/placeholder.png' ?>" class="pub-list-img">
-            <div class="pub-list-info"><div class="pub-list-title"><?= htmlspecialchars($p['titulo']) ?></div><div class="pub-list-meta"><span class="status-badge-hub status-<?= $p['status'] ?>"><?= $p['status'] ?></span> · <?= date('d/m/Y', strtotime($p['criado_em'])) ?></div></div>
-            <div class="d-flex gap-2"><button class="btn btn-light btn-sm rounded-pill" onclick='editarPub(<?= json_encode($p) ?>)'><i class="fa fa-edit"></i></button><a href="/incubadora_ispsn/app/controllers/website_action.php?action=delete_pub&id=<?= $p['id'] ?>" class="btn btn-light btn-sm rounded-pill text-danger" onclick="return confirm('Excluir?')"><i class="fa fa-trash"></i></a></div>
+            <img src="<?= htmlspecialchars($imgPubAdm) ?>" class="pub-list-img" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';">
+            <div class="pub-list-info"><div class="pub-list-title"><?= htmlspecialchars($p['titulo']) ?></div><div class="pub-list-meta"><span class="status-badge-hub status-<?= htmlspecialchars($p['status']) ?>"><?= htmlspecialchars($p['status']) ?></span> · <?= date('d/m/Y', strtotime($p['criado_em'])) ?></div></div>
+            <div class="d-flex gap-2"><button class="btn btn-light btn-sm rounded-pill" onclick='editarPub(<?= json_encode($p, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>)'><i class="fa fa-edit"></i></button><a href="/incubadora_ispsn/app/controllers/website_action.php?action=delete_pub&id=<?= (int)$p['id'] ?>" class="btn btn-light btn-sm rounded-pill text-danger" onclick="return confirm('Excluir?')"><i class="fa fa-trash"></i></a></div>
         </div>
         <?php endforeach; ?>
     </div>
 </div>
 
-<!-- TAB 3: GALERIA -->
+<!-- TAB 4: GALERIA -->
 <div id="section-galeria" class="hub-section">
     <div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold mb-0">Galeria de Imagens</h5><button class="btn btn-dark btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalGaleria"><i class="fa fa-plus me-1"></i> Adicionar Foto</button></div>
     <div class="gallery-admin-grid">
-        <?php foreach ($galeria as $g): ?>
+        <?php foreach ($galeria as $g):
+            $imgGalAdm = resolver_imagem_site($g['imagem'] ?? '', '/incubadora_ispsn/assets/img/ilustracao_criatividade.png');
+        ?>
         <div class="gallery-admin-card">
-            <img src="<?= $g['imagem'] ?>" class="gallery-admin-img">
+            <img src="<?= htmlspecialchars($imgGalAdm) ?>" class="gallery-admin-img" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/ilustracao_criatividade.png';">
             <div class="gallery-admin-actions">
                 <span class="small fw-bold"><?= htmlspecialchars($g['titulo']) ?></span>
-                <a href="/incubadora_ispsn/app/controllers/website_action.php?action=delete_galeria&id=<?= $g['id'] ?>" class="text-danger" onclick="return confirm('Remover da galeria?')"><i class="fa fa-trash"></i></a>
+                <a href="/incubadora_ispsn/app/controllers/website_action.php?action=delete_galeria&id=<?= (int)$g['id'] ?>" class="text-danger" onclick="return confirm('Remover da galeria?')"><i class="fa fa-trash"></i></a>
             </div>
         </div>
         <?php endforeach; ?>
@@ -141,6 +217,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="modal-header border-0 pb-0"><h5 class="fw-bold">Gestão de Conteúdo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-4">
                 <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save_pub">
                     <input type="hidden" name="id" id="pubId">
                     <div class="row g-3">
@@ -165,6 +242,7 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="modal-header border-0 pb-0"><h5 class="fw-bold">Adicionar Foto à Galeria</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body p-4">
                 <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="action" value="save_galeria">
                     <div class="row g-3">
                         <div class="col-12"><label class="small fw-bold">Título do Momento</label><input type="text" name="titulo" class="form-control" required></div>
@@ -179,10 +257,10 @@ require_once __DIR__ . '/../partials/_layout.php';
 </div>
 
 <script>
-function switchTab(tab) {
+function switchTab(tab, ev) {
     document.querySelectorAll('.hub-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.hub-section').forEach(s => s.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    if (ev && ev.currentTarget) ev.currentTarget.classList.add('active');
     document.getElementById('section-' + tab).classList.add('active');
 }
 function editarPub(p) {

@@ -13,6 +13,10 @@ services:
       - DB_USER=incubadora_user
       - DB_PASS=incubadora_pass
       - DB_NAME=imcubadora_ispsn
+    volumes:
+      - incubadora_uploads:/var/www/html/uploads
+      - incubadora_blog_img:/var/www/html/assets/img/blog
+      - incubadora_galeria_img:/var/www/html/assets/img/galeria
     depends_on:
       - db
     networks:
@@ -67,3 +71,6 @@ networks:
 
 volumes:
   incubadora_db_data:
+  incubadora_uploads:
+  incubadora_blog_img:
+  incubadora_galeria_img:
