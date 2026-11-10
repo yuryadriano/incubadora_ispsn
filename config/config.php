@@ -8,7 +8,7 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
-define('ASSET_VERSION', '2026111001');
+define('ASSET_VERSION', '2026111005');
 
 // 1. Iniciar e libertar o lock de sessão ANTES de abrir conexão MySQL (elimina contenção de flock + conexões presas em 504)
 if (!defined('NO_SESSION') && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {

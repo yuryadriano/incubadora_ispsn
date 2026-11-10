@@ -128,8 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Candidatura — Incubadora Académica do ISPSN</title>
     <meta name="description" content="Candidata a tua ideia à Incubadora Académica ISPSN e transforma o teu projeto numa startup de sucesso.">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="/incubadora_ispsn/public/website/assets/style.css?v=<?= $css_version ?>">
+    <?php require __DIR__ . '/partials/_head_assets.php'; ?>
     <style>
         .form-section { display: none; }
         .form-section.active { display: block; animation: slideDown 0.3s ease-out; }

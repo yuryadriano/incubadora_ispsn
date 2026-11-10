@@ -2,7 +2,7 @@
 define('NO_SESSION', true);
 require_once __DIR__ . '/../../config/config.php';
 
-header('Cache-Control: public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
@@ -61,8 +61,7 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notícias &amp; Eventos — Incubadora Académica do ISPSN</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="/incubadora_ispsn/public/website/assets/style.css?v=<?= $css_version ?>">
+    <?php require __DIR__ . '/partials/_head_assets.php'; ?>
 </head>
 <body class="bg-gray-50 text-gray-800 font-poppins">
 <div class="flex flex-col min-h-screen bg-gray-50">
