@@ -56,16 +56,15 @@ $tituloPagina = $mapaMenu[$secAtiva]['titulo'];
 $userParam = $isAdminOrSuper ? ('?id_usuario=' . (int)$idUsuario) : '';
 $userAmp   = $isAdminOrSuper ? ('&id_usuario=' . (int)$idUsuario) : '';
 
-// Carregar projeto do estudante
+// Carregar projeto do estudante (colunas reais da tabela projetos)
 $idProjeto = (int)($_GET['id'] ?? 0);
 $projeto   = null;
 
 if ($idProjeto > 0) {
     $stmt = $mysqli->prepare("
-        SELECT p.*, u.nome AS lider_nome, e.titulo AS edital_titulo
+        SELECT p.*, u.nome AS lider_nome
         FROM projetos p
         JOIN usuarios u ON u.id = p.criado_por
-        LEFT JOIN editais e ON e.id = p.id_edital
         LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id
         WHERE p.id = ? AND (p.criado_por = ? OR mp.id_usuario = ?)
         LIMIT 1
@@ -78,10 +77,9 @@ if ($idProjeto > 0) {
 
 if (!$projeto) {
     $stmtUlt = $mysqli->prepare("
-        SELECT p.*, u.nome AS lider_nome, e.titulo AS edital_titulo
+        SELECT p.*, u.nome AS lider_nome
         FROM projetos p
         JOIN usuarios u ON u.id = p.criado_por
-        LEFT JOIN editais e ON e.id = p.id_edital
         LEFT JOIN membros_projeto mp ON mp.id_projeto = p.id
         WHERE p.criado_por = ? OR mp.id_usuario = ?
         ORDER BY p.criado_em DESC
@@ -136,14 +134,14 @@ $fasesOrdem = [
 ];
 
 // Carregar apenas os dados necessários para a secção ativa
-$membros         = [];
-$metasPorFase    = ['ideacao' => [], 'validacao' => [], 'mvp' => [], 'tracao' => [], 'mercado' => []];
-$tarefas         = [];
-$mentorAtivo     = null;
-$mensagensChat   = [];
-$proximaReuniao  = null;
-$ficheiros       = [];
-$termoAtivo      = null;
+$membros        = [];
+$metasPorFase   = ['ideacao' => [], 'validacao' => [], 'mvp' => [], 'tracao' => [], 'mercado' => []];
+$tarefas        = [];
+$mentorAtivo    = null;
+$mensagensChat  = [];
+$proximaReuniao = null;
+$ficheiros      = [];
+$termoAtivo     = null;
 
 if ($secAtiva === 'proposta') {
     $stmtEq = $mysqli->prepare("
@@ -165,7 +163,7 @@ if ($secAtiva === 'proposta') {
         FROM metas_projeto mp
         JOIN metas_padrao mpd ON mpd.id = mp.id_meta_padrao
         WHERE mp.id_projeto = ?
-        ORDER BY FIELD(mpd.fase,'ideacao','validacao','mvp','tracao','mercado'), mpd.numero ASC
+        ORDER BY mpd.fase, mpd.numero ASC
     ");
     $temMetasInstanciadas = false;
     if ($stmtMP) {
@@ -187,7 +185,7 @@ if ($secAtiva === 'proposta') {
                    evidencia_tipo, evidencia_desc, peso_percentual
             FROM metas_padrao
             WHERE activo = 1
-            ORDER BY FIELD(fase,'ideacao','validacao','mvp','tracao','mercado'), numero ASC
+            ORDER BY fase, numero ASC
         ");
         if ($resPad) {
             while ($rp = $resPad->fetch_assoc()) {
@@ -244,7 +242,7 @@ if ($secAtiva === 'proposta') {
         FROM mensagens m
         JOIN usuarios u ON u.id = m.id_usuario
         WHERE m.id_projeto = ?
-        ORDER BY m.data_envio ASC, m.id ASC
+        ORDER BY m.id ASC
         LIMIT 100
     ");
     if ($stmtMsg) {
@@ -257,9 +255,9 @@ if ($secAtiva === 'proposta') {
     $stmtFic = $mysqli->prepare("
         SELECT f.*, u.nome AS autor
         FROM ficheiros_projeto f
-        JOIN usuarios u ON u.id = f.submetido_por
+        LEFT JOIN usuarios u ON u.id = f.id_usuario_up
         WHERE f.id_projeto = ?
-        ORDER BY f.criado_em DESC
+        ORDER BY f.id DESC
     ");
     if ($stmtFic) {
         $stmtFic->bind_param('i', $idProjeto);
@@ -343,13 +341,13 @@ require_once __DIR__ . '/../partials/_layout.php';
             <div class="col-md-6">
                 <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.72rem;">Problema Identificado</div>
                 <div style="font-size:0.88rem; line-height:1.55; color:var(--text-secondary);">
-                    <?= nl2br(htmlspecialchars((string)(!empty($projeto['problema_identificado']) ? $projeto['problema_identificado'] : 'Não especificado.'))) ?>
+                    <?= nl2br(htmlspecialchars((string)(!empty($projeto['problema']) ? $projeto['problema'] : 'Não especificado.'))) ?>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.72rem;">Solução Proposta</div>
                 <div style="font-size:0.88rem; line-height:1.55; color:var(--text-secondary);">
-                    <?= nl2br(htmlspecialchars((string)(!empty($projeto['solucao_proposta']) ? $projeto['solucao_proposta'] : 'Não especificada.'))) ?>
+                    <?= nl2br(htmlspecialchars((string)(!empty($projeto['solucao']) ? $projeto['solucao'] : 'Não especificada.'))) ?>
                 </div>
             </div>
         </div>
@@ -361,7 +359,9 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <span class="badge-estado badge-submetido">
                     <i class="fa fa-crown text-warning me-1"></i><?= htmlspecialchars($projeto['lider_nome'] ?? 'Líder') ?> (Líder)
                 </span>
-                <?php foreach ($membros as $mb): ?>
+                <?php foreach ($membros as $mb):
+                    if ((int)$mb['id_usuario'] === (int)$projeto['criado_por']) continue;
+                ?>
                     <span class="badge-estado badge-submetido">
                         <?= htmlspecialchars($mb['nome']) ?> (<?= htmlspecialchars($mb['papel'] ?: 'Membro') ?>)
                     </span>
@@ -382,6 +382,8 @@ require_once __DIR__ . '/../partials/_layout.php';
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="editar_proposta">
                 <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
+                <input type="hidden" name="tipo" value="<?= htmlspecialchars((string)($projeto['tipo'] ?? 'startup_tecnologica')) ?>">
+                <input type="hidden" name="area" value="<?= htmlspecialchars((string)($projeto['area_tematica'] ?? 'tecnologia')) ?>">
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectSelf) ?>">
 
                 <div class="modal-header-custom">
@@ -400,11 +402,11 @@ require_once __DIR__ . '/../partials/_layout.php';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label-custom">Problema Identificado</label>
-                            <textarea name="problema" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['problema_identificado'] ?? '')) ?></textarea>
+                            <textarea name="problema" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['problema'] ?? '')) ?></textarea>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label-custom">Solução Proposta</label>
-                            <textarea name="solucao" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['solucao_proposta'] ?? '')) ?></textarea>
+                            <textarea name="solucao" class="form-control-custom" rows="3"><?= htmlspecialchars((string)($projeto['solucao'] ?? '')) ?></textarea>
                         </div>
                         <div class="col-12">
                             <label class="form-label-custom">Atualizar Pitch Deck (PDF, PPT, PPTX ou ZIP)</label>
@@ -425,9 +427,9 @@ require_once __DIR__ . '/../partials/_layout.php';
 <div class="modal fade" id="modalAddMembro" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
-            <form action="/incubadora_ispsn/app/controllers/equipa_action.php" method="POST">
+            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST">
                 <?= csrf_field() ?>
-                <input type="hidden" name="action" value="adicionar">
+                <input type="hidden" name="action" value="adicionar_membro">
                 <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectSelf) ?>">
 
@@ -539,7 +541,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <td class="fw-bold" style="font-size:0.82rem;"><?= (int)($m['peso_percentual'] ?? 20) ?>%</td>
                                     <td><span class="badge-estado <?= $badgeCls ?>"><?= $badgeTxt ?></span></td>
                                     <td class="text-end pe-4">
-                                        <?php if ($estM === 'activa' || $estM === 'reprovada'): ?>
+                                        <?php if (($estM === 'activa' || $estM === 'reprovada') && (int)$m['id'] > 0): ?>
                                             <button type="button" class="btn-primary-custom" style="padding:5px 12px; font-size:0.76rem;"
                                                     onclick="abrirModalMeta(<?= (int)$m['id'] ?>, <?= htmlspecialchars(json_encode($m['meta_titulo']), ENT_QUOTES) ?>)">
                                                 <i class="fa fa-upload"></i> Enviar Evidência
@@ -584,7 +586,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="atualizar_estado_tarefa">
                                     <input type="hidden" name="id_tarefa" value="<?= (int)$tar['id'] ?>">
-                                    <input type="hidden" name="estado" value="concluida">
+                                    <input type="hidden" name="status" value="concluida">
                                     <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectSelf) ?>&aba=tarefas">
                                     <input type="file" name="evidencia_ficheiro" class="form-control form-control-sm" style="width:210px;" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip">
                                     <button type="submit" class="btn-primary-custom" style="padding:5px 12px; font-size:0.76rem;">
@@ -686,6 +688,7 @@ function abrirModalMeta(idMeta, titulo) {
         <?php else: ?>
             <?php foreach ($mensagensChat as $msg):
                 $souEu = ((int)$msg['id_usuario'] === (int)$idUsuario);
+                $dataEnvio = $msg['data_envio'] ?? ($msg['criado_em'] ?? '');
             ?>
                 <div class="chat-msg <?= $souEu ? 'me' : 'other' ?>">
                     <?php if (!$souEu): ?>
@@ -694,16 +697,22 @@ function abrirModalMeta(idMeta, titulo) {
                         </div>
                     <?php endif; ?>
                     <div><?= nl2br(htmlspecialchars($msg['mensagem'])) ?></div>
-                    <span class="chat-meta"><?= date('d/m H:i', strtotime($msg['data_envio'])) ?></span>
+                    <?php if ($dataEnvio): ?>
+                        <span class="chat-meta"><?= date('d/m H:i', strtotime($dataEnvio)) ?></span>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
 
     <div class="p-3 border-top" style="background:var(--surface);">
-        <form id="formChatEstudante" onsubmit="enviarMensagemChat(event)">
+        <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="enviar_mensagem">
+            <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
+            <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectSelf) ?>">
             <div class="input-group">
-                <input type="text" id="inputMsgTexto" class="form-control" placeholder="Escreva a sua mensagem..." required>
+                <input type="text" name="mensagem" class="form-control" placeholder="Escreva a sua mensagem..." required>
                 <button type="submit" class="btn-primary-custom px-4">
                     <i class="fa fa-paper-plane"></i> Enviar
                 </button>
@@ -715,31 +724,6 @@ function abrirModalMeta(idMeta, titulo) {
 <script>
 const chatWin = document.getElementById('chatWindow');
 if (chatWin) chatWin.scrollTop = chatWin.scrollHeight;
-
-function enviarMensagemChat(e) {
-    e.preventDefault();
-    const input = document.getElementById('inputMsgTexto');
-    const txt = input.value.trim();
-    if (!txt) return;
-
-    const fd = new FormData();
-    fd.append('action', 'enviar');
-    fd.append('id_projeto', '<?= (int)$idProjeto ?>');
-    fd.append('mensagem', txt);
-    const csrfEl = document.querySelector('meta[name="csrf-token"]');
-    if (csrfEl) fd.append('csrf_token', csrfEl.getAttribute('content'));
-
-    fetch('/incubadora_ispsn/app/controllers/chat_action.php', { method: 'POST', body: fd })
-        .then(r => r.json())
-        .then(d => {
-            if (d.status === 'ok') {
-                location.reload();
-            } else {
-                alert(d.msg || 'Erro ao enviar mensagem.');
-            }
-        })
-        .catch(() => location.reload());
-}
 </script>
 
 <?php elseif ($secAtiva === 'documentos'): ?>
@@ -771,6 +755,7 @@ function enviarMensagemChat(e) {
                     <thead style="background:var(--surface-2); font-size:0.74rem; text-transform:uppercase; color:var(--text-muted);">
                         <tr>
                             <th class="ps-4">Documento</th>
+                            <th>Tipo</th>
                             <th>Submetido por</th>
                             <th>Data</th>
                             <th class="text-end pe-4">Ação</th>
@@ -780,6 +765,7 @@ function enviarMensagemChat(e) {
                         <?php if (!empty($projeto['pitch_path'])): ?>
                             <tr>
                                 <td class="ps-4 fw-bold"><i class="fa fa-file-powerpoint text-warning me-2"></i>Pitch Deck Oficial</td>
+                                <td class="text-muted small">Pitch Deck</td>
                                 <td class="text-muted small"><?= htmlspecialchars($projeto['lider_nome'] ?? 'Líder') ?></td>
                                 <td class="text-muted small"><?= date('d/m/Y', strtotime($projeto['criado_em'])) ?></td>
                                 <td class="text-end pe-4">
@@ -791,11 +777,12 @@ function enviarMensagemChat(e) {
                         <?php endif; ?>
                         <?php foreach ($ficheiros as $fic): ?>
                             <tr>
-                                <td class="ps-4 fw-bold"><i class="fa fa-file-lines text-primary me-2"></i><?= htmlspecialchars($fic['nome_original']) ?></td>
-                                <td class="text-muted small"><?= htmlspecialchars($fic['autor']) ?></td>
-                                <td class="text-muted small"><?= date('d/m/Y H:i', strtotime($fic['criado_em'])) ?></td>
+                                <td class="ps-4 fw-bold"><i class="fa fa-file-lines text-primary me-2"></i><?= htmlspecialchars($fic['titulo'] ?? 'Documento') ?></td>
+                                <td class="text-muted small"><?= htmlspecialchars($fic['tipo'] ?? 'Documento') ?></td>
+                                <td class="text-muted small"><?= htmlspecialchars($fic['autor'] ?? 'Equipa') ?></td>
+                                <td class="text-muted small"><?= !empty($fic['criado_em']) ? date('d/m/Y H:i', strtotime($fic['criado_em'])) : '—' ?></td>
                                 <td class="text-end pe-4">
-                                    <a href="/incubadora_ispsn/<?= htmlspecialchars(ltrim((string)$fic['caminho'], '/')) ?>" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:0.76rem;">
+                                    <a href="/incubadora_ispsn/<?= htmlspecialchars(ltrim((string)$fic['path'], '/')) ?>" target="_blank" class="btn-ghost" style="padding:4px 10px; font-size:0.76rem;">
                                         Descarregar
                                     </a>
                                 </td>
@@ -812,8 +799,9 @@ function enviarMensagemChat(e) {
 <div class="modal fade" id="modalSubirFicheiro" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content modal-content-custom">
-            <form action="/incubadora_ispsn/app/controllers/ficheiro_action.php" method="POST" enctype="multipart/form-data">
+            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" enctype="multipart/form-data">
                 <?= csrf_field() ?>
+                <input type="hidden" name="action" value="upload_documento">
                 <input type="hidden" name="id_projeto" value="<?= (int)$idProjeto ?>">
                 <input type="hidden" name="redirect" value="<?= htmlspecialchars($redirectSelf) ?>">
 
@@ -822,8 +810,23 @@ function enviarMensagemChat(e) {
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body-custom">
-                    <label class="form-label-custom">Selecione o ficheiro (PDF, DOCX, XLSX, PPTX, ZIP, Imagem) *</label>
-                    <input type="file" name="ficheiro" class="form-control form-control-custom" required>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Título do Documento *</label>
+                        <input type="text" name="titulo" class="form-control-custom" placeholder="Ex: Modelo de Negócio / Canvas" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-custom">Categoria</label>
+                        <select name="tipo" class="form-select form-control-custom">
+                            <option value="Documento">Documento Geral</option>
+                            <option value="Pitch">Pitch Deck</option>
+                            <option value="Financeiro">Plano Financeiro</option>
+                            <option value="Relatório">Relatório</option>
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label-custom">Ficheiro (PDF, DOCX, XLSX, PPTX, ZIP, Imagem — máx. 10 MB) *</label>
+                        <input type="file" name="ficheiro" class="form-control form-control-custom" required>
+                    </div>
                 </div>
                 <div class="modal-footer-custom">
                     <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>

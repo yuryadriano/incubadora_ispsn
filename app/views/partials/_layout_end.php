@@ -133,10 +133,8 @@ async function marcarLidas() {
     loadNotifications();
 }
 
-// Verificar badges ao carregar
-checkNotifications();
-
-// Carregar lista ao abrir os dropdowns
+// Os badges iniciais já vêm renderizados pelo PHP em _layout.php ($naoLidas)
+// Carregar lista apenas quando o utilizador abre o dropdown de notificações
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('notifDropdown')?.addEventListener('show.bs.dropdown', loadNotifications);
     document.getElementById('btnNotif')?.addEventListener('show.bs.dropdown', loadNotifications);

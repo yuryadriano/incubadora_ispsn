@@ -8,9 +8,50 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
-define('ASSET_VERSION', '2026110901');
+define('ASSET_VERSION', '2026111001');
 
-// Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
+// 1. Iniciar e libertar o lock de sessão ANTES de abrir conexão MySQL (elimina contenção de flock + conexões presas em 504)
+if (!defined('NO_SESSION') && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
+    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
+            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    session_set_cookie_params([
+        'secure'   => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+
+    if (empty($_SESSION['_csrf_token'])) {
+        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    // Em qualquer pedido GET (exceto logout.php), gravar e fechar o ficheiro de sessão imediatamente (< 0.1ms)
+    // mantendo $_SESSION (incluindo flash messages) disponível em memória para a view atual.
+    $scriptAtual = basename($_SERVER['SCRIPT_NAME'] ?? '');
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && $scriptAtual !== 'logout.php') {
+        $flashKeys = ['flash_ok', 'flash_erro', 'flash_aviso', 'convite_link', 'wa_redirect'];
+        $flashMem  = [];
+        foreach ($flashKeys as $fk) {
+            if (array_key_exists($fk, $_SESSION)) {
+                $flashMem[$fk] = $_SESSION[$fk];
+                unset($_SESSION[$fk]);
+            }
+        }
+        session_write_close();
+        foreach ($flashMem as $fk => $fv) {
+            $_SESSION[$fk] = $fv;
+        }
+    }
+}
+
+// Helper para fecho antecipado manual em endpoints pesados
+function close_session_early(): void {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+}
+
+// 2. Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
 @ini_set('default_socket_timeout', '5');
 @ini_set('mysqlnd.net_read_timeout', '8');
 
@@ -73,29 +114,6 @@ function ensure_db_connection() {
         }
     }
     return $mysqli;
-}
-
-if (!defined('NO_SESSION') && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
-    $isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off')
-            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-    session_set_cookie_params([
-        'secure'   => $isHttps,
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-    session_start();
-
-    // Inicializar token CSRF imediatamente se não existir
-    if (empty($_SESSION['_csrf_token'])) {
-        $_SESSION['_csrf_token'] = bin2hex(random_bytes(32));
-    }
-}
-
-// Helper para fecho antecipado manual em endpoints pesados
-function close_session_early(): void {
-    if (session_status() === PHP_SESSION_ACTIVE) {
-        session_write_close();
-    }
 }
 
 
