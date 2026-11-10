@@ -25,9 +25,9 @@ if ($stmtSeedCfg) {
     $stmtSeedCfg->close();
 }
 
-// 1. Buscar Configurações Globais
+// 1. Buscar Configurações Globais (ocultando flags internas de sistema)
 $configs = [];
-$resC = $mysqli->query("SELECT * FROM config_website ORDER BY grupo, chave");
+$resC = $mysqli->query("SELECT * FROM config_website WHERE COALESCE(tipo, 'text') != 'hidden' ORDER BY grupo, chave");
 if ($resC) while ($r = $resC->fetch_assoc()) $configs[$r['grupo']][] = $r;
 
 // 2. Buscar Publicações
@@ -162,14 +162,24 @@ require_once __DIR__ . '/../partials/_layout.php';
                         Líder: <?= htmlspecialchars($sv['autor']) ?> · Fase: <?= htmlspecialchars(ucfirst((string)$sv['fase'])) ?> · <?= (int)$sv['pontos'] ?> SP
                     </div>
                 </div>
-                <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" class="m-0">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="toggle_destaque_startup">
-                    <input type="hidden" name="id_projeto" value="<?= (int)$sv['id'] ?>">
-                    <button type="submit" class="btn btn-sm <?= $emDestaque ? 'btn-warning fw-bold' : 'btn-outline-secondary' ?> rounded-pill px-3">
-                        <i class="fa fa-star me-1"></i> <?= $emDestaque ? 'Destacada' : 'Destacar no Site' ?>
-                    </button>
-                </form>
+                <div class="d-flex align-items-center gap-2">
+                    <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" class="m-0">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="toggle_destaque_startup">
+                        <input type="hidden" name="id_projeto" value="<?= (int)$sv['id'] ?>">
+                        <button type="submit" class="btn btn-sm <?= $emDestaque ? 'btn-warning fw-bold' : 'btn-outline-secondary' ?> rounded-pill px-3">
+                            <i class="fa fa-star me-1"></i> <?= $emDestaque ? 'Destacada' : 'Destacar no Site' ?>
+                        </button>
+                    </form>
+                    <form method="post" action="/incubadora_ispsn/app/controllers/website_action.php" class="m-0" onsubmit="return confirm('Eliminar definitivamente esta startup e todos os seus registos?')">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="delete_startup">
+                        <input type="hidden" name="id_projeto" value="<?= (int)$sv['id'] ?>">
+                        <button type="submit" class="btn btn-light btn-sm rounded-pill text-danger" title="Eliminar Startup">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
             <?php endforeach; ?>
         </div>

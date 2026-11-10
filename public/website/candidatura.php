@@ -208,14 +208,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN">
+            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
         </a>
         <div class="nav-links">
-            <a href="/incubadora_ispsn/public/website/">← Voltar ao Site</a>
-            <a href="/incubadora_ispsn/public/login.php" class="nav-cta-solid"><i class="fa fa-right-to-bracket"></i> Portal</a>
+            <a href="index.php#hero">Início</a>
+            <a href="sobre.php">Sobre Nós</a>
+            <a href="index.php#startups">Startups</a>
+            <a href="index.php#adn">Ecossistema</a>
+            <a href="index.php#noticias">Notícias</a>
+            <a href="index.php#galeria">Galeria</a>
+            <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+            <a href="/incubadora_ispsn/public/login.php" class="nav-item">Portal <i class="fa fa-arrow-right small ms-1"></i></a>
         </div>
         
-        <!-- HAMBURGER (SÓ VISÍVEL EM MOBILE) -->
         <button class="nav-hamburger" id="hamburger">
             <span></span>
             <span></span>
@@ -226,7 +231,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $processo) {
 
 <!-- MENU MOBILE OVERLAY -->
 <div class="nav-mobile" id="navMobile">
-    <a href="/incubadora_ispsn/public/website/" onclick="toggleMobileMenu()">← Voltar ao Site</a>
+    <a href="index.php#hero" onclick="toggleMobileMenu()">Início</a>
+    <a href="sobre.php" onclick="toggleMobileMenu()">Sobre Nós</a>
+    <a href="index.php#startups" onclick="toggleMobileMenu()">Startups</a>
+    <a href="index.php#adn" onclick="toggleMobileMenu()">Ecossistema</a>
+    <a href="index.php#noticias" onclick="toggleMobileMenu()">Notícias</a>
+    <a href="index.php#galeria" onclick="toggleMobileMenu()">Galeria</a>
+    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center" onclick="toggleMobileMenu()"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
     <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
 </div>
 

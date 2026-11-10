@@ -23,6 +23,17 @@ if ($action === 'toggle_destaque_startup') {
     exit;
 }
 
+// ── ELIMINAR STARTUP (DE TESTE OU INVÁLIDA) ──
+if ($action === 'delete_startup') {
+    $idProjeto = (int)($_POST['id_projeto'] ?? 0);
+    if ($idProjeto > 0 && function_exists('eliminar_projeto_completo')) {
+        eliminar_projeto_completo($mysqli, $idProjeto);
+        $_SESSION['flash_ok'] = "Startup eliminada do sistema com sucesso!";
+    }
+    header("Location: /incubadora_ispsn/app/views/admin/website.php");
+    exit;
+}
+
 // ── ATUALIZAR CONFIGURAÇÕES GLOBAIS ──────────
 if ($action === 'update_website') {
     $configs = $_POST['config'] ?? [];

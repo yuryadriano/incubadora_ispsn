@@ -88,17 +88,38 @@ if ($resS) while ($row = $resS->fetch_assoc()) $sugestoes[] = $row;
 <nav class="navbar scrolled" id="navbar">
     <div class="nav-container">
         <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn.jpg" alt="ISPSN">
-            <span>Incubadora <strong>ISPSN</strong></span>
+            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
         </a>
         <div class="nav-links">
-            <a href="index.php">Início</a>
+            <a href="index.php#hero">Início</a>
             <a href="sobre.php">Sobre Nós</a>
-            <a href="index.php#noticias">Notícias</a>
-            <a href="candidatura.php" class="nav-cta-solid">Candidatar-se</a>
+            <a href="index.php#startups">Startups</a>
+            <a href="index.php#adn">Ecossistema</a>
+            <a href="index.php#noticias" class="active">Notícias</a>
+            <a href="index.php#galeria">Galeria</a>
+            <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+            <a href="/incubadora_ispsn/public/login.php" class="nav-item">Portal <i class="fa fa-arrow-right small ms-1"></i></a>
         </div>
+
+        <button class="nav-hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </div>
 </nav>
+
+<!-- MENU MOBILE OVERLAY -->
+<div class="nav-mobile" id="navMobile">
+    <a href="index.php#hero" onclick="toggleMobileMenu()">Início</a>
+    <a href="sobre.php" onclick="toggleMobileMenu()">Sobre Nós</a>
+    <a href="index.php#startups" onclick="toggleMobileMenu()">Startups</a>
+    <a href="index.php#adn" onclick="toggleMobileMenu()">Ecossistema</a>
+    <a href="index.php#noticias" class="active" onclick="toggleMobileMenu()">Notícias</a>
+    <a href="index.php#galeria" onclick="toggleMobileMenu()">Galeria</a>
+    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center" onclick="toggleMobileMenu()"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
+    <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
+</div>
 
 <article class="article-page">
     <div class="container" style="max-width:1300px">
@@ -158,12 +179,90 @@ if ($resS) while ($row = $resS->fetch_assoc()) $sugestoes[] = $row;
 
 <footer class="footer">
     <div class="footer-container">
-        <div class="footer-bottom text-center">
-            <p class="small mb-0">&copy; <?= date('Y') ?> Incubadora Académica ISPSN.</p>
+        <div class="footer-main-grid">
+            <div class="footer-brand">
+                <div class="f-logo">
+                    <a href="index.php#hero" class="nav-logo" style="padding: 0; color: #fff;">
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                    </a>
+                </div>
+                <p class="f-desc">
+                    Transformando o potencial académico em inovação de mercado. Somos o berço das próximas grandes empresas de Angola.
+                </p>
+                <div class="f-social-links">
+                    <a href="<?= htmlspecialchars(get_config('facebook_url', '#')) ?>"><i class="fab fa-facebook-f"></i></a>
+                    <a href="<?= htmlspecialchars(get_config('linkedin_url', '#')) ?>"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="<?= htmlspecialchars(get_config('instagram_url', '#')) ?>"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+
+            <div class="footer-links">
+                <h6>Explorar</h6>
+                <ul>
+                    <li><a href="index.php#hero">Início</a></li>
+                    <li><a href="index.php#startups">Startups</a></li>
+                    <li><a href="index.php#adn">Ecossistema</a></li>
+                    <li><a href="sobre.php">Sobre Nós</a></li>
+                    <li><a href="index.php#galeria">Galeria</a></li>
+                    <li><a href="index.php#noticias">Notícias</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-links">
+                <h6>Portal</h6>
+                <ul>
+                    <li><a href="/incubadora_ispsn/public/website/candidatura.php">Candidaturas</a></li>
+                    <li><a href="/incubadora_ispsn/public/login.php">Área do Membro</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-contact">
+                <h6>Contactos</h6>
+                <div class="contact-item">
+                    <i class="fa fa-envelope-open"></i>
+                    <div>
+                        <span>E-mail</span>
+                        <strong><?= htmlspecialchars(get_config('contacto_email', 'incubadora@ispsn.org')) ?></strong>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <i class="fa fa-phone-volume"></i>
+                    <div>
+                        <span>Telefone</span>
+                        <strong><?= htmlspecialchars(get_config('contacto_telefone', '+244 923 000 000')) ?></strong>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <i class="fa fa-location-dot"></i>
+                    <div>
+                        <span>Localização</span>
+                        <strong><?= htmlspecialchars(get_config('contacto_endereco', 'Huambo, Angola')) ?></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="bottom-inner">
+                <p>&copy; <?= date('Y') ?> <strong>Incubadora Académica ISPSN</strong>. Todos os direitos reservados.</p>
+                <div class="bottom-links">
+                    <span>Desenvolvido por <strong class="text-white">GTI - Educa futuro</strong></span>
+                </div>
+            </div>
         </div>
     </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const hamburger = document.getElementById('hamburger');
+const navMobile = document.getElementById('navMobile');
+function toggleMobileMenu() {
+    hamburger.classList.toggle('active');
+    navMobile.classList.toggle('open');
+    document.body.style.overflow = navMobile.classList.contains('open') ? 'hidden' : 'auto';
+}
+if (hamburger) hamburger.addEventListener('click', toggleMobileMenu);
+</script>
 </body>
 </html>

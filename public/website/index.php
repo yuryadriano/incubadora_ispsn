@@ -18,15 +18,13 @@ if ($resProc) {
 }
 
 // 2. Estatísticas reais sincronizadas em tempo real com a Base de Dados do Sistema
+// Contabiliza apenas startups já selecionadas/aprovadas e utilizadores ativos
 $stats = ['startups' => 0, 'mentores' => 0, 'incubados' => 0, 'membros' => 0];
 $resStats = $mysqli->query("
     SELECT
-        (SELECT COUNT(*) FROM projetos WHERE estado != 'rejeitado') AS total_startups,
-        GREATEST(
-            (SELECT COUNT(*) FROM mentores),
-            (SELECT COUNT(*) FROM usuarios WHERE perfil = 'mentor' AND activo = 1)
-        ) AS total_mentores,
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido')) AS total_incubados,
+        (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido')) AS total_startups,
+        (SELECT COUNT(*) FROM usuarios WHERE perfil = 'mentor' AND activo = 1) AS total_mentores,
+        (SELECT COUNT(*) FROM projetos WHERE estado IN ('incubado','fundo_investimento','concluido')) AS total_incubados,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'utilizador' AND activo = 1) AS total_membros
 ");
 if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
@@ -36,15 +34,15 @@ if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['membros']   = (int)($rowSt['total_membros']   ?? 0);
 }
 
-// 3. Buscar Startups sincronizadas com o sistema (prioriza destaque_publico = 1, seguido das startups ativas/incubadas)
+// 3. Buscar apenas Startups JÁ SELECIONADAS (aprovadas, incubadas, investimento ou graduadas)
 $projetos = [];
 $resProj = $mysqli->query("
     SELECT p.id, p.titulo, p.descricao, p.area_tematica, p.fase, p.tipo, p.estado, p.pontos, p.destaque_publico, u.nome AS autor
     FROM projetos p
     JOIN usuarios u ON u.id = p.criado_por
-    WHERE p.estado != 'rejeitado'
+    WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')
     ORDER BY p.destaque_publico DESC,
-             FIELD(p.estado, 'incubado', 'fundo_investimento', 'concluido', 'aprovado', 'em_avaliacao', 'submetido'),
+             FIELD(p.estado, 'incubado', 'fundo_investimento', 'concluido', 'aprovado'),
              p.pontos DESC,
              p.criado_em DESC
     LIMIT 6

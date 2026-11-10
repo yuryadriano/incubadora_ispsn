@@ -257,6 +257,86 @@ function get_config($chave, $default = '') {
         : $default;
 }
 
+// Helper para eliminar um projeto e todas as suas dependências em segurança
+function eliminar_projeto_completo(mysqli $db, int $idProjeto): bool {
+    if ($idProjeto <= 0) return false;
+    $tabelasFilhas = [
+        'membros_projeto'       => 'id_projeto',
+        'avaliacoes'            => 'id_projeto',
+        'avaliacoes_atribuicao' => 'projeto_id',
+        'historico_estados'     => 'id_projeto',
+        'metas_projeto'         => 'id_projeto',
+        'tarefas'               => 'id_projeto',
+        'mensagens'             => 'id_projeto',
+        'ficheiros_projeto'     => 'id_projeto',
+        'mentorias'             => 'id_projeto',
+        'termos_incubacao'      => 'id_projeto',
+        'reunioes'              => 'id_projeto',
+        'acompanhamentos'       => 'id_projeto',
+        'comentarios_projetos'  => 'id_projeto',
+        'relatorios'            => 'id_projeto',
+    ];
+    @$db->query("DELETE s FROM sessoes_mentoria s JOIN mentorias m ON m.id = s.id_mentoria WHERE m.id_projeto = " . (int)$idProjeto);
+    foreach ($tabelasFilhas as $tab => $col) {
+        @$db->query("DELETE FROM `{$tab}` WHERE `{$col}` = " . (int)$idProjeto);
+    }
+    return (bool)@$db->query("DELETE FROM `projetos` WHERE `id` = " . (int)$idProjeto);
+}
+
+// Limpeza única automática dos dados de teste iniciais (Startup IA aotomatica / Evaristo, 2 mentores de teste e empreendedor de teste)
+(function() use ($mysqli) {
+    if (!$mysqli) return;
+    $resFlag = @$mysqli->query("SELECT valor FROM config_website WHERE chave = 'limpeza_dados_teste_v1' LIMIT 1");
+    $rowFlag = $resFlag ? $resFlag->fetch_assoc() : null;
+    if ($rowFlag && ($rowFlag['valor'] ?? '') === '1') {
+        return;
+    }
+
+    // 1. Eliminar projetos de teste (IA aotomatica ou criados por utilizadores de perfil 'utilizador' de teste)
+    $resP = @$mysqli->query("
+        SELECT p.id
+        FROM projetos p
+        LEFT JOIN usuarios u ON u.id = p.criado_por
+        WHERE p.titulo LIKE '%IA aotomatica%'
+           OR u.perfil = 'utilizador'
+    ");
+    if ($resP) {
+        while ($rp = $resP->fetch_assoc()) {
+            eliminar_projeto_completo($mysqli, (int)$rp['id']);
+        }
+    }
+
+    // 2. Eliminar os mentores e empreendedores de teste (preservando admin, superadmin e funcionario)
+    @$mysqli->query("DELETE FROM sessoes_mentoria");
+    @$mysqli->query("DELETE FROM mentorias");
+    @$mysqli->query("DELETE FROM mentores");
+
+    $resU = @$mysqli->query("SELECT id FROM usuarios WHERE perfil IN ('mentor', 'utilizador')");
+    if ($resU) {
+        while ($ru = $resU->fetch_assoc()) {
+            $uid = (int)$ru['id'];
+            @$mysqli->query("DELETE FROM logs_acesso WHERE id_usuario = {$uid}");
+            @$mysqli->query("DELETE FROM notificacoes WHERE id_usuario = {$uid}");
+            @$mysqli->query("DELETE FROM reservas_espaco WHERE id_usuario = {$uid}");
+            @$mysqli->query("DELETE FROM membros_projeto WHERE id_usuario = {$uid}");
+            @$mysqli->query("DELETE FROM avaliacoes_atribuicao WHERE avaliador_id = {$uid}");
+            @$mysqli->query("DELETE FROM avaliacoes WHERE id_avaliador = {$uid}");
+            @$mysqli->query("DELETE FROM emprestimos_equipamento WHERE id_usuario = {$uid}");
+            @$mysqli->query("UPDATE visitantes SET id_usuario_visitado = NULL WHERE id_usuario_visitado = {$uid}");
+            $resPOwn = @$mysqli->query("SELECT id FROM projetos WHERE criado_por = {$uid} OR id_responsavel = {$uid}");
+            if ($resPOwn) {
+                while ($po = $resPOwn->fetch_assoc()) {
+                    eliminar_projeto_completo($mysqli, (int)$po['id']);
+                }
+            }
+            @$mysqli->query("DELETE FROM usuarios WHERE id = {$uid}");
+        }
+    }
+
+    // Registar flag para executar apenas uma única vez
+    @$mysqli->query("INSERT INTO config_website (chave, valor, grupo, tipo, descricao) VALUES ('limpeza_dados_teste_v1', '1', 'Sistema', 'hidden', 'Limpeza inicial de dados de teste concluída') ON DUPLICATE KEY UPDATE valor = '1'");
+})();
+
 // Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro
 function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png'): string {
     $url = trim((string)$url);
