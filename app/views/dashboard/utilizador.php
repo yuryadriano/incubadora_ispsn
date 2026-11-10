@@ -1,6 +1,6 @@
 <?php
 // app/views/dashboard/utilizador.php
-// Painel Geral do Empreendedor — Orientado ao Fluxo Real da Incubadora ISPSN
+// Painel Geral do Empreendedor — Design Nativo Alinhado ao Painel do Mentor/Admin
 
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarLogin();
@@ -39,12 +39,12 @@ if ($isAdminOrSuper) {
 }
 
 $tituloPagina = 'Painel Geral';
-$paginaActiva = 'meu-painel';
+$paginaActiva = 'dashboard';
 
 $userParam = $isAdminOrSuper ? ('?id_usuario=' . (int)$idUsuario) : '';
 $userAmp   = $isAdminOrSuper ? ('&id_usuario=' . (int)$idUsuario) : '';
 
-// ── 1. Projetos do estudante (criador ou membro) ─────────────────────────
+// 1. Listar projetos do estudante
 $stmtLista = $mysqli->prepare("
     SELECT DISTINCT p.id, p.titulo, p.estado, p.fase, p.pontos, p.criado_em
     FROM projetos p
@@ -59,7 +59,7 @@ $stmtLista->close();
 
 $idProjSel = isset($_GET['id_projeto']) ? (int)$_GET['id_projeto'] : 0;
 
-// ── 2. Projeto selecionado ───────────────────────────────────────────────
+// 2. Carregar projeto ativo
 $meuProjeto = null;
 if ($idProjSel > 0) {
     $stmtP = $mysqli->prepare("
@@ -85,25 +85,24 @@ $stmtP->execute();
 $meuProjeto = $stmtP->get_result()->fetch_assoc();
 $stmtP->close();
 
-// ── 3. Dados específicos do estado atual do projeto ──────────────────────
-$mentorAtivo     = null;
-$termoAtivo      = null;
-$numAvalAtrib    = 0;
-$numAvalConcl    = 0;
-$metasFase       = [];
-$tarefasAbertas  = [];
-$proximaReuniao  = null;
-$ultimosFeedback = [];
-$numMembros      = 0;
-$numDocs         = 0;
+// 3. Dados resumidos para o Painel Geral
+$mentorAtivo      = null;
+$metasFase        = [];
+$tarefasPendentes = [];
+$proximasReunioes = [];
+$totalSessoes     = 0;
+$numAvalAtrib     = 0;
+$numAvalConcl     = 0;
+$ultimaMensagem   = null;
 
 if ($meuProjeto) {
     $idP       = (int)$meuProjeto['id'];
     $faseAtual = (string)($meuProjeto['fase'] ?? 'ideacao');
 
-    // Mentor ativo (apenas se existir mentoria ativa)
+    // Mentor atribuído e total de sessões
     $stmtMent = $mysqli->prepare("
-        SELECT u.nome AS mentor_nome, u.email AS mentor_email, mt.especialidade
+        SELECT m.id AS id_mentoria, u.nome AS mentor_nome, u.email AS mentor_email, mt.especialidade,
+               (SELECT COUNT(*) FROM sessoes_mentoria s WHERE s.id_mentoria = m.id) AS total_sessoes
         FROM mentorias m
         JOIN mentores mt ON mt.id = m.id_mentor
         JOIN usuarios u ON u.id = mt.id_usuario
@@ -116,24 +115,12 @@ if ($meuProjeto) {
         $stmtMent->execute();
         $mentorAtivo = $stmtMent->get_result()->fetch_assoc();
         $stmtMent->close();
+        if ($mentorAtivo) {
+            $totalSessoes = (int)($mentorAtivo['total_sessoes'] ?? 0);
+        }
     }
 
-    // Termo de incubação
-    $stmtTermo = $mysqli->prepare("
-        SELECT id, codigo_termo, estado, criado_em, assinado_em
-        FROM termos_incubacao
-        WHERE id_projeto = ? AND estado IN ('gerado', 'pendente_assinatura', 'assinado')
-        ORDER BY criado_em DESC
-        LIMIT 1
-    ");
-    if ($stmtTermo) {
-        $stmtTermo->bind_param('i', $idP);
-        $stmtTermo->execute();
-        $termoAtivo = $stmtTermo->get_result()->fetch_assoc();
-        $stmtTermo->close();
-    }
-
-    // Progresso da Comissão de Avaliação (3 avaliadores)
+    // Progresso da avaliação (3 avaliadores)
     $stmtAv = $mysqli->prepare("
         SELECT
             COUNT(*) AS total_atribuidos,
@@ -150,7 +137,7 @@ if ($meuProjeto) {
         $stmtAv->close();
     }
 
-    // Metas da fase atual (usadas quando o projeto está incubado)
+    // Metas da fase atual
     $stmtM = $mysqli->prepare("
         SELECT mp.*, mpd.numero, mpd.titulo AS meta_titulo, mpd.descricao AS meta_descricao,
                mpd.evidencia_tipo, mpd.evidencia_desc, mpd.peso_percentual
@@ -166,87 +153,52 @@ if ($meuProjeto) {
         $stmtM->close();
     }
 
-    // Tarefas do mentor pendentes / em curso
+    // Tarefas em aberto atribuídas pelo mentor
     $stmtT = $mysqli->prepare("
         SELECT *
         FROM tarefas
         WHERE id_projeto = ? AND COALESCE(validada_mentor, 0) = 0
         ORDER BY data_limite ASC
-        LIMIT 5
+        LIMIT 6
     ");
     if ($stmtT) {
         $stmtT->bind_param('i', $idP);
         $stmtT->execute();
-        $tarefasAbertas = $stmtT->get_result()->fetch_all(MYSQLI_ASSOC);
+        $tarefasPendentes = $stmtT->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmtT->close();
     }
 
-    // Comentários / Pareceres recentes da Comissão ou Mentor
-    $stmtCom = $mysqli->prepare("
-        SELECT c.comentario, c.criado_em, u.nome, u.perfil
-        FROM comentarios_projetos c
-        JOIN usuarios u ON u.id = c.id_usuario
-        WHERE c.id_projeto = ?
-        ORDER BY c.criado_em DESC
-        LIMIT 3
+    // Próximas reuniões agendadas (mesma query do mentor.php)
+    $stmtR = $mysqli->prepare("
+        SELECT r.*
+        FROM reunioes r
+        WHERE r.id_projeto = ? AND r.data_reuniao >= NOW() AND r.status = 'agendada'
+        ORDER BY r.data_reuniao ASC
+        LIMIT 4
     ");
-    if ($stmtCom) {
-        $stmtCom->bind_param('i', $idP);
-        $stmtCom->execute();
-        $ultimosFeedback = $stmtCom->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmtCom->close();
+    if ($stmtR) {
+        $stmtR->bind_param('i', $idP);
+        $stmtR->execute();
+        $proximasReunioes = $stmtR->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmtR->close();
     }
 
-    // Contagem rápida de equipa e documentos para o dossiê
-    $stmtCntEq = $mysqli->prepare("SELECT COUNT(*) AS n FROM membros_projeto WHERE id_projeto = ?");
-    if ($stmtCntEq) {
-        $stmtCntEq->bind_param('i', $idP);
-        $stmtCntEq->execute();
-        $numMembros = (int)($stmtCntEq->get_result()->fetch_assoc()['n'] ?? 0);
-        $stmtCntEq->close();
-    }
-
-    $stmtCntDoc = $mysqli->prepare("SELECT COUNT(*) AS n FROM ficheiros_projeto WHERE id_projeto = ?");
-    if ($stmtCntDoc) {
-        $stmtCntDoc->bind_param('i', $idP);
-        $stmtCntDoc->execute();
-        $numDocs = (int)($stmtCntDoc->get_result()->fetch_assoc()['n'] ?? 0);
-        $stmtCntDoc->close();
+    // Última mensagem no chat
+    $stmtMsg = $mysqli->prepare("
+        SELECT m.mensagem, u.nome, u.perfil
+        FROM mensagens m
+        JOIN usuarios u ON u.id = m.id_usuario
+        WHERE m.id_projeto = ?
+        ORDER BY m.id DESC
+        LIMIT 1
+    ");
+    if ($stmtMsg) {
+        $stmtMsg->bind_param('i', $idP);
+        $stmtMsg->execute();
+        $ultimaMensagem = $stmtMsg->get_result()->fetch_assoc();
+        $stmtMsg->close();
     }
 }
-
-// Reservas ativas do estudante
-$numReservas = 0;
-$stmtRes = $mysqli->prepare("
-    SELECT COUNT(*) AS n
-    FROM reservas_espaco
-    WHERE id_usuario = ? AND status IN ('pendente', 'confirmada') AND data_reserva >= CURDATE()
-");
-if ($stmtRes) {
-    $stmtRes->bind_param('i', $idUsuario);
-    $stmtRes->execute();
-    $numReservas = (int)($stmtRes->get_result()->fetch_assoc()['n'] ?? 0);
-    $stmtRes->close();
-}
-
-$labelsEstado = [
-    'submetido'          => ['txt' => 'Submetido (Em Triagem)',    'chip' => 'sp-chip-warn'],
-    'em_avaliacao'       => ['txt' => 'Em Avaliação Técnica',      'chip' => 'sp-chip-warn'],
-    'em_revisao'         => ['txt' => 'Revisão Solicitada',        'chip' => 'sp-chip-err'],
-    'aprovado'           => ['txt' => 'Aprovado para Incubação',   'chip' => 'sp-chip-ok'],
-    'rejeitado'          => ['txt' => 'Não Selecionado',           'chip' => 'sp-chip-err'],
-    'incubado'           => ['txt' => 'Em Incubação Ativa',        'chip' => 'sp-chip-ok'],
-    'fundo_investimento' => ['txt' => 'Pronto p/ Investimento',    'chip' => 'sp-chip-ok'],
-    'concluido'          => ['txt' => 'Startup Graduada',          'chip' => 'sp-chip-ok'],
-];
-
-$labelsFase = [
-    'ideacao'   => 'Fase 1 · Ideação',
-    'validacao' => 'Fase 2 · Validação',
-    'mvp'       => 'Fase 3 · MVP',
-    'tracao'    => 'Fase 4 · Tração',
-    'mercado'   => 'Fase 5 · Mercado',
-];
 
 $flashOk   = $_SESSION['flash_ok']   ?? ''; unset($_SESSION['flash_ok']);
 $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
@@ -254,528 +206,577 @@ $flashErro = $_SESSION['flash_erro'] ?? ''; unset($_SESSION['flash_erro']);
 require_once __DIR__ . '/../partials/_layout.php';
 ?>
 
-<div class="std-painel">
+<style>
+/* Estilos nativos alinhados ao Painel do Mentor (dashboard/mentor.php & mentor/projeto_detalhe.php) */
+.std-dash-grid { display: grid; grid-template-columns: 1fr 360px; gap: 24px; align-items: start; }
+@media (max-width: 1100px) { .std-dash-grid { grid-template-columns: 1fr; } }
 
-    <?php if ($flashOk): ?>
-        <div class="alert-custom alert-success mb-3" role="status">
-            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
-            <span><?= htmlspecialchars($flashOk, ENT_QUOTES, 'UTF-8') ?></span>
-        </div>
-    <?php endif; ?>
-    <?php if ($flashErro): ?>
-        <div class="alert-custom alert-danger mb-3" role="alert">
-            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
-            <span><?= htmlspecialchars($flashErro, ENT_QUOTES, 'UTF-8') ?></span>
-        </div>
-    <?php endif; ?>
+.maturity-pipeline { padding: 8px 0; }
+.pipeline-container { display: flex; align-items: center; justify-content: space-between; position: relative; }
+.pipeline-step { display: flex; flex-direction: column; align-items: center; z-index: 2; flex: 1; text-decoration: none; }
+.step-icon {
+    width: 45px; height: 45px; border-radius: 50%;
+    background: var(--surface-2); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem; transition: all 0.3s;
+    border: 3px solid var(--surface); box-shadow: 0 0 0 2px var(--border);
+}
+.step-label { font-size: 0.75rem; font-weight: 700; margin-top: 8px; color: var(--text-muted); }
+.pipeline-line { flex: 1; height: 4px; background: var(--border); margin-top: -24px; z-index: 1; transition: all 0.3s; }
+.pipeline-step.active .step-icon { background: var(--primary); color: #fff; transform: scale(1.12); box-shadow: 0 0 0 3px rgba(217,119,6,0.28); }
+.pipeline-step.active .step-label { color: var(--primary); }
+.pipeline-step.completed .step-icon { background: #10B981; color: #fff; box-shadow: 0 0 0 2px #10B981; }
+.pipeline-step.completed .step-label { color: #10B981; }
+.pipeline-line.completed { background: #10B981; }
 
-    <?php if (!$meuProjeto): ?>
-        <!-- ═══════════════════════════════════════════════════
-             ETAPA 0: SEM PROJETO SUBMETIDO (FOCO ÚNICO: SUBMETER)
-        ═══════════════════════════════════════════════════ -->
-        <section class="std-command-hero">
-            <div class="row g-4 align-items-center position-relative" style="z-index: 2;">
-                <div class="col-lg-8">
-                    <span class="std-live-pill mb-3" style="background: rgba(245,158,11,0.2); color: #FBBF24; border: 1px solid rgba(245,158,11,0.4);">
-                        <span class="std-live-dot" style="background: #F59E0B;"></span>
-                        <span>Passo 1 do Fluxo · Submissão de Ideia</span>
-                    </span>
-                    <h1 style="font-size: 1.7rem; font-weight: 800; color: #FFFFFF; margin-bottom: 10px;">
-                        Bem-vindo à Incubadora do ISPSN, <?= htmlspecialchars(explode(' ', $nomeEstudante)[0], ENT_QUOTES, 'UTF-8') ?>
-                    </h1>
-                    <p style="color: #CBD5E1; max-width: 60ch; margin-bottom: 20px; font-size: 0.94rem;">
-                        Para iniciar o seu percurso, submeta a proposta da sua startup. A Comissão Técnica (3 avaliadores) analisará o projeto para aprovação e atribuição de mentor.
-                    </p>
-                    <button type="button" class="std-hero-btn std-hero-btn-amber" data-bs-toggle="modal" data-bs-target="#modalNovoProjeto">
-                        <i class="fa-solid fa-rocket" aria-hidden="true"></i>
-                        <span>Submeter Proposta de Startup</span>
-                    </button>
-                </div>
-                <div class="col-lg-4">
-                    <div class="std-hero-glass" style="font-size: 0.82rem; color: #E2E8F0;">
-                        <div class="fw-bold mb-2" style="color: #FBBF24; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em;">
-                            Etapas do Ciclo ISPSN
-                        </div>
-                        <div class="mb-1"><strong>1. Submissão:</strong> Problema, solução e Pitch Deck.</div>
-                        <div class="mb-1"><strong>2. Avaliação Técnica:</strong> 3 pareceres da comissão.</div>
-                        <div class="mb-1"><strong>3. Termo &amp; Mentoria:</strong> Assinatura e designação de mentor.</div>
-                        <div><strong>4. Execução por Fases:</strong> Metas validadas e Startup Points.</div>
-                    </div>
-                </div>
+.metas-banner {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+    border-bottom: 1px solid #FDE68A;
+}
+body.dark-mode .metas-banner {
+    background: linear-gradient(135deg, rgba(217,119,6,0.18), rgba(180,83,9,0.1));
+    border-bottom-color: var(--border);
+}
+.metas-badge-count {
+    background: #D97706; color: #fff;
+    font-size: 0.72rem; font-weight: 800;
+    min-width: 24px; height: 24px;
+    border-radius: 12px; display: inline-flex;
+    align-items: center; justify-content: center;
+    padding: 0 8px;
+}
+.meta-item {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+}
+.meta-item:last-child { border-bottom: none; }
+.meta-item:hover { background: var(--table-hover); }
+
+.task-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.task-item:last-child { border-bottom: none; }
+.task-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.task-dot.alta  { background: #EF4444; }
+.task-dot.media { background: #F59E0B; }
+.task-dot.baixa { background: #10B981; }
+
+.meeting-item {
+    display: flex; gap: 14px; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+.meeting-item:last-child { border-bottom: none; }
+.meeting-date-badge {
+    flex-shrink: 0; width: 44px; min-height: 50px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-weight: 800; line-height: 1.1;
+}
+.meeting-date-badge .day   { font-size: 1.2rem; }
+.meeting-date-badge .month { font-size: 0.62rem; text-transform: uppercase; opacity: .88; }
+</style>
+
+<!-- FLASH MESSAGES -->
+<?php if ($flashOk):   ?><div class="alert-custom alert-success mb-4"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
+<?php if ($flashErro): ?><div class="alert-custom alert-danger mb-4"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
+
+<!-- CABEÇALHO NATIVO DO SISTEMA (.page-header) -->
+<div class="page-header">
+    <div>
+        <div class="page-header-title">
+            <i class="fa fa-rocket me-2" style="color:var(--primary)"></i>
+            Painel do Empreendedor
+        </div>
+        <div class="page-header-sub">
+            Olá, <?= htmlspecialchars(explode(' ', $nomeEstudante)[0]) ?>. Bem-vindo ao centro de acompanhamento da sua startup.
+        </div>
+    </div>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <?php if (count($listaProjetos) > 1 && $meuProjeto): ?>
+            <form method="GET" class="m-0">
+                <?php if ($isAdminOrSuper): ?>
+                    <input type="hidden" name="id_usuario" value="<?= (int)$idUsuario ?>">
+                <?php endif; ?>
+                <select name="id_projeto" class="form-select" style="font-size:0.84rem; border-radius:9px; border-color:var(--border);" onchange="this.form.submit()">
+                    <?php foreach ($listaProjetos as $lp): ?>
+                        <option value="<?= (int)$lp['id'] ?>" <?= ((int)$lp['id'] === (int)$meuProjeto['id']) ? 'selected' : '' ?>>
+                            Startup: <?= htmlspecialchars($lp['titulo']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </form>
+        <?php endif; ?>
+        <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProjeto">
+            <i class="fa fa-plus"></i> Submeter Nova Ideia
+        </button>
+    </div>
+</div>
+
+<?php if (!$meuProjeto): ?>
+    <!-- ESTADO INICIAL: SEM STARTUP REGISTADA -->
+    <div class="card-custom">
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fa fa-seedling" style="color:var(--primary)"></i></div>
+            <div class="empty-state-title">Ainda não tem nenhuma startup registada</div>
+            <div class="empty-state-text mb-4">
+                Submeta a proposta da sua startup para iniciar a avaliação pela Comissão Técnica, receber mentoria e bater metas por fase.
             </div>
-        </section>
+            <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#modalNovoProjeto">
+                <i class="fa fa-rocket"></i> Criar Minha Startup Agora
+            </button>
+        </div>
+    </div>
 
-    <?php else:
-        $idP       = (int)$meuProjeto['id'];
-        $estKey    = (string)($meuProjeto['estado'] ?? 'submetido');
-        $faseKey   = (string)($meuProjeto['fase'] ?? 'ideacao');
-        $estInfo   = $labelsEstado[$estKey] ?? ['txt' => ucfirst($estKey), 'chip' => 'sp-chip-neutral'];
-        $faseTexto = $labelsFase[$faseKey] ?? ucfirst($faseKey);
-        $pontosSP  = (int)($meuProjeto['pontos'] ?? 0);
+<?php else:
+    $idP          = (int)$meuProjeto['id'];
+    $estadoProj   = (string)($meuProjeto['estado'] ?? 'submetido');
+    $faseAtual    = (string)($meuProjeto['fase'] ?? 'ideacao');
+    $pontosSP     = (int)($meuProjeto['pontos'] ?? 0);
+    $metasConcl   = count(array_filter($metasFase, fn($m) => ($m['estado'] ?? '') === 'concluida'));
+    $totalMetas   = count($metasFase);
+    $emTriagem    = in_array($estadoProj, ['submetido', 'em_avaliacao', 'em_revisao', 'rejeitado'], true);
 
-        // Classificar em qual macro-etapa do fluxo o projeto está
-        $isEmTriagem  = in_array($estKey, ['submetido', 'em_avaliacao', 'em_revisao', 'rejeitado'], true);
-        $isAprovado   = ($estKey === 'aprovado');
-        $isIncubado   = in_array($estKey, ['incubado', 'fundo_investimento', 'concluido'], true);
+    $fasesLabels = [
+        'ideacao'   => ['emoji' => '💡', 'label' => 'Ideação',   'icon' => 'lightbulb'],
+        'validacao' => ['emoji' => '🔬', 'label' => 'Validação', 'icon' => 'vial'],
+        'mvp'       => ['emoji' => '📦', 'label' => 'MVP',       'icon' => 'cube'],
+        'tracao'    => ['emoji' => '📈', 'label' => 'Tração',    'icon' => 'chart-line'],
+        'mercado'   => ['emoji' => '🛒', 'label' => 'Mercado',   'icon' => 'shop'],
+    ];
+    $faseInfo = $fasesLabels[$faseAtual] ?? $fasesLabels['ideacao'];
 
-        // Contagem de metas da fase atual (só relevante quando incubado)
-        $metasConcluidas = count(array_filter($metasFase, fn($m) => ($m['estado'] ?? '') === 'concluida'));
-        $metasAtivas     = array_values(array_filter($metasFase, fn($m) => in_array($m['estado'] ?? '', ['activa', 'reprovada', 'em_avaliacao'], true)));
-        $totalMetasFase  = count($metasFase);
+    $urlProposta   = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php?id=' . $idP . '&sec=proposta'   . $userAmp;
+    $urlMetas      = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php?id=' . $idP . '&sec=metas'      . $userAmp;
+    $urlMentoria   = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php?id=' . $idP . '&sec=mentoria'   . $userAmp;
+    $urlDocumentos = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php?id=' . $idP . '&sec=documentos' . $userAmp;
+?>
 
-        // Verificação simples do dossiê de candidatura (relevante na triagem)
-        $temProblemaSol = (strlen(trim((string)($meuProjeto['problema'] ?? ''))) >= 15 && strlen(trim((string)($meuProjeto['solucao'] ?? ''))) >= 15);
-        $temPitch       = (!empty($meuProjeto['pitch_path']) || $numDocs > 0);
-        $linkDossie     = '/incubadora_ispsn/app/views/utilizador/meu_projeto.php?id=' . $idP . $userAmp;
-    ?>
+    <!-- 1. KPI CARDS NATIVOS (IDÊNTICOS AO PAINEL DO MENTOR) -->
+    <div class="kpi-grid mb-4">
+        <a href="<?= htmlspecialchars($urlProposta) ?>" class="kpi-card text-decoration-none" style="--kpi-color:var(--primary)">
+            <div class="kpi-icon"><i class="fa fa-rocket"></i></div>
+            <div class="kpi-value" style="font-size:1.55rem;"><?= $faseInfo['emoji'] ?> <?= $faseInfo['label'] ?></div>
+            <div class="kpi-label">Fase Actual · <?= $pontosSP ?> SP</div>
+            <div class="small text-muted mt-1" style="font-size:0.72rem;">Estado: <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $estadoProj))) ?></div>
+        </a>
 
-        <!-- ═══════════════════════════════════════════════════
-             1. CABEÇALHO LIMPO COM LINHA DO FLUXO REAL (4 MARCOS)
-        ═══════════════════════════════════════════════════ -->
-        <section class="std-command-hero">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 position-relative" style="z-index: 2;">
+        <a href="<?= htmlspecialchars($urlMetas) ?>" class="kpi-card text-decoration-none" style="--kpi-color:#8B5CF6">
+            <div class="kpi-icon"><i class="fa fa-bullseye"></i></div>
+            <?php if ($emTriagem && $totalMetas === 0): ?>
+                <div class="kpi-value"><?= $numAvalConcl ?><span style="font-size:1.1rem; font-weight:600; color:var(--text-muted)">/3</span></div>
+                <div class="kpi-label">Pareceres da Comissão</div>
+                <div class="small text-muted mt-1" style="font-size:0.72rem;"><?= $numAvalAtrib ?>/3 avaliadores atribuídos</div>
+            <?php else: ?>
+                <div class="kpi-value"><?= $metasConcl ?><span style="font-size:1.1rem; font-weight:600; color:var(--text-muted)">/<?= $totalMetas ?></span></div>
+                <div class="kpi-label">Metas da Fase Validadas</div>
+                <div class="small text-muted mt-1" style="font-size:0.72rem;">Clique para bater metas e enviar evidências</div>
+            <?php endif; ?>
+        </a>
+
+        <a href="<?= htmlspecialchars($urlMetas) ?>" class="kpi-card text-decoration-none" style="--kpi-color:var(--warning)">
+            <div class="kpi-icon"><i class="fa fa-list-check"></i></div>
+            <div class="kpi-value"><?= count($tarefasPendentes) ?></div>
+            <div class="kpi-label">Tarefas em Aberto</div>
+            <div class="small text-muted mt-1" style="font-size:0.72rem;">Plano de ação com o mentor</div>
+        </a>
+
+        <a href="<?= htmlspecialchars($urlMentoria) ?>" class="kpi-card text-decoration-none" style="--kpi-color:var(--success)">
+            <div class="kpi-icon"><i class="fa fa-comments"></i></div>
+            <div class="kpi-value"><?= count($proximasReunioes) + $totalSessoes ?></div>
+            <div class="kpi-label">Mentoria &amp; Sessões</div>
+            <div class="small text-muted mt-1" style="font-size:0.72rem;"><?= $mentorAtivo ? 'Mentor: ' . htmlspecialchars($mentorAtivo['mentor_nome']) : 'Abrir canal de mentoria' ?></div>
+        </a>
+    </div>
+
+    <!-- 2. TIMELINE DE MATURIDADE (IDÊNTICA A mentor/projeto_detalhe.php) -->
+    <div class="card-custom mb-4">
+        <div class="card-body-custom py-3 px-4">
+            <div class="d-flex justify-content-between mb-3 align-items-center flex-wrap gap-2">
                 <div>
-                    <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
-                        <span class="std-live-pill" style="background: rgba(245,158,11,0.2); color: #FCD34D; border: 1px solid rgba(245,158,11,0.45);">
-                            <span class="std-live-dot" style="background: #FBBF24;"></span>
-                            <span><?= htmlspecialchars($estInfo['txt'], ENT_QUOTES, 'UTF-8') ?></span>
-                        </span>
-                        <?php if ($isIncubado): ?>
-                            <span class="std-live-pill" style="background: rgba(16,185,129,0.2); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.4);">
-                                <i class="fa-solid fa-layer-group"></i>
-                                <span><?= htmlspecialchars($faseTexto, ENT_QUOTES, 'UTF-8') ?> · <?= $pontosSP ?> SP</span>
-                            </span>
-                        <?php endif; ?>
-                        <?php if (count($listaProjetos) > 1): ?>
-                            <form method="GET" class="m-0 d-inline-block">
-                                <?php if ($isAdminOrSuper): ?>
-                                    <input type="hidden" name="id_usuario" value="<?= (int)$idUsuario ?>">
-                                <?php endif; ?>
-                                <select name="id_projeto" class="form-select form-select-sm" style="background:#1E293B; color:#F8FAFC; border-color:rgba(255,255,255,0.2); font-size:0.75rem; border-radius:999px; padding:2px 26px 2px 10px;" onchange="this.form.submit()">
-                                    <?php foreach ($listaProjetos as $lp): ?>
-                                        <option value="<?= (int)$lp['id'] ?>" <?= ((int)$lp['id'] === $idP) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars((string)$lp['titulo'], ENT_QUOTES, 'UTF-8') ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-
-                    <h1 style="font-size: 1.65rem; font-weight: 800; color: #FFFFFF; margin: 0 0 6px;">
-                        <?= htmlspecialchars((string)$meuProjeto['titulo'], ENT_QUOTES, 'UTF-8') ?>
-                    </h1>
-                    <div style="font-size: 0.82rem; color: #CBD5E1;">
-                        Área: <strong><?= htmlspecialchars(ucfirst((string)($meuProjeto['area_tematica'] ?? 'Tecnologia')), ENT_QUOTES, 'UTF-8') ?></strong>
-                        · Submetido em <?= date('d/m/Y', strtotime((string)$meuProjeto['criado_em'])) ?>
-                    </div>
+                    <h5 class="fw-bold mb-0" style="font-size:1rem;">
+                        <i class="fa fa-map-signs me-2" style="color:var(--primary)"></i>
+                        Jornada da Startup: <span style="color:var(--primary)"><?= htmlspecialchars($meuProjeto['titulo']) ?></span>
+                    </h5>
                 </div>
-
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="<?= htmlspecialchars($linkDossie, ENT_QUOTES, 'UTF-8') ?>" class="std-hero-btn std-hero-btn-amber">
-                        <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
-                        <span>Abrir Dossiê da Startup</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge-estado badge-<?= htmlspecialchars($estadoProj) ?>">
+                        <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $estadoProj))) ?>
+                    </span>
+                    <a href="<?= htmlspecialchars($urlProposta) ?>" class="btn-ghost" style="padding:4px 12px; font-size:0.76rem;">
+                        <i class="fa fa-pen-to-square"></i> Gerir Startup
                     </a>
-                    <button type="button" class="std-hero-btn" data-bs-toggle="modal" data-bs-target="#modalNovoProjeto">
-                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-                        <span>Nova Proposta</span>
-                    </button>
                 </div>
             </div>
 
-            <!-- Barra linear simples dos 4 Marcos do Ciclo de Vida -->
-            <?php
-            $marcosFluxo = [
-                ['lbl' => '1. Submissão da Proposta',   'done' => true,                                  'active' => ($estKey === 'submetido')],
-                ['lbl' => '2. Avaliação (3 Avaliadores)', 'done' => ($isAprovado || $isIncubado),          'active' => in_array($estKey, ['em_avaliacao', 'em_revisao'], true)],
-                ['lbl' => '3. Termo de Incubação',      'done' => $isIncubado,                           'active' => $isAprovado],
-                ['lbl' => '4. Incubação & Metas',       'done' => ($estKey === 'concluido'),             'active' => in_array($estKey, ['incubado', 'fundo_investimento'], true)],
-            ];
-            ?>
-            <div class="std-pipeline" style="border-top-color: rgba(255,255,255,0.12); margin-top: 18px; padding-top: 16px;">
-                <?php foreach ($marcosFluxo as $mf):
-                    $bgM = $mf['done'] ? 'rgba(16,185,129,0.16)' : ($mf['active'] ? 'rgba(245,158,11,0.22)' : 'rgba(255,255,255,0.05)');
-                    $bdM = $mf['done'] ? 'rgba(16,185,129,0.45)' : ($mf['active'] ? '#F59E0B' : 'rgba(255,255,255,0.1)');
-                    $icM = $mf['done'] ? '#10B981' : ($mf['active'] ? '#F59E0B' : 'rgba(255,255,255,0.15)');
+            <div class="maturity-pipeline">
+                <?php
+                $fasesKeys = array_keys($fasesLabels);
+                $currentFaseIdx = array_search($faseAtual, $fasesKeys, true);
+                if ($currentFaseIdx === false) $currentFaseIdx = 0;
                 ?>
-                    <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:<?= $bgM ?>; border:1px solid <?= $bdM ?>;">
-                        <span style="width:24px; height:24px; border-radius:50%; background:<?= $icM ?>; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; flex-shrink:0;">
-                            <i class="fa-solid <?= $mf['done'] ? 'fa-check' : ($mf['active'] ? 'fa-bolt' : 'fa-circle') ?>"></i>
-                        </span>
-                        <span style="font-size:0.78rem; font-weight:700; color:#F8FAFC;"><?= htmlspecialchars($mf['lbl'], ENT_QUOTES, 'UTF-8') ?></span>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </section>
-
-        <!-- ═══════════════════════════════════════════════════
-             2. CONTEÚDO PRINCIPAL (ADAPTADO À ETAPA ATUAL DO FLUXO)
-        ═══════════════════════════════════════════════════ -->
-        <div class="row g-4 align-items-start">
-
-            <!-- COLUNA CENTRAL (8 COLUNAS): FOCO NA ETAPA ATUAL -->
-            <div class="col-lg-8">
-
-                <?php if ($isEmTriagem): ?>
-                    <!-- ── MODO A: PROJETO EM TRIAGEM / AVALIAÇÃO TÉCNICA ── -->
-                    <section class="sp-surface-primary">
-                        <div class="sp-card-head">
-                            <div class="sp-card-head-title">
-                                <span class="sp-icon-badge"><i class="fa-solid fa-magnifying-glass-chart"></i></span>
-                                <div>
-                                    <div class="sp-kicker">Etapa Atual · Triagem &amp; Comissão Técnica</div>
-                                    <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Acompanhamento da Avaliação</h2>
-                                </div>
-                            </div>
-                            <span class="sp-chip sp-chip-warn sp-num">
-                                <?= $numAvalConcl ?> de 3 pareceres concluídos
-                            </span>
-                        </div>
-
-                        <?php if ($estKey === 'rejeitado' && !empty($meuProjeto['motivo_rejeicao'])): ?>
-                            <div class="p-3 rounded-3 mb-3" style="background: var(--sp-err-bg); border: 1px solid var(--sp-err-border); color: var(--sp-err-text);">
-                                <div class="fw-bold mb-1"><i class="fa-solid fa-circle-xmark me-1"></i> Motivo registado pela Comissão:</div>
-                                <div style="font-size: 0.86rem;"><?= nl2br(htmlspecialchars((string)$meuProjeto['motivo_rejeicao'], ENT_QUOTES, 'UTF-8')) ?></div>
-                            </div>
+                <div class="pipeline-container">
+                    <?php foreach ($fasesKeys as $idx => $fK):
+                        $fItem  = $fasesLabels[$fK];
+                        $status = ($idx < $currentFaseIdx) ? 'completed' : (($idx === $currentFaseIdx) ? 'active' : 'pending');
+                    ?>
+                        <a href="<?= htmlspecialchars($urlMetas) ?>" class="pipeline-step <?= $status ?>" title="Ver metas da fase <?= htmlspecialchars($fItem['label']) ?>">
+                            <div class="step-icon"><i class="fa fa-<?= $fItem['icon'] ?>"></i></div>
+                            <div class="step-label"><?= $fItem['label'] ?></div>
+                        </a>
+                        <?php if ($idx < 4): ?>
+                            <div class="pipeline-line <?= ($idx < $currentFaseIdx) ? 'completed' : '' ?>"></div>
                         <?php endif; ?>
-
-                        <p style="font-size: 0.88rem; color: var(--sp-text-sec); margin-bottom: 16px;">
-                            A sua proposta encontra-se na fase de apreciação pela Comissão Técnica (composta por <strong>3 avaliadores</strong>). Assim que os 3 pareceres forem submetidos, o sistema calcula automaticamente a média final (aprovação com nota ≥ 7.0/10).
-                        </p>
-
-                        <!-- Barra visual simples dos 3 Avaliadores -->
-                        <div class="p-3 rounded-3 mb-4" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
-                            <div class="d-flex justify-content-between align-items-center mb-2" style="font-size: 0.82rem;">
-                                <span class="fw-bold">Progresso da Comissão Avaliadora</span>
-                                <span class="sp-num fw-bold" style="color: var(--sp-accent);"><?= $numAvalAtrib ?>/3 atribuídos · <?= $numAvalConcl ?>/3 avaliados</span>
-                            </div>
-                            <div style="height: 10px; background: var(--sp-border); border-radius: 999px; overflow: hidden;">
-                                <div style="width: <?= max(5, (int)round(($numAvalConcl / 3) * 100)) ?>%; height: 100%; background: linear-gradient(90deg, #F59E0B, #10B981); border-radius: 999px;"></div>
-                            </div>
-                        </div>
-
-                        <!-- O que o estudante pode fazer enquanto aguarda -->
-                        <div class="sp-kicker mb-2">Verificação do Dossiê Submetido</div>
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <div class="p-3 rounded-3 h-100" style="background: <?= $temProblemaSol ? 'var(--sp-ok-bg)' : 'var(--sp-warn-bg)' ?>; border: 1px solid <?= $temProblemaSol ? 'var(--sp-ok-border)' : 'var(--sp-warn-border)' ?>;">
-                                    <div class="fw-bold" style="font-size: 0.84rem;">
-                                        <i class="fa-solid <?= $temProblemaSol ? 'fa-check-circle text-success' : 'fa-circle-exclamation text-warning' ?> me-1"></i>
-                                        Problema &amp; Solução
-                                    </div>
-                                    <div style="font-size: 0.76rem; color: var(--sp-text-sec); margin-top: 4px;">
-                                        <?= $temProblemaSol ? 'Preenchidos no dossiê.' : 'Recomendado detalhar melhor.' ?>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="p-3 rounded-3 h-100" style="background: <?= $temPitch ? 'var(--sp-ok-bg)' : 'var(--sp-warn-bg)' ?>; border: 1px solid <?= $temPitch ? 'var(--sp-ok-border)' : 'var(--sp-warn-border)' ?>;">
-                                    <div class="fw-bold" style="font-size: 0.84rem;">
-                                        <i class="fa-solid <?= $temPitch ? 'fa-check-circle text-success' : 'fa-circle-exclamation text-warning' ?> me-1"></i>
-                                        Pitch Deck / Anexos
-                                    </div>
-                                    <div style="font-size: 0.76rem; color: var(--sp-text-sec); margin-top: 4px;">
-                                        <?= $temPitch ? 'Documento anexado.' : 'Anexe o seu Pitch Deck.' ?>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="p-3 rounded-3 h-100" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
-                                    <div class="fw-bold" style="font-size: 0.84rem;">
-                                        <i class="fa-solid fa-users me-1" style="color: var(--sp-accent);"></i>
-                                        Equipa (<?= $numMembros ?>)
-                                    </div>
-                                    <div style="font-size: 0.76rem; color: var(--sp-text-sec); margin-top: 4px;">
-                                        Gerir membros no dossiê.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-color: var(--sp-border) !important;">
-                            <span style="font-size: 0.8rem; color: var(--sp-text-muted);">
-                                Precisa de atualizar a descrição, o Pitch Deck ou a equipa?
-                            </span>
-                            <a href="<?= htmlspecialchars($linkDossie, ENT_QUOTES, 'UTF-8') ?>" class="sp-btn-primary">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                                <span>Gerir Proposta em Minha Startup</span>
-                            </a>
-                        </div>
-                    </section>
-
-                <?php elseif ($isAprovado): ?>
-                    <!-- ── MODO B: PROJETO APROVADO (AGUARDA ASSINATURA DO TERMO DE INCUBAÇÃO) ── -->
-                    <section class="sp-surface-primary">
-                        <div class="sp-card-head">
-                            <div class="sp-card-head-title">
-                                <span class="sp-icon-badge" style="background: var(--sp-ok-bg); color: var(--sp-ok-text);"><i class="fa-solid fa-award"></i></span>
-                                <div>
-                                    <div class="sp-kicker">Proposta Aprovada pela Comissão Técnica</div>
-                                    <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Formalização do Termo de Incubação</h2>
-                                </div>
-                            </div>
-                            <?php if (!empty($meuProjeto['media_final'])): ?>
-                                <span class="sp-chip sp-chip-ok sp-num">Média Final: <?= number_format((float)$meuProjeto['media_final'], 1) ?>/10</span>
-                            <?php endif; ?>
-                        </div>
-
-                        <p style="font-size: 0.9rem; color: var(--sp-text-sec);">
-                            Parabéns! O seu projeto foi aprovado pela Comissão Técnica. O próximo passo oficial do fluxo é a emissão e assinatura digital do <strong>Termo de Incubação</strong> pela Direção para desbloquear a <strong>Fase 1 (Ideação)</strong> e as respetivas metas.
-                        </p>
-
-                        <?php if ($termoAtivo): ?>
-                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--sp-warn-bg); border: 1px solid var(--sp-warn-border);">
-                                <div>
-                                    <div class="fw-bold" style="font-size: 0.9rem;">Termo Ref. <?= htmlspecialchars((string)$termoAtivo['codigo_termo'], ENT_QUOTES, 'UTF-8') ?></div>
-                                    <div style="font-size: 0.78rem; color: var(--sp-text-sec);">Estado: <strong><?= htmlspecialchars(ucfirst(str_replace('_', ' ', (string)$termoAtivo['estado'])), ENT_QUOTES, 'UTF-8') ?></strong></div>
-                                </div>
-                                <a href="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?= (int)$termoAtivo['id'] ?>" class="sp-btn-primary">
-                                    <i class="fa-solid fa-file-contract"></i>
-                                    <span>Consultar Termo</span>
-                                </a>
-                            </div>
-                        <?php else: ?>
-                            <div class="sp-empty-line">
-                                <i class="fa-solid fa-hourglass-half"></i>
-                                <span>A Coordenação está a preparar a emissão do Termo de Incubação para este projeto.</span>
-                            </div>
-                        <?php endif; ?>
-                    </section>
-
-                <?php else: ?>
-                    <!-- ── MODO C: STARTUP EM INCUBAÇÃO ATIVA (FOCO NAS METAS DA FASE & TAREFAS DO MENTOR) ── -->
-                    <section class="sp-surface-primary">
-                        <div class="sp-card-head">
-                            <div class="sp-card-head-title">
-                                <span class="sp-icon-badge"><i class="fa-solid fa-bullseye"></i></span>
-                                <div>
-                                    <div class="sp-kicker"><?= htmlspecialchars($faseTexto, ENT_QUOTES, 'UTF-8') ?></div>
-                                    <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Metas Ativas &amp; Entregas da Fase</h2>
-                                </div>
-                            </div>
-                            <span class="sp-chip sp-chip-ok sp-num">
-                                <?= $metasConcluidas ?>/<?= $totalMetasFase ?> metas validadas
-                            </span>
-                        </div>
-
-                        <?php if (empty($metasFase)): ?>
-                            <div class="sp-empty-line mb-3">
-                                <i class="fa-regular fa-clock"></i>
-                                <span>A aguardar ativação das metas desta fase pela Coordenação / Mentor.</span>
-                            </div>
-                        <?php else: ?>
-                            <div class="d-flex flex-column gap-2 mb-3">
-                                <?php foreach ($metasFase as $mf):
-                                    $estM = (string)($mf['estado'] ?? 'inactiva');
-                                    $chipM = $estM === 'concluida' ? 'sp-chip-ok' : ($estM === 'reprovada' ? 'sp-chip-err' : ($estM === 'activa' || $estM === 'em_avaliacao' ? 'sp-chip-warn' : 'sp-chip-neutral'));
-                                    $lblM  = $estM === 'concluida' ? 'Validada ✓' : ($estM === 'reprovada' ? 'Devolvida pelo Mentor' : ($estM === 'em_avaliacao' ? 'Em Revisão pelo Mentor' : ($estM === 'activa' ? 'Ativa p/ Entrega' : 'Aguarda Ativação')));
-                                ?>
-                                    <div class="p-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
-                                        <div style="max-width: 72%;">
-                                            <div class="fw-bold" style="font-size: 0.88rem;">
-                                                <span class="sp-code me-1" style="color:var(--sp-accent);">#<?= (int)$mf['numero'] ?></span>
-                                                <?= htmlspecialchars((string)$mf['meta_titulo'], ENT_QUOTES, 'UTF-8') ?>
-                                            </div>
-                                            <div style="font-size: 0.78rem; color: var(--sp-text-sec);">
-                                                <?= htmlspecialchars((string)$mf['meta_descricao'], ENT_QUOTES, 'UTF-8') ?>
-                                            </div>
-                                            <?php if (!empty($mf['feedback_mentor'])): ?>
-                                                <div class="mt-1" style="font-size: 0.76rem; color: var(--sp-err-text);">
-                                                    <strong>Nota do Mentor:</strong> <?= htmlspecialchars((string)$mf['feedback_mentor'], ENT_QUOTES, 'UTF-8') ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="sp-chip <?= $chipM ?>"><?= $lblM ?></span>
-                                            <?php if ($estM === 'activa' || $estM === 'reprovada'): ?>
-                                                <a href="<?= htmlspecialchars($linkDossie . '&tab=metas', ENT_QUOTES, 'UTF-8') ?>" class="sp-btn-primary py-1 px-3" style="min-height: 34px; font-size: 0.78rem;">
-                                                    Submeter Evidência →
-                                                </a>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($tarefasAbertas)): ?>
-                            <div class="pt-3 border-top" style="border-color: var(--sp-border) !important;">
-                                <div class="sp-kicker mb-2">Tarefas Atribuídas pelo Mentor (<?= count($tarefasAbertas) ?>)</div>
-                                <div class="d-flex flex-column gap-2">
-                                    <?php foreach ($tarefasAbertas as $t): ?>
-                                        <div class="p-2 px-3 rounded-3 d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border); font-size: 0.84rem;">
-                                            <div>
-                                                <strong><?= htmlspecialchars((string)$t['titulo'], ENT_QUOTES, 'UTF-8') ?></strong>
-                                                <?php if (!empty($t['data_limite'])): ?>
-                                                    <span class="ms-2" style="font-size: 0.75rem; color: var(--sp-text-muted);">Prazo: <?= date('d/m/Y', strtotime((string)$t['data_limite'])) ?></span>
-                                                <?php endif; ?>
-                                            </div>
-                                            <a href="<?= htmlspecialchars($linkDossie . '&tab=metas', ENT_QUOTES, 'UTF-8') ?>" class="sp-link" style="font-size: 0.78rem;">Ver tarefa →</a>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </section>
-                <?php endif; ?>
-
-                <!-- PARECERES OFICIAIS RECENTES (SÓ APARECE SE EXISTIREM COMENTÁRIOS) -->
-                <?php if (!empty($ultimosFeedback)): ?>
-                    <section class="sp-surface-primary mb-0">
-                        <div class="sp-card-head">
-                            <div class="sp-card-head-title">
-                                <span class="sp-icon-badge"><i class="fa-solid fa-comments"></i></span>
-                                <div>
-                                    <div class="sp-kicker">Comunicação Oficial</div>
-                                    <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-md);">Últimos Pareceres da Comissão / Mentor</h2>
-                                </div>
-                            </div>
-                            <a href="<?= htmlspecialchars($linkDossie . '&tab=comunicacao', ENT_QUOTES, 'UTF-8') ?>" class="sp-link">Ver todos →</a>
-                        </div>
-                        <div class="d-flex flex-column gap-2">
-                            <?php foreach ($ultimosFeedback as $fb): ?>
-                                <div class="p-3 rounded-3" style="background: var(--sp-surface-muted); border: 1px solid var(--sp-border);">
-                                    <div class="d-flex justify-content-between align-items-center mb-1" style="font-size: 0.78rem;">
-                                        <strong><?= htmlspecialchars((string)$fb['nome'], ENT_QUOTES, 'UTF-8') ?> (<?= htmlspecialchars(ucfirst((string)$fb['perfil']), ENT_QUOTES, 'UTF-8') ?>)</strong>
-                                        <span style="color: var(--sp-text-muted);"><?= date('d/m/Y H:i', strtotime((string)$fb['criado_em'])) ?></span>
-                                    </div>
-                                    <div style="font-size: 0.85rem; color: var(--sp-text-sec);"><?= nl2br(htmlspecialchars((string)$fb['comentario'], ENT_QUOTES, 'UTF-8')) ?></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </section>
-                <?php endif; ?>
-
-            </div>
-
-            <!-- COLUNA LATERAL LIMPA (4 COLUNAS): APENAS RESUMO DE ORIENTAÇÃO -->
-            <div class="col-lg-4">
-                <aside class="sp-surface-aside">
-
-                    <!-- Mentor -->
-                    <div class="sp-aside-block">
-                        <span class="sp-aside-icon"><i class="fa-solid fa-user-tie"></i></span>
-                        <div class="sp-aside-body">
-                            <div class="sp-kicker mb-1">Mentor da Startup</div>
-                            <?php if ($mentorAtivo): ?>
-                                <div class="fw-bold" style="font-size: 0.9rem;"><?= htmlspecialchars((string)$mentorAtivo['mentor_nome'], ENT_QUOTES, 'UTF-8') ?></div>
-                                <div style="font-size: 0.76rem; color: var(--sp-text-sec);"><?= htmlspecialchars((string)($mentorAtivo['especialidade'] ?? $mentorAtivo['mentor_email']), ENT_QUOTES, 'UTF-8') ?></div>
-                                <a href="<?= htmlspecialchars($linkDossie . '&tab=comunicacao', ENT_QUOTES, 'UTF-8') ?>" class="sp-link mt-1" style="font-size: 0.78rem;">Enviar mensagem ao mentor →</a>
-                            <?php else: ?>
-                                <div style="font-size: 0.8rem; color: var(--sp-text-muted);">
-                                    <?= $isEmTriagem ? 'Atribuído após aprovação da proposta.' : 'A aguardar designação pela coordenação.' ?>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Termo de Incubação -->
-                    <div class="sp-aside-block">
-                        <span class="sp-aside-icon"><i class="fa-solid fa-file-contract"></i></span>
-                        <div class="sp-aside-body">
-                            <div class="sp-kicker mb-1">Termo de Incubação</div>
-                            <?php if ($termoAtivo): ?>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="sp-chip <?= ($termoAtivo['estado'] ?? '') === 'assinado' ? 'sp-chip-ok' : 'sp-chip-warn' ?>">
-                                        <?= ($termoAtivo['estado'] ?? '') === 'assinado' ? 'Assinado' : 'Em assinatura' ?>
-                                    </span>
-                                    <a href="/incubadora_ispsn/app/views/admin/termo_incubacao.php?id=<?= (int)$termoAtivo['id'] ?>" class="sp-link" style="font-size: 0.78rem;">Ver PDF →</a>
-                                </div>
-                            <?php else: ?>
-                                <div style="font-size: 0.8rem; color: var(--sp-text-muted);">
-                                    Disponível após aprovação técnica.
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Reservas de Espaço -->
-                    <div class="sp-aside-block">
-                        <span class="sp-aside-icon"><i class="fa-solid fa-building-user"></i></span>
-                        <div class="sp-aside-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <div class="sp-kicker mb-1">Salas &amp; Coworking</div>
-                                    <div class="fw-bold" style="font-size: 0.85rem;"><?= $numReservas ?> reserva(s) ativa(s)</div>
-                                </div>
-                                <a href="/incubadora_ispsn/app/views/utilizador/reservas.php<?= $userParam ?>" class="sp-link" style="font-size: 0.78rem;">Gerir →</a>
-                            </div>
-                        </div>
-                    </div>
-
-                </aside>
-            </div>
-
-        </div>
-    <?php endif; ?>
-
-    <!-- MODAL SUBMETER NOVA PROPOSTA -->
-    <div class="modal fade" id="modalNovoProjeto" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content modal-content-custom">
-                <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" enctype="multipart/form-data">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="action" value="criar_projeto">
-                    <input type="hidden" name="id_usuario_alvo" value="<?= (int)$idUsuario ?>">
-                    <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php<?= $userParam ?>">
-
-                    <div class="modal-header-custom">
-                        <h5 class="modal-title fw-bold m-0"><i class="fa-solid fa-rocket me-2" style="color:var(--primary);"></i>Submeter Nova Proposta de Startup</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body-custom">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label-custom">Nome da Startup / Projeto *</label>
-                                <input type="text" name="titulo" class="form-control-custom" placeholder="Ex: AgroSmart Huambo" required minlength="5">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Tipologia *</label>
-                                <select name="tipo" class="form-select form-control-custom" required>
-                                    <option value="startup_tecnologica">Startup Tecnológica</option>
-                                    <option value="negocio_tradicional">Negócio Tradicional / Inovação</option>
-                                    <option value="impacto_social">Impacto Social / Ambiental</option>
-                                    <option value="outro">Outro</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Área Temática *</label>
-                                <select name="area" class="form-select form-control-custom" required>
-                                    <option value="tecnologia">Tecnologia &amp; Sistemas</option>
-                                    <option value="saude">Saúde &amp; Bem-Estar</option>
-                                    <option value="educacao">Educação</option>
-                                    <option value="agro">Agronegócio</option>
-                                    <option value="financas">Finanças / Fintech</option>
-                                    <option value="outro">Outra Área</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label-custom">Resumo Executivo (mín. 20 caracteres) *</label>
-                                <textarea name="descricao" class="form-control-custom" rows="3" required minlength="20" placeholder="Descreva a proposta de valor da startup..."></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Problema que Resolve</label>
-                                <textarea name="problema" class="form-control-custom" rows="2" placeholder="Qual é a dor real identificada?"></textarea>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label-custom">Solução Proposta</label>
-                                <textarea name="solucao" class="form-control-custom" rows="2" placeholder="Como a sua ideia resolve esse problema?"></textarea>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label-custom">Pitch Deck (PDF, PPT, PPTX ou ZIP — opcional)</label>
-                                <input type="file" name="pitch_ficheiro" class="form-control form-control-custom" accept=".pdf,.ppt,.pptx,.zip">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer-custom">
-                        <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn-primary-custom"><i class="fa-solid fa-paper-plane me-1"></i> Submeter para Avaliação</button>
-                    </div>
-                </form>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 3. GRELHA CENTRAL 2 COLUNAS (IGUAL AO PAINEL DO MENTOR) -->
+    <div class="std-dash-grid">
+
+        <!-- COLUNA PRINCIPAL -->
+        <div style="min-width:0;">
+
+            <!-- BANNER DE METAS & EVIDÊNCIAS DA FASE -->
+            <div class="card-custom mb-4">
+                <div class="metas-banner">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:9px;background:rgba(217,119,6,.15);color:#D97706;display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                            <i class="fa fa-bullseye"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:0.9rem;font-weight:700;color:#92400E;">
+                                Metas &amp; Evidências — Fase de <?= htmlspecialchars($faseInfo['label']) ?>
+                            </div>
+                            <div style="font-size:0.75rem;color:#A16207;">
+                                <?php if ($emTriagem && empty($metasFase)): ?>
+                                    Proposta em apreciação técnica (<?= $numAvalConcl ?>/3 pareceres) · As metas desbloqueiam após assinatura do Termo
+                                <?php else: ?>
+                                    Submeta os comprovativos das metas ativas para validação do seu mentor
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="<?= htmlspecialchars($urlMetas) ?>" class="btn-primary-custom" style="padding:6px 14px; font-size:0.76rem;">
+                        <i class="fa fa-paper-plane"></i> Ir para Metas &amp; Evidências
+                    </a>
+                </div>
+
+                <?php if (empty($metasFase)): ?>
+                    <div class="card-body-custom">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div>
+                                <div class="fw-bold mb-1" style="font-size:0.9rem;">
+                                    <?php if ($emTriagem): ?>
+                                        A sua startup está na etapa de Avaliação Técnica (<?= $numAvalConcl ?> de 3 pareceres concluídos)
+                                    <?php else: ?>
+                                        A aguardar ativação das metas da fase de <?= htmlspecialchars($faseInfo['label']) ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="text-muted small">
+                                    Consulte no menu <strong>Metas &amp; Evidências</strong> todas as metas previstas para a fase de <?= htmlspecialchars($faseInfo['label']) ?> e prepare os seus entregáveis.
+                                </div>
+                            </div>
+                            <a href="<?= htmlspecialchars($urlMetas) ?>" class="btn-ghost" style="font-size:0.8rem;">
+                                Ver roteiro de metas &rarr;
+                            </a>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <?php foreach ($metasFase as $mf):
+                        $estM = (string)($mf['estado'] ?? 'inactiva');
+                        $badgeStyle = 'background:#F1F5F9; color:#64748B;';
+                        $badgeTexto = 'Inativa';
+                        if ($estM === 'concluida') {
+                            $badgeStyle = 'background:#D1FAE5; color:#065F46;';
+                            $badgeTexto = 'Validada ✓';
+                        } elseif ($estM === 'activa') {
+                            $badgeStyle = 'background:#FEF3C7; color:#92400E;';
+                            $badgeTexto = 'Ativa p/ Entrega';
+                        } elseif ($estM === 'em_avaliacao') {
+                            $badgeStyle = 'background:#DBEAFE; color:#1E40AF;';
+                            $badgeTexto = 'Em Validação pelo Mentor';
+                        } elseif ($estM === 'reprovada') {
+                            $badgeStyle = 'background:#FEE2E2; color:#991B1B;';
+                            $badgeTexto = 'Devolvida';
+                        }
+                    ?>
+                        <div class="meta-item">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                                <div style="flex:1; min-width:220px;">
+                                    <div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); margin-bottom:2px;">
+                                        #<?= (int)$mf['numero'] ?>. <?= htmlspecialchars($mf['meta_titulo']) ?>
+                                    </div>
+                                    <div style="font-size:0.8rem; color:var(--text-secondary);">
+                                        <?= htmlspecialchars($mf['meta_descricao']) ?>
+                                    </div>
+                                    <?php if (!empty($mf['feedback_mentor'])): ?>
+                                        <div class="mt-1 text-danger" style="font-size:0.75rem;">
+                                            <strong>Feedback do Mentor:</strong> <?= htmlspecialchars($mf['feedback_mentor']) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge-estado" style="<?= $badgeStyle ?>"><?= $badgeTexto ?></span>
+                                    <?php if ($estM === 'activa' || $estM === 'reprovada'): ?>
+                                        <a href="<?= htmlspecialchars($urlMetas) ?>" class="btn-primary-custom" style="padding:6px 12px; font-size:0.75rem;">
+                                            <i class="fa fa-upload"></i> Enviar Evidência
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+
+            <!-- RESUMO DO PROJETO & ACESSO RÁPIDO ÀS SECÇÕES DO MENU -->
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="card-title-custom"><i class="fa fa-compass"></i> Áreas de Trabalho da Startup</div>
+                    <span class="small text-muted">Organizadas no seu menu lateral</span>
+                </div>
+                <div class="card-body-custom">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="<?= htmlspecialchars($urlProposta) ?>" class="p-3 rounded-3 d-flex align-items-start gap-3 text-decoration-none h-100" style="background:var(--surface-2); border:1px solid var(--border);">
+                                <div style="width:40px;height:40px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="fa fa-rocket"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="color:var(--text-primary); font-size:0.9rem;">Minha Startup &amp; Equipa</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">Editar problema, solução, equipa co-fundadora e diagnóstico IA.</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="<?= htmlspecialchars($urlMetas) ?>" class="p-3 rounded-3 d-flex align-items-start gap-3 text-decoration-none h-100" style="background:var(--surface-2); border:1px solid var(--border);">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#8B5CF6;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="fa fa-bullseye"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="color:var(--text-primary); font-size:0.9rem;">Metas &amp; Evidências</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">Bater metas da fase, submeter comprovativos e entregar tarefas do mentor.</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="<?= htmlspecialchars($urlMentoria) ?>" class="p-3 rounded-3 d-flex align-items-start gap-3 text-decoration-none h-100" style="background:var(--surface-2); border:1px solid var(--border);">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#10B981;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="fa fa-comments"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="color:var(--text-primary); font-size:0.9rem;">Mentoria &amp; Chat Direto</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">Conversar em tempo real com o mentor, ver reuniões e sessões realizadas.</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="<?= htmlspecialchars($urlDocumentos) ?>" class="p-3 rounded-3 d-flex align-items-start gap-3 text-decoration-none h-100" style="background:var(--surface-2); border:1px solid var(--border);">
+                                <div style="width:40px;height:40px;border-radius:10px;background:#3B82F6;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i class="fa fa-folder-open"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="color:var(--text-primary); font-size:0.9rem;">Doc Hub &amp; Termo</div>
+                                    <div class="text-muted" style="font-size:0.78rem;">Carregar Pitch Deck, ficheiros técnicos e consultar o Termo de Incubação.</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- COLUNA LATERAL (360px — IGUAL AO PAINEL DO MENTOR) -->
+        <div style="display:flex; flex-direction:column; gap:24px;">
+
+            <!-- CARTÃO DO MENTOR & CHAT RÁPIDO -->
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="card-title-custom"><i class="fa fa-comments"></i> Mentoria &amp; Canal Direto</div>
+                </div>
+                <div class="card-body-custom" style="padding:18px 20px;">
+                    <?php if ($mentorAtivo): ?>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div style="width:42px;height:42px;border-radius:50%;background:var(--primary);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <?= strtoupper(substr($mentorAtivo['mentor_nome'], 0, 1)) ?>
+                            </div>
+                            <div>
+                                <div class="fw-bold" style="font-size:0.9rem;"><?= htmlspecialchars($mentorAtivo['mentor_nome']) ?></div>
+                                <div class="text-muted" style="font-size:0.75rem;"><?= htmlspecialchars($mentorAtivo['especialidade'] ?? 'Mentor Designado') ?></div>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div class="p-2 px-3 rounded-3 mb-3" style="background:var(--surface-2); font-size:0.8rem; color:var(--text-secondary);">
+                            <i class="fa fa-user-tie me-1" style="color:var(--primary)"></i>
+                            <?= $emTriagem ? 'O mentor é atribuído após a aprovação técnica.' : 'Pode usar o chat para comunicar com a Coordenação.' ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($ultimaMensagem): ?>
+                        <div class="p-2 px-3 rounded-3 mb-3" style="background:var(--surface-2); border-left:3px solid var(--primary); font-size:0.8rem;">
+                            <div class="fw-bold" style="font-size:0.72rem; color:var(--primary);"><?= htmlspecialchars($ultimaMensagem['nome']) ?>:</div>
+                            <div class="text-truncate"><?= htmlspecialchars($ultimaMensagem['mensagem']) ?></div>
+                        </div>
+                    <?php endif; ?>
+
+                    <a href="<?= htmlspecialchars($urlMentoria) ?>" class="btn-primary-custom w-100 justify-content-center" style="font-size:0.82rem;">
+                        <i class="fa fa-comments"></i> Abrir Chat &amp; Mentoria
+                    </a>
+                </div>
+            </div>
+
+            <!-- TAREFAS PENDENTES DO MENTOR -->
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="card-title-custom"><i class="fa fa-clipboard-list"></i> Tarefas do Mentor</div>
+                    <?php if (!empty($tarefasPendentes)): ?>
+                        <span class="metas-badge-count" style="background:var(--warning);"><?= count($tarefasPendentes) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body-custom" style="padding:16px 20px;">
+                    <?php if (empty($tarefasPendentes)): ?>
+                        <div style="text-align:center; padding:20px 0;">
+                            <i class="fa fa-check-circle" style="font-size:1.7rem; color:var(--success); margin-bottom:6px; display:block;"></i>
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Nenhuma tarefa pendente!</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($tarefasPendentes as $t):
+                            $prio = $t['prioridade'] ?? 'media';
+                        ?>
+                            <div class="task-item">
+                                <span class="task-dot <?= htmlspecialchars($prio) ?>"></span>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:0.84rem; font-weight:600; color:var(--text-primary);"><?= htmlspecialchars($t['titulo']) ?></div>
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <small class="text-muted" style="font-size:0.72rem;">
+                                            <i class="fa fa-clock me-1"></i><?= !empty($t['data_limite']) ? date('d/m/Y', strtotime($t['data_limite'])) : 'Sem prazo' ?>
+                                        </small>
+                                        <a href="<?= htmlspecialchars($urlMetas) ?>" style="font-size:0.74rem; color:var(--primary); font-weight:700; text-decoration:none;">Entregar &rarr;</a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- PRÓXIMAS REUNIÕES AGENDADAS -->
+            <div class="card-custom">
+                <div class="card-header-custom">
+                    <div class="card-title-custom"><i class="fa fa-calendar-days"></i> Próximas Reuniões</div>
+                    <?php if (!empty($proximasReunioes)): ?>
+                        <span class="metas-badge-count" style="background:var(--info);"><?= count($proximasReunioes) ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="card-body-custom" style="padding:16px 20px;">
+                    <?php if (empty($proximasReunioes)): ?>
+                        <div style="text-align:center; padding:20px 0;">
+                            <i class="fa fa-calendar-xmark" style="font-size:1.7rem; color:var(--border); margin-bottom:6px; display:block;"></i>
+                            <p style="font-size:0.82rem; color:var(--text-muted); margin:0;">Nenhuma reunião marcada.</p>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($proximasReunioes as $re): ?>
+                            <div class="meeting-item">
+                                <div class="meeting-date-badge">
+                                    <span class="day"><?= date('d', strtotime($re['data_reuniao'])) ?></span>
+                                    <span class="month"><?= date('M', strtotime($re['data_reuniao'])) ?></span>
+                                </div>
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:0.85rem; font-weight:700; color:var(--text-primary);"><?= htmlspecialchars($re['titulo']) ?></div>
+                                    <div style="font-size:0.72rem; color:var(--text-muted);"><i class="fa fa-clock me-1"></i><?= date('H:i', strtotime($re['data_reuniao'])) ?></div>
+                                    <?php if (!empty($re['link_reuniao'])): ?>
+                                        <a href="<?= htmlspecialchars($re['link_reuniao']) ?>" target="_blank" class="btn-primary-custom mt-2" style="padding:4px 10px; font-size:0.72rem;">
+                                            <i class="fa fa-video"></i> Entrar na Reunião
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+<?php endif; ?>
+
+<!-- MODAL SUBMETER NOVA PROPOSTA -->
+<div class="modal fade" id="modalNovoProjeto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-content-custom">
+            <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" enctype="multipart/form-data">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="criar_projeto">
+                <input type="hidden" name="id_usuario_alvo" value="<?= (int)$idUsuario ?>">
+                <input type="hidden" name="redirect" value="/incubadora_ispsn/app/views/dashboard/utilizador.php<?= $userParam ?>">
+
+                <div class="modal-header-custom">
+                    <h5 class="modal-title fw-bold m-0"><i class="fa fa-rocket me-2" style="color:var(--primary);"></i>Submeter Nova Proposta de Startup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body-custom">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <label class="form-label-custom">Nome da Startup / Projeto *</label>
+                            <input type="text" name="titulo" class="form-control-custom" placeholder="Ex: AgroSmart Huambo" required minlength="5">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Tipologia *</label>
+                            <select name="tipo" class="form-select form-control-custom" required>
+                                <option value="startup_tecnologica">Startup Tecnológica</option>
+                                <option value="negocio_tradicional">Negócio Tradicional / Inovação</option>
+                                <option value="impacto_social">Impacto Social / Ambiental</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Área Temática *</label>
+                            <select name="area" class="form-select form-control-custom" required>
+                                <option value="tecnologia">Tecnologia &amp; Sistemas</option>
+                                <option value="saude">Saúde &amp; Bem-Estar</option>
+                                <option value="educacao">Educação</option>
+                                <option value="agro">Agronegócio</option>
+                                <option value="financas">Finanças / Fintech</option>
+                                <option value="outro">Outra Área</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-custom">Resumo Executivo (mín. 20 caracteres) *</label>
+                            <textarea name="descricao" class="form-control-custom" rows="3" required minlength="20" placeholder="Descreva a proposta de valor da startup..."></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Problema que Resolve</label>
+                            <textarea name="problema" class="form-control-custom" rows="2" placeholder="Qual é a dor real identificada?"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-custom">Solução Proposta</label>
+                            <textarea name="solucao" class="form-control-custom" rows="2" placeholder="Como a sua ideia resolve esse problema?"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-custom">Pitch Deck (PDF, PPT, PPTX ou ZIP — opcional)</label>
+                            <input type="file" name="pitch_ficheiro" class="form-control form-control-custom" accept=".pdf,.ppt,.pptx,.zip">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-custom">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn-primary-custom"><i class="fa fa-paper-plane me-1"></i> Submeter para Avaliação</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <?php require_once __DIR__ . '/../partials/_layout_end.php'; ?>

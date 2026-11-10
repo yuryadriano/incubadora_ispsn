@@ -41,38 +41,21 @@ require_once __DIR__ . '/../partials/_layout.php';
     <?php if ($flashOk):   ?><div class="alert-custom alert-success mb-4"><i class="fa fa-check-circle"></i> <?= htmlspecialchars($flashOk) ?></div><?php endif; ?>
     <?php if ($flashErro): ?><div class="alert-custom alert-danger mb-4"><i class="fa fa-triangle-exclamation"></i> <?= htmlspecialchars($flashErro) ?></div><?php endif; ?>
 
-    <!-- PAGE HEADER -->
-    <?php if ($perfil === 'utilizador'): ?>
-        <header class="std-command-hero">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 position-relative" style="z-index:2;">
-                <span class="std-live-pill" style="background: rgba(245,158,11,0.2); color: #FCD34D; border: 1px solid rgba(245,158,11,0.45);">
-                    <i class="fa-solid fa-user-shield" style="color: #FBBF24;"></i>
-                    <span>Identidade &amp; Segurança ISPSN</span>
-                </span>
-                <span class="std-live-pill" style="background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.14);">
-                    <span>Conta Ativa · <?= htmlspecialchars(ucfirst((string)($usuario['tipo_utilizador'] ?? 'Estudante')), ENT_QUOTES, 'UTF-8') ?></span>
-                </span>
+    <!-- PAGE HEADER UNIFICADO -->
+    <div class="page-header">
+        <div>
+            <div class="page-header-title">
+                <i class="fa fa-user-circle me-2" style="color:var(--primary)"></i>
+                <?= htmlspecialchars($usuario['nome'] ?? 'Configurações de Conta', ENT_QUOTES, 'UTF-8') ?>
             </div>
-            <h1 style="font-size: 1.65rem; font-weight: 800; color: #FFFFFF; margin: 4px 0 4px; position-relative; z-index:2;">
-                <?= htmlspecialchars($usuario['nome'] ?? 'Perfil do Empreendedor', ENT_QUOTES, 'UTF-8') ?>
-            </h1>
-            <div style="font-size: 0.84rem; color: #CBD5E1; position-relative; z-index:2;">
-                Gestão de credenciais académicas, dados de contacto e segurança da conta na Incubadora.
-            </div>
-        </header>
-    <?php else: ?>
-        <div class="page-header">
-            <div>
-                <div class="page-header-title">
-                    <i class="fa fa-user-circle me-2" style="color:var(--primary)"></i>
-                    Configurações de Conta
-                </div>
-                <div class="page-header-sub">
-                    Gerencie as suas informações pessoais e credenciais de segurança.
-                </div>
+            <div class="page-header-sub">
+                Gerencie as suas informações pessoais, credenciais académicas e segurança da conta.
             </div>
         </div>
-    <?php endif; ?>
+        <span class="badge-estado badge-aprovado">
+            Conta Ativa · <?= htmlspecialchars(ucfirst((string)($usuario['tipo_utilizador'] ?? 'Estudante')), ENT_QUOTES, 'UTF-8') ?>
+        </span>
+    </div>
 
     <div class="row g-4">
         <!-- INFO BÁSICA -->

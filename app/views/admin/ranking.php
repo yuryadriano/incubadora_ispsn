@@ -61,62 +61,47 @@ include __DIR__ . '/../partials/_layout.php';
 
 <div class="std-painel">
 
-    <!-- HERO DO LEADERBOARD -->
-    <header class="std-command-hero">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 position-relative" style="z-index:2;">
-            <span class="std-live-pill" style="background: rgba(245,158,11,0.2); color: #FCD34D; border: 1px solid rgba(245,158,11,0.45);">
-                <i class="fa-solid fa-trophy" style="color: #FBBF24;"></i>
-                <span>Leaderboard Oficial ISPSN</span>
-            </span>
-            <span class="std-live-pill" style="background: rgba(255,255,255,0.08); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.14);">
-                <span><?= count($topProjetos) ?> startup(s) em competição</span>
-            </span>
-        </div>
-        <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 position-relative" style="z-index:2;">
-            <div>
-                <h1 style="font-size: 1.65rem; font-weight: 800; color: #FFFFFF; margin: 4px 0 6px;">
-                    Ranking de Startups &amp; Mérito Académico
-                </h1>
-                <div style="font-size: 0.84rem; color: #CBD5E1;">
-                    Classificação em tempo real por <strong>Startup Points (SP)</strong> atribuídos por avanço de maturidade e metas validadas.
-                </div>
+    <!-- PAGE HEADER NATIVO DO SISTEMA -->
+    <div class="page-header">
+        <div>
+            <div class="page-header-title">
+                <i class="fa-solid fa-trophy me-2" style="color:var(--primary)"></i>
+                Ranking de Startups &amp; Mérito Académico
+            </div>
+            <div class="page-header-sub">
+                Leaderboard Oficial ISPSN · <?= count($topProjetos) ?> startup(s) em competição por Startup Points (SP).
             </div>
         </div>
-    </header>
+    </div>
 
-    <!-- PÓDIO TOP 3 STARTUPS -->
+    <!-- PÓDIO TOP 3 STARTUPS (USANDO KPI-CARD NATIVO) -->
     <?php if (count($topProjetos) >= 1):
         $podium = array_slice($topProjetos, 0, 3);
         $medals = [
-            0 => ['cls' => 'rank-1', 'lbl' => '1.º Lugar · Ouro',   'cor' => '#F59E0B', 'icon' => 'fa-crown'],
-            1 => ['cls' => 'rank-2', 'lbl' => '2.º Lugar · Prata',  'cor' => '#64748B', 'icon' => 'fa-medal'],
-            2 => ['cls' => 'rank-3', 'lbl' => '3.º Lugar · Bronze', 'cor' => '#D97706', 'icon' => 'fa-award'],
+            0 => ['lbl' => '1.º Lugar · Ouro',   'cor' => '#F59E0B', 'icon' => 'fa-crown', 'iconCls' => 'amber'],
+            1 => ['lbl' => '2.º Lugar · Prata',  'cor' => '#64748B', 'icon' => 'fa-medal', 'iconCls' => 'blue'],
+            2 => ['lbl' => '3.º Lugar · Bronze', 'cor' => '#D97706', 'icon' => 'fa-award', 'iconCls' => 'amber'],
         ];
     ?>
-        <div class="std-podium-grid">
+        <div class="kpi-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
             <?php foreach ($podium as $iP => $pod):
                 $m = $medals[$iP];
                 $fLbl = $labelsFase[$pod['fase'] ?? 'ideacao'] ?? ucfirst((string)($pod['fase'] ?? 'Ideação'));
             ?>
-                <div class="std-podium-card <?= $m['cls'] ?>">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="sp-chip sp-chip-warn" style="color: <?= $m['cor'] ?>;">
-                            <i class="fa-solid <?= $m['icon'] ?>"></i>
-                            <span><?= $m['lbl'] ?></span>
-                        </span>
-                        <span class="sp-code fw-bold" style="font-size: 1.05rem; color: var(--sp-accent);">
-                            <?= (int)($pod['pontos'] ?? 0) ?> SP
-                        </span>
+                <div class="kpi-card" style="--kpi-color:<?= $m['cor'] ?>">
+                    <div class="kpi-top">
+                        <span class="kpi-label"><?= $m['lbl'] ?></span>
+                        <div class="kpi-icon <?= $m['iconCls'] ?>"><i class="fa-solid <?= $m['icon'] ?>"></i></div>
                     </div>
-                    <h3 class="fw-bold mb-1" style="font-size: 1.05rem; color: var(--sp-text);">
+                    <div class="fw-bold mb-1" style="font-size:1.05rem;color:var(--text);">
                         <?= htmlspecialchars((string)$pod['titulo'], ENT_QUOTES, 'UTF-8') ?>
-                    </h3>
-                    <div style="font-size: 0.78rem; color: var(--sp-text-muted); margin-bottom: 10px;">
+                    </div>
+                    <div class="text-muted mb-2" style="font-size:0.78rem;">
                         <i class="fa-regular fa-user me-1"></i><?= htmlspecialchars((string)$pod['autor_nome'], ENT_QUOTES, 'UTF-8') ?>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center pt-2 border-top" style="border-color: var(--sp-border) !important; font-size: 0.75rem;">
-                        <span class="sp-chip sp-chip-neutral">Fase: <?= htmlspecialchars($fLbl, ENT_QUOTES, 'UTF-8') ?></span>
-                        <span style="color: var(--sp-text-sec);"><?= htmlspecialchars(ucfirst((string)($pod['area_tematica'] ?? 'Tecnologia')), ENT_QUOTES, 'UTF-8') ?></span>
+                    <div class="kpi-footer justify-content-between">
+                        <span class="kpi-badge up"><?= (int)($pod['pontos'] ?? 0) ?> SP</span>
+                        <span>Fase: <?= htmlspecialchars($fLbl, ENT_QUOTES, 'UTF-8') ?></span>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -124,14 +109,11 @@ include __DIR__ . '/../partials/_layout.php';
     <?php endif; ?>
 
     <!-- TABELA INTERATIVA COM PESQUISA E FILTRO POR FASE -->
-    <section class="sp-surface-primary">
-        <div class="sp-card-head">
-            <div class="sp-card-head-title">
-                <span class="sp-icon-badge"><i class="fa-solid fa-ranking-star"></i></span>
-                <div>
-                    <div class="sp-kicker">Classificação Geral</div>
-                    <h2 class="fw-bold m-0" style="font-size: var(--sp-fs-lg);">Tabela de Mérito das Startups</h2>
-                </div>
+    <div class="card-custom">
+        <div class="card-header-custom">
+            <div class="card-title-custom">
+                <i class="fa-solid fa-ranking-star" style="color:var(--primary)"></i>
+                Tabela de Mérito das Startups
             </div>
             <div class="d-flex flex-wrap gap-2 align-items-center">
                 <input type="search" id="filtroTextoRanking" class="form-control form-control-sm" style="width: 210px;" placeholder="Pesquisar startup ou líder..." oninput="filtrarTabelaRanking()">
@@ -143,88 +125,90 @@ include __DIR__ . '/../partials/_layout.php';
                 </select>
             </div>
         </div>
-
-        <?php if (empty($topProjetos)): ?>
-            <div class="sp-empty-line">
-                <i class="fa-solid fa-trophy" aria-hidden="true"></i>
-                <span>Ainda não existem startups classificadas no ranking.</span>
-            </div>
-        <?php else: ?>
-            <div class="table-responsive">
-                <table class="sp-table" id="tabelaRankingStartups">
-                    <thead>
-                        <tr>
-                            <th style="width: 72px;">Posição</th>
-                            <th>Startup &amp; Líder</th>
-                            <th>Área</th>
-                            <th>Fase Atual</th>
-                            <th>Estado</th>
-                            <th class="text-end">Pontuação</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($topProjetos as $idx => $p):
-                            $pos     = $idx + 1;
-                            $isMinha = ((int)($p['criado_por'] ?? 0) === (int)($idUsuario ?? 0));
-                            $estKey  = (string)($p['estado'] ?? '');
-                            $faseKey = (string)($p['fase'] ?? 'ideacao');
-                            $estLbl  = $labelsEstado[$estKey] ?? $estKey;
-                            $faseLbl = $labelsFase[$faseKey] ?? ucfirst($faseKey);
-
-                            $chipEst = 'sp-chip-neutral';
-                            if (in_array($estKey, ['incubado', 'fundo_investimento', 'concluido', 'aprovado'], true)) {
-                                $chipEst = 'sp-chip-ok';
-                            } elseif ($estKey === 'em_avaliacao' || $estKey === 'submetido') {
-                                $chipEst = 'sp-chip-warn';
-                            }
-                        ?>
-                            <tr class="linha-ranking"
-                                data-fase="<?= htmlspecialchars($faseKey, ENT_QUOTES, 'UTF-8') ?>"
-                                data-search="<?= htmlspecialchars(strtolower((string)$p['titulo'] . ' ' . (string)$p['autor_nome']), ENT_QUOTES, 'UTF-8') ?>"
-                                style="<?= $isMinha ? 'background: var(--sp-warn-bg);' : '' ?>">
-                                <td class="sp-code fw-bold">
-                                    <?php if ($pos === 1): ?>
-                                        <span class="sp-chip sp-chip-warn">#1</span>
-                                    <?php elseif ($pos === 2 || $pos === 3): ?>
-                                        <span class="sp-chip sp-chip-neutral">#<?= $pos ?></span>
-                                    <?php else: ?>
-                                        <span style="color: var(--sp-text-muted);">#<?= $pos ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="fw-bold" style="color: var(--sp-text);">
-                                        <?= htmlspecialchars((string)$p['titulo'], ENT_QUOTES, 'UTF-8') ?>
-                                        <?php if ($isMinha): ?>
-                                            <span class="sp-chip sp-chip-warn ms-1">A sua startup</span>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div style="font-size: var(--sp-fs-xs); color: var(--sp-text-muted);">
-                                        <?= htmlspecialchars((string)$p['autor_nome'], ENT_QUOTES, 'UTF-8') ?>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span style="font-size: 0.8rem; color: var(--sp-text-sec);">
-                                        <?= htmlspecialchars(ucfirst((string)($p['area_tematica'] ?? 'Tecnologia')), ENT_QUOTES, 'UTF-8') ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="sp-chip sp-chip-neutral"><?= htmlspecialchars($faseLbl, ENT_QUOTES, 'UTF-8') ?></span>
-                                </td>
-                                <td>
-                                    <span class="sp-chip <?= $chipEst ?>"><?= htmlspecialchars($estLbl, ENT_QUOTES, 'UTF-8') ?></span>
-                                </td>
-                                <td class="text-end">
-                                    <span class="sp-code fw-bold" style="color: var(--sp-accent);">
-                                        <?= (int)($p['pontos'] ?? 0) ?> SP
-                                    </span>
-                                </td>
+        <div class="card-body-custom p-0">
+            <?php if (empty($topProjetos)): ?>
+                <div class="empty-state py-4">
+                    <div class="empty-state-icon"><i class="fa-solid fa-trophy"></i></div>
+                    <div class="empty-state-title">Sem startups classificadas</div>
+                    <div class="empty-state-desc">Ainda não existem startups classificadas no ranking.</div>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="tabelaRankingStartups">
+                        <thead style="background:var(--surface-2);font-size:0.75rem;text-transform:uppercase;color:var(--text-muted)">
+                            <tr>
+                                <th class="ps-4" style="width: 72px;">Posição</th>
+                                <th>Startup &amp; Líder</th>
+                                <th>Área</th>
+                                <th>Fase Atual</th>
+                                <th>Estado</th>
+                                <th class="text-end pe-4">Pontuação</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php endif; ?>
-    </section>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($topProjetos as $idx => $p):
+                                $pos     = $idx + 1;
+                                $isMinha = ((int)($p['criado_por'] ?? 0) === (int)($idUsuario ?? 0));
+                                $estKey  = (string)($p['estado'] ?? '');
+                                $faseKey = (string)($p['fase'] ?? 'ideacao');
+                                $estLbl  = $labelsEstado[$estKey] ?? $estKey;
+                                $faseLbl = $labelsFase[$faseKey] ?? ucfirst($faseKey);
+
+                                $badgeEst = 'badge-submetido';
+                                if (in_array($estKey, ['incubado', 'fundo_investimento', 'concluido', 'aprovado'], true)) {
+                                    $badgeEst = 'badge-incubado';
+                                } elseif ($estKey === 'em_avaliacao' || $estKey === 'submetido') {
+                                    $badgeEst = 'badge-avaliacao';
+                                }
+                            ?>
+                                <tr class="linha-ranking"
+                                    data-fase="<?= htmlspecialchars($faseKey, ENT_QUOTES, 'UTF-8') ?>"
+                                    data-search="<?= htmlspecialchars(strtolower((string)$p['titulo'] . ' ' . (string)$p['autor_nome']), ENT_QUOTES, 'UTF-8') ?>"
+                                    style="<?= $isMinha ? 'background: rgba(245, 158, 11, 0.08);' : '' ?>">
+                                    <td class="ps-4 fw-bold">
+                                        <?php if ($pos === 1): ?>
+                                            <span class="badge-estado badge-avaliacao">#1</span>
+                                        <?php elseif ($pos === 2 || $pos === 3): ?>
+                                            <span class="badge-estado badge-submetido">#<?= $pos ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">#<?= $pos ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold" style="font-size:0.88rem;color:var(--text);">
+                                            <?= htmlspecialchars((string)$p['titulo'], ENT_QUOTES, 'UTF-8') ?>
+                                            <?php if ($isMinha): ?>
+                                                <span class="badge-estado badge-avaliacao ms-1">A sua startup</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="text-muted" style="font-size:0.75rem;">
+                                            <?= htmlspecialchars((string)$p['autor_nome'], ENT_QUOTES, 'UTF-8') ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-muted" style="font-size:0.8rem;">
+                                            <?= htmlspecialchars(ucfirst((string)($p['area_tematica'] ?? 'Tecnologia')), ENT_QUOTES, 'UTF-8') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-estado badge-submetido"><?= htmlspecialchars($faseLbl, ENT_QUOTES, 'UTF-8') ?></span>
+                                    </td>
+                                    <td>
+                                        <span class="badge-estado <?= $badgeEst ?>"><?= htmlspecialchars($estLbl, ENT_QUOTES, 'UTF-8') ?></span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <span class="fw-bold" style="color:var(--primary);">
+                                            <?= (int)($p['pontos'] ?? 0) ?> SP
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 
 </div>
 

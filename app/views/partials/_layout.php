@@ -30,6 +30,7 @@ $idUsuario    = $idUsuario ?? (int)($_SESSION['usuario_id'] ?? 0);
 
 $isSimulando = ($perfil === 'utilizador' && in_array($realPerfilSessao, ['admin', 'superadmin'], true) && $idUsuario > 0);
 $qsEstudante = $isSimulando ? ('?id_usuario=' . (int)$idUsuario) : '';
+$qsAmpEst    = $isSimulando ? ('&id_usuario=' . (int)$idUsuario) : '';
 $hrefPainelEstudante = $isSimulando
     ? ('/incubadora_ispsn/app/views/dashboard/utilizador.php' . $qsEstudante)
     : '/incubadora_ispsn/public/index.php';
@@ -47,16 +48,22 @@ if ($stmtN) {
 
 $iniciais = strtoupper(substr($nomeUsuario, 0, 1));
 $paginaActiva = $paginaActiva ?? 'dashboard';
+if ($paginaActiva === 'meu-painel') {
+    $paginaActiva = 'dashboard';
+}
 $tituloPagina = $tituloPagina ?? 'Painel';
 
 // Menus por perfil
 $menus = [
     'utilizador' => [
-        ['icon'=>'fa-house',           'label'=>'Painel Geral',     'href'=>$hrefPainelEstudante,                                              'id'=>'dashboard'],
-        ['icon'=>'fa-rocket',          'label'=>'Minha Startup',    'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php' . $qsEstudante,'id'=>'projetos'],
-        ['icon'=>'fa-bookmark',        'label'=>'Reservas de Espaço','href'=>'/incubadora_ispsn/app/views/utilizador/reservas.php' . $qsEstudante,  'id'=>'reservas'],
-        ['icon'=>'fa-trophy',          'label'=>'Ranking Startups', 'href'=>'/incubadora_ispsn/app/views/admin/ranking.php' . $qsEstudante,        'id'=>'ranking'],
-        ['icon'=>'fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php' . $qsEstudante,          'id'=>'perfil'],
+        ['icon'=>'fa-house',           'label'=>'Painel Geral',       'href'=>$hrefPainelEstudante,                                                               'id'=>'dashboard'],
+        ['icon'=>'fa-rocket',          'label'=>'Minha Startup',      'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php?sec=proposta' . $qsAmpEst,  'id'=>'projetos'],
+        ['icon'=>'fa-bullseye',        'label'=>'Metas & Evidências', 'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php?sec=metas' . $qsAmpEst,     'id'=>'metas'],
+        ['icon'=>'fa-comments',        'label'=>'Mentoria & Chat',    'href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php?sec=mentoria' . $qsAmpEst,  'id'=>'mentoria'],
+        ['icon'=>'fa-folder-open',     'label'=>'Doc Hub / Ficheiros','href'=>'/incubadora_ispsn/app/views/utilizador/meu_projeto.php?sec=documentos' . $qsAmpEst,'id'=>'documentos'],
+        ['icon'=>'fa-bookmark',        'label'=>'Reservas de Espaço', 'href'=>'/incubadora_ispsn/app/views/utilizador/reservas.php' . $qsEstudante,               'id'=>'reservas'],
+        ['icon'=>'fa-trophy',          'label'=>'Ranking Startups',   'href'=>'/incubadora_ispsn/app/views/admin/ranking.php' . $qsEstudante,                     'id'=>'ranking'],
+        ['icon'=>'fa-user',            'label'=>'Meu Perfil',         'href'=>'/incubadora_ispsn/app/views/auth/perfil.php' . $qsEstudante,                       'id'=>'perfil'],
     ],
     'admin' => [
         ['icon'=>'fa-house',           'label'=>'Comando Central',  'href'=>'/incubadora_ispsn/public/index.php',             'id'=>'dashboard'],
