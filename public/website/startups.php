@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'startups';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
 
 // Processo de candidatura aberto
 $processo = null;
@@ -31,12 +31,12 @@ if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['incubados'] = (int)($rowSt['total_incubados'] ?? 0);
 }
 
-// Buscar Startups JÁ SELECIONADAS na Base de Dados
+// Buscar Startups JÁ SELECIONADAS na Base de Dados (colunas validadas com database/schema.sql)
 $startups = [];
 $resProj = $mysqli->query("
-    SELECT p.id, p.titulo, p.descricao, p.problema, p.solucao, p.publico_alvo, p.modelo_negocio, p.diferencial,
+    SELECT p.id, p.titulo, p.descricao, p.problema, p.solucao,
            p.area_tematica, p.fase, p.tipo, p.estado, p.pontos, p.destaque_publico, p.criado_em,
-           u.nome AS autor, u.curso
+           u.nome AS autor
     FROM projetos p
     JOIN usuarios u ON u.id = p.criado_por
     WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')
@@ -89,10 +89,10 @@ $labelsEstado = [
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center text-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
-                     alt="Logo ISPSN"
-                     class="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
+                     alt="Logo Incubadora Sol Nascente"
+                     class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
+                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <i class="fa-solid fa-rocket text-xs text-orange-400"></i>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Ecossistema de Inovação ISPSN</span>

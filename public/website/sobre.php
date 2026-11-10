@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'sobre';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
 
 // Estatísticas reais sincronizadas com a BD
 $stats = ['startups' => 0, 'mentores' => 0, 'membros' => 0];
@@ -24,11 +24,12 @@ if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['membros']  = (int)($rowSt['total_membros']  ?? 0);
 }
 
-// Equipa & Mentores ativos sincronizados com a BD
+// Equipa & Mentores ativos sincronizados com a BD (colunas validadas com database/schema.sql)
 $equipa = [];
-$resEq = $mysqli->query("
-    SELECT u.nome, u.perfil, COALESCE(m.area_especialidade, u.departamento, 'Inovação & Empreendedorismo') AS area,
-           COALESCE(m.empresa, 'ISPSN') AS instituicao
+$resEq = @$mysqli->query("
+    SELECT u.nome, u.perfil,
+           COALESCE(NULLIF(m.especialidade, ''), 'Inovação & Empreendedorismo') AS area,
+           'ISPSN — Sol Nascente' AS instituicao
     FROM usuarios u
     LEFT JOIN mentores m ON m.id_usuario = u.id
     WHERE u.activo = 1 AND u.perfil IN ('admin', 'funcionario', 'mentor')
@@ -69,10 +70,10 @@ $bannerSobre = resolver_imagem_site(get_config('sobre_imagem', ''), $fallbackBlo
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center text-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
-                     alt="Logo ISPSN"
+                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
+                     alt="Logo Incubadora Sol Nascente"
                      class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Página Institucional · HONOR · LABOR · MERITUM</span>

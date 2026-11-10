@@ -19,15 +19,15 @@ $fWaDigits = preg_replace('/\D+/', '', $fTelefone) ?: '244923000000';
             <div class="sm:col-span-2 lg:col-span-1">
                 <a href="/incubadora_ispsn/public/website/index.php" class="flex items-center gap-3 mb-4">
                     <div class="relative">
-                        <div class="absolute inset-0 bg-orange-500 rounded-full blur-md opacity-20"></div>
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
-                             alt="Logo Incubadora ISPSN"
-                             class="relative w-10 h-10 object-contain"
-                             onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                        <div class="absolute inset-0 bg-amber-400 rounded-full blur-md opacity-25"></div>
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
+                             alt="Logo Incubadora de Empresas Sol Nascente"
+                             class="relative w-11 h-11 object-contain"
+                             onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-white leading-tight">Incubadora Académica</p>
-                        <p class="text-xs text-orange-400 font-semibold tracking-wide">do ISPSN</p>
+                        <p class="text-sm font-bold text-white leading-tight">Incubadora de Empresas</p>
+                        <p class="text-xs text-amber-400 font-semibold tracking-wide">Sol Nascente · ISPSN</p>
                     </div>
                 </a>
                 <p class="text-gray-400 text-sm leading-relaxed mb-6 max-w-xs">

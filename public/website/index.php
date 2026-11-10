@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'inicio';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
 
 // 1. Processo de candidatura aberto
 $processo = null;
@@ -106,21 +106,26 @@ $labelsEstado = [
     <?php require __DIR__ . '/partials/_navbar.php'; ?>
 
     <main class="flex-1">
-        <!-- 1. HERO SECTION (Padrão IPIL + Identidade ISPSN) -->
+        <!-- 1. HERO SECTION (Padrão IPIL + Identidade Humana Sol Nascente ISPSN) -->
         <section id="home" class="relative flex flex-col items-center justify-center text-white text-center overflow-hidden min-h-screen px-4">
             <img src="<?= htmlspecialchars($heroImg) ?>"
-                 alt="Incubadora Académica ISPSN"
-                 class="absolute inset-0 w-full h-full object-cover"
-                 onerror="this.onerror=null;this.src='<?= $fallbackGenImg ?>';">
-            <div class="absolute inset-0 bg-linear-to-b from-black/85 via-black/60 to-black/75"></div>
+                 alt="Incubadora de Empresas Sol Nascente — ISPSN"
+                 class="absolute inset-0 w-full h-full object-cover object-center"
+                 onerror="this.onerror=null;this.src='<?= $fallbackBlogImg ?>';">
+            <div class="absolute inset-0 bg-linear-to-b from-black/85 via-black/60 to-black/80"></div>
+            <!-- Aura Sol Nascente inspirada nos raios dourados do logótipo oficial -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-orange-500/15 rounded-full blur-3xl pointer-events-none"></div>
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 max-w-3xl px-4 sm:px-6 py-20">
                 <div class="flex items-center justify-center mb-6">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
-                         alt="Logo ISPSN"
-                         class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-2xl"
-                         onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
+                        <img src="/incubadora_ispsn/assets/img/logo_sn_dark_bg.png"
+                             alt="Incubadora de Empresas Sol Nascente — ISPSN"
+                             class="relative h-20 sm:h-24 w-auto object-contain drop-shadow-2xl"
+                             onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
+                    </div>
                 </div>
 
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-6">
@@ -209,12 +214,15 @@ $labelsEstado = [
                     <div class="w-full md:w-1/2 relative">
                         <div class="absolute -bottom-6 -left-6 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
                         <div class="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-xl">
-                            <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png"
-                                 alt="Inovação e Criatividade ISPSN"
+                            <img src="/incubadora_ispsn/assets/img/hero_humano_sn.jpg"
+                                 alt="Talento Humano e Inovação — Incubadora Sol Nascente ISPSN"
                                  class="w-full h-64 sm:h-80 md:h-96 object-cover hover:scale-105 transition-transform duration-700">
-                            <div class="absolute bottom-4 left-4 bg-black/75 backdrop-blur-sm text-white px-4 py-2.5 rounded-xl border border-white/10">
-                                <p class="text-xs text-orange-400 font-semibold">HONOR · LABOR · MERITUM</p>
-                                <p class="text-sm font-bold">Incubadora Académica ISPSN</p>
+                            <div class="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/80 backdrop-blur-md text-white px-4 py-3 rounded-xl border border-white/15 flex items-center gap-3">
+                                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png" alt="SN" class="w-9 h-9 object-contain shrink-0">
+                                <div>
+                                    <p class="text-[11px] text-amber-400 font-semibold tracking-wider">HONOR · LABOR · MERITUM</p>
+                                    <p class="text-sm font-bold">Incubadora de Empresas Sol Nascente</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -595,18 +603,18 @@ $labelsEstado = [
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto">
                     <?php
                     $parceiros = [
-                        ['nome' => 'ISPSN — Sol Nascente',       'sub' => 'Ensino Superior'],
-                        ['nome' => 'GTI — Educa Futuro',         'sub' => 'Tecnologia & Inovação'],
-                        ['nome' => 'Investigação Científica',    'sub' => 'Laboratórios & Pesquisa'],
-                        ['nome' => 'Extensão Universitária',     'sub' => 'Impacto Comunitário'],
+                        ['nome' => 'Incubadora Sol Nascente',    'sub' => 'Empreendedorismo & Inovação', 'img' => '/incubadora_ispsn/assets/img/logo_sn_oficial.png'],
+                        ['nome' => 'Educa Futuro Huambo',        'sub' => 'HONOR · LABOR · MERITUM',     'img' => '/incubadora_ispsn/assets/img/galeria/gal_1777456481.png'],
+                        ['nome' => 'ISPSN — Ensino Superior',    'sub' => 'Investigação Científica',     'img' => '/incubadora_ispsn/assets/img/logo_sn_bulb_light.png'],
+                        ['nome' => 'GTI — Tecnologia',           'sub' => 'Transformação Digital',       'img' => '/incubadora_ispsn/assets/img/logo_sn_oficial.png'],
                     ];
                     foreach ($parceiros as $parc):
                     ?>
                         <div class="group bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-300">
-                            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
+                            <img src="<?= $parc['img'] ?>"
                                  alt="<?= htmlspecialchars($parc['nome']) ?>"
                                  class="h-12 w-auto object-contain mx-auto mb-3 grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
-                                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_oficial.png';">
                             <p class="text-xs font-bold text-gray-800 group-hover:text-orange-600 transition-colors"><?= htmlspecialchars($parc['nome']) ?></p>
                             <p class="text-[11px] text-gray-400 mt-0.5"><?= htmlspecialchars($parc['sub']) ?></p>
                         </div>
