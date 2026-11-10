@@ -2,15 +2,15 @@
 define('NO_SESSION', true);
 require_once __DIR__ . '/../../config/config.php';
 
-// Cache curto para refletir rapidamente alterações feitas no painel Admin
 header('Cache-Control: public, max-age=30, s-maxage=60, stale-while-revalidate=120');
 header('Vary: Accept-Encoding');
 
-$css_version = ASSET_VERSION;
+$css_version     = ASSET_VERSION;
+$activePage      = 'inicio';
 $fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
-// 1. Buscar processo de candidatura aberto
+// 1. Processo de candidatura aberto
 $processo = null;
 $resProc = $mysqli->query("SELECT * FROM processos_candidatura WHERE estado='aberto' ORDER BY criado_em DESC LIMIT 1");
 if ($resProc) {
@@ -18,7 +18,6 @@ if ($resProc) {
 }
 
 // 2. Estatísticas reais sincronizadas em tempo real com a Base de Dados do Sistema
-// Contabiliza apenas startups já selecionadas/aprovadas e utilizadores ativos
 $stats = ['startups' => 0, 'mentores' => 0, 'incubados' => 0, 'membros' => 0];
 $resStats = $mysqli->query("
     SELECT
@@ -53,32 +52,30 @@ if ($resProj) {
     }
 }
 
-// 4. Buscar publicações recentes
+// 4. Publicações recentes
 $noticias = [];
-$resNot = $mysqli->query("SELECT * FROM publicacoes_website WHERE status='publicado' ORDER BY criado_em DESC LIMIT 4");
+$resNot = $mysqli->query("SELECT * FROM publicacoes_website WHERE status='publicado' ORDER BY criado_em DESC LIMIT 3");
 if ($resNot) {
     while ($row = $resNot->fetch_assoc()) {
         $noticias[] = $row;
     }
 }
 
-// 5. Buscar galeria
+// 5. Galeria
 $galeria = [];
-$resGal = $mysqli->query("SELECT * FROM galeria_website WHERE ativo=1 ORDER BY ordem ASC, criado_em DESC LIMIT 8");
+$resGal = $mysqli->query("SELECT * FROM galeria_website WHERE ativo=1 ORDER BY ordem ASC, criado_em DESC LIMIT 6");
 if ($resGal) {
     while ($row = $resGal->fetch_assoc()) {
         $galeria[] = $row;
     }
 }
 
-// Configurações dinâmicas geridas no painel Admin (com fallback oficial ISPSN)
-$heroBadge     = get_config('hero_badge', 'O Futuro Começa Aqui no ISPSN');
+// Configurações dinâmicas ISPSN
+$heroBadge     = get_config('hero_badge', 'Inovação · Empreendedorismo · Tecnologia');
 $heroSubtitulo = get_config('hero_subtitulo', 'Aceleramos o talento académico angolano através de mentoria, recursos e um ecossistema focado no sucesso empresarial.');
 $textoMissao   = get_config('missao', 'Promover o desenvolvimento das competências profissionais, científicas e tecnológicas dos futuros líderes, através de um ensino superior inovador e de qualidade, fundado nos valores do humanismo e da responsabilidade individual.');
 $textoVisao    = get_config('visao', 'Promover ensino de qualidade e rigor no âmbito interdisciplinar, a investigação, a formação avançada e a extensão universitária.');
-$emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
-$telContacto   = get_config('contacto_telefone', '+244 923 000 000');
-$endContacto   = get_config('contacto_endereco', 'Huambo, Angola');
+$heroImg       = resolver_imagem_site(get_config('hero_imagem', ''), $fallbackBlogImg);
 
 $labelsFase = [
     'ideacao'   => 'Ideação',
@@ -88,607 +85,539 @@ $labelsFase = [
     'mercado'   => 'Mercado',
 ];
 $labelsEstado = [
-    'submetido'          => 'Em Triagem',
-    'em_avaliacao'       => 'Em Avaliação',
-    'aprovado'           => 'Aprovada',
+    'aprovado'           => 'Selecionada',
     'incubado'           => 'Incubada',
     'fundo_investimento' => 'Investimento',
     'concluido'          => 'Graduada',
 ];
 ?>
 <!DOCTYPE html>
-<html lang="pt-pt">
+<html lang="pt-PT">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= htmlspecialchars(get_config('site_titulo', 'Incubadora Académica ISPSN — Onde as Ideias se Tornam Realidade')) ?></title>
-<meta name="description" content="<?= htmlspecialchars($heroSubtitulo) ?>">
-
-<!-- Bootstrap 5 -->
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-<!-- Fonts & Icons -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-<!-- AOS Animation Library -->
-<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-
-<link rel="stylesheet" href="/incubadora_ispsn/public/website/assets/style.css?v=<?= $css_version ?>">
-<style>
-.startup-showcase-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 28px;
-}
-.startup-card-pub {
-    background: #FFFFFF;
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 28px;
-    box-shadow: var(--shadow);
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-.startup-card-pub:hover {
-    transform: translateY(-6px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--primary);
-}
-.startup-badge-area {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 0.74rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    background: var(--primary-light);
-    color: var(--primary-dark);
-}
-.startup-badge-fase {
-    display: inline-flex;
-    align-items: center;
-    padding: 5px 12px;
-    border-radius: 999px;
-    font-size: 0.74rem;
-    font-weight: 700;
-    background: #F1F5F9;
-    color: #334155;
-}
-.edital-live-banner {
-    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-    border: 1px solid rgba(251, 191, 36, 0.35);
-    border-radius: 24px;
-    padding: 32px 40px;
-    color: #FFFFFF;
-    margin-top: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 24px;
-    box-shadow: var(--shadow-lg);
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars(get_config('site_titulo', 'Incubadora Académica do ISPSN')) ?></title>
+    <meta name="description" content="<?= htmlspecialchars($heroSubtitulo) ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="/incubadora_ispsn/public/website/assets/style.css?v=<?= $css_version ?>">
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-poppins">
+<div class="flex flex-col min-h-screen bg-gray-50">
 
-<!-- NAVBAR -->
-<nav class="navbar" id="navbar">
-    <div class="nav-container">
-        <a href="/incubadora_ispsn/public/website/" class="nav-logo">
-            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
-        </a>
-        <div class="nav-links">
-            <a href="#hero">Início</a>
-            <a href="sobre.php">Sobre Nós</a>
-            <a href="#startups">Startups</a>
-            <a href="#adn">Ecossistema</a>
-            <a href="#noticias">Notícias</a>
-            <a href="#galeria">Galeria</a>
-            <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
-            <a href="/incubadora_ispsn/public/login.php" class="nav-item">Portal <i class="fa fa-arrow-right small ms-1"></i></a>
-        </div>
-        
-        <button class="nav-hamburger" id="hamburger">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-    </div>
-</nav>
+    <?php require __DIR__ . '/partials/_navbar.php'; ?>
 
-<!-- MENU MOBILE OVERLAY -->
-<div class="nav-mobile" id="navMobile">
-    <a href="#hero" onclick="toggleMobileMenu()">Início</a>
-    <a href="sobre.php" onclick="toggleMobileMenu()">Sobre Nós</a>
-    <a href="#startups" onclick="toggleMobileMenu()">Startups</a>
-    <a href="#adn" onclick="toggleMobileMenu()">Ecossistema</a>
-    <a href="#noticias" onclick="toggleMobileMenu()">Notícias</a>
-    <a href="#galeria" onclick="toggleMobileMenu()">Galeria</a>
-    <a href="/incubadora_ispsn/public/website/candidatura.php" class="nav-cta-solid mt-3 text-center" onclick="toggleMobileMenu()"><i class="fa fa-rocket me-2"></i> Candidatar-se</a>
-    <a href="/incubadora_ispsn/public/login.php" class="nav-portal-mobile" onclick="toggleMobileMenu()"><i class="fa fa-user-shield me-2"></i> ACESSO AO PORTAL</a>
-</div>
+    <main class="flex-1">
+        <!-- 1. HERO SECTION (Padrão IPIL + Identidade ISPSN) -->
+        <section id="home" class="relative flex flex-col items-center justify-center text-white text-center overflow-hidden min-h-screen px-4">
+            <img src="<?= htmlspecialchars($heroImg) ?>"
+                 alt="Incubadora Académica ISPSN"
+                 class="absolute inset-0 w-full h-full object-cover"
+                 onerror="this.onerror=null;this.src='<?= $fallbackGenImg ?>';">
+            <div class="absolute inset-0 bg-linear-to-b from-black/85 via-black/60 to-black/75"></div>
+            <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
-<!-- HERO SECTION -->
-<section class="hero" id="hero">
-    <div class="hero-video-bg"></div>
-    <div class="hero-overlay"></div>
-    <div class="hero-content" data-aos="fade-up" data-aos-duration="1200">
-        <div class="hero-badge"><i class="fa fa-sparkles me-2"></i> <?= htmlspecialchars($heroBadge) ?></div>
-        <h1 class="hero-title">
-            Onde as <span class="hero-gradient">Ideias</span> Ganham <span class="hero-gradient">Asas</span>
-        </h1>
-        <p class="hero-subtitle">
-            <?= htmlspecialchars($heroSubtitulo) ?>
-        </p>
-        <div class="hero-btns">
-            <a href="/incubadora_ispsn/public/website/candidatura.php" class="btn-hero-primary">
-                <i class="fa fa-paper-plane me-2"></i> <?= $processo ? 'Candidatar ao Edital Aberto' : 'Submeter Candidatura' ?>
-            </a>
-            <a href="#startups" class="btn-hero-secondary">
-                Conhecer Startups (<?= (int)$stats['startups'] ?>)
-            </a>
-        </div>
-    </div>
-</section>
+            <div class="relative z-10 max-w-3xl px-4 sm:px-6 py-20">
+                <div class="flex items-center justify-center mb-6">
+                    <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
+                         alt="Logo ISPSN"
+                         class="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-2xl"
+                         onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                </div>
 
-<!-- IMPACT STATS (SINCRONIZADO EM TEMPO REAL COM O SISTEMA) -->
-<div class="stats-overlap" data-aos="zoom-in">
-    <div class="stats-container">
-        <div class="stat-item"><div class="stat-number" data-target="<?= (int)$stats['startups'] ?>"><?= (int)$stats['startups'] ?></div><div class="stat-label">Startups</div></div>
-        <div class="stat-divider"></div>
-        <div class="stat-item"><div class="stat-number" data-target="<?= (int)$stats['mentores'] ?>"><?= (int)$stats['mentores'] ?></div><div class="stat-label">Mentores</div></div>
-        <div class="stat-divider"></div>
-        <div class="stat-item"><div class="stat-number" data-target="<?= (int)$stats['incubados'] ?>"><?= (int)$stats['incubados'] ?></div><div class="stat-label">Incubados</div></div>
-        <div class="stat-divider"></div>
-        <div class="stat-item"><div class="stat-number" data-target="<?= (int)$stats['membros'] ?>"><?= (int)$stats['membros'] ?></div><div class="stat-label">Empreendedores</div></div>
-    </div>
-</div>
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-6">
+                    <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+                    <span class="text-orange-300 text-xs sm:text-sm font-medium tracking-wide"><?= htmlspecialchars($heroBadge) ?></span>
+                </div>
 
-<!-- VITRINE DE STARTUPS & PROJETOS DO ECOSSISTEMA (SINCRONIZADA COM A BD) -->
-<section id="startups" style="padding: 100px 0 60px; background: var(--bg);">
-    <div class="section-container">
-        <div class="section-header d-flex justify-content-between align-items-end flex-wrap gap-3" data-aos="fade-up">
-            <div>
-                <span class="section-eyebrow">Portfólio Académico</span>
-                <h2 class="section-title">Startups &amp; Inovação no ISPSN</h2>
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-5 leading-tight tracking-tight font-poppins">
+                    Incubadora Académica <span class="text-orange-400">do ISPSN</span>
+                </h1>
+
+                <p class="text-sm sm:text-base md:text-lg mb-10 text-gray-300 leading-relaxed max-w-2xl mx-auto">
+                    <?= htmlspecialchars($heroSubtitulo) ?>
+                </p>
+
+                <div class="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                    <a href="/incubadora_ispsn/public/website/candidatura.php"
+                       class="flex items-center gap-2 px-7 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer text-sm sm:text-base w-full sm:w-auto justify-center">
+                        <i class="fa-solid fa-rocket text-xs"></i>
+                        <span><?= $processo ? 'Candidatar ao Edital Aberto' : 'Submeter Candidatura' ?></span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                    <a href="/incubadora_ispsn/public/website/startups.php"
+                       class="flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-xl border border-white/20 transition-all duration-300 hover:scale-105 cursor-pointer text-sm sm:text-base w-full sm:w-auto">
+                        <span>Startups Selecionadas (<?= (int)$stats['startups'] ?>)</span>
+                    </a>
+                </div>
             </div>
-            <a href="/incubadora_ispsn/public/website/candidatura.php" class="btn-nexus">
-                <i class="fa fa-rocket me-2"></i> Inscrever a Minha Ideia
-            </a>
-        </div>
 
-        <?php if (empty($projetos)): ?>
-            <div class="text-center py-5 bg-white rounded-4 border p-5">
-                <i class="fa fa-rocket fa-3x text-warning mb-3 d-block"></i>
-                <h4 class="fw-bold">Seja a próxima Startup em destaque no ISPSN</h4>
-                <p class="text-muted mb-4">Submeta a sua proposta de negócio ou inovação tecnológica para avaliação pela Comissão Técnica.</p>
-                <a href="/incubadora_ispsn/public/website/candidatura.php" class="btn-hero-primary">Candidatar Agora</a>
+            <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none">
+                <span class="text-white/40 text-xs tracking-widest uppercase">scroll</span>
+                <div class="w-px h-8 bg-linear-to-b from-white/40 to-transparent"></div>
             </div>
-        <?php else: ?>
-            <div class="startup-showcase-grid">
-                <?php foreach ($projetos as $idxP => $proj):
-                    $faseKey   = (string)($proj['fase'] ?? 'ideacao');
-                    $estadoKey = (string)($proj['estado'] ?? 'submetido');
-                    $faseTxt   = $labelsFase[$faseKey]     ?? ucfirst($faseKey);
-                    $estadoTxt = $labelsEstado[$estadoKey] ?? ucfirst($estadoKey);
-                    $areaTxt   = ucfirst((string)($proj['area_tematica'] ?? 'Tecnologia'));
-                ?>
-                    <div class="startup-card-pub" data-aos="fade-up" data-aos-delay="<?= ($idxP % 3) * 80 ?>">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                                <span class="startup-badge-area">
-                                    <i class="fa fa-bolt"></i> <?= htmlspecialchars($areaTxt) ?>
-                                </span>
-                                <span class="startup-badge-fase">
-                                    Fase: <?= htmlspecialchars($faseTxt) ?> · <?= htmlspecialchars($estadoTxt) ?>
-                                </span>
-                            </div>
-                            <h4 class="fw-bold mb-2" style="color: var(--dark); font-size: 1.25rem;">
-                                <?= htmlspecialchars($proj['titulo']) ?>
-                            </h4>
-                            <p class="text-muted mb-4" style="font-size: 0.92rem; line-height: 1.6;">
-                                <?= htmlspecialchars(mb_strimwidth((string)($proj['descricao'] ?? ''), 0, 160, '...')) ?>
-                            </p>
+        </section>
+
+        <!-- 2. NOSSA ESTRUTURA & ADN DO SUCESSO ACADÉMICO (2 Colunas + 4 Mini-Cards) -->
+        <section id="adn" class="relative bg-white py-20 sm:py-28 overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-80 h-80 bg-orange-100 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
+            <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col-reverse md:flex-row items-center gap-12 lg:gap-20">
+                    <div class="w-full md:w-1/2 space-y-6">
+                        <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase">Nosso Conceito</span>
+                        <h2 class="text-3xl sm:text-4xl font-bold text-black leading-snug">
+                            O ADN do <span class="text-orange-500">Sucesso Académico</span>
+                        </h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            <span class="text-orange-500 font-semibold">Na Incubadora Académica do ISPSN</span>, transformamos o conhecimento académico e científico em valor real de mercado. O nosso ecossistema no Huambo foi desenhado para apoiar estudantes e pré-licenciados em todas as etapas do negócio.
+                        </p>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <?php
+                            $adnItems = [
+                                ['icon' => 'fa-puzzle-piece',  'title' => 'Criatividade',   'desc' => 'Soluções inovadoras e científicas para problemas reais.'],
+                                ['icon' => 'fa-chart-line',    'title' => 'Oportunidade',   'desc' => 'Acesso direto a mercados, parceiros e investidores.'],
+                                ['icon' => 'fa-brain',         'title' => 'Conhecimento',   'desc' => 'Mentoria técnica e acompanhamento de alto nível académico.'],
+                                ['icon' => 'fa-shield-halved', 'title' => 'Resiliência',    'desc' => 'Suporte estruturado desde a ideação até à entrada no mercado.'],
+                            ];
+                            foreach ($adnItems as $item):
+                            ?>
+                                <div class="flex gap-4 items-start bg-gray-50 border border-gray-100 rounded-2xl p-5 hover:shadow-md hover:border-orange-200 transition-all duration-300 group">
+                                    <div class="bg-orange-500 group-hover:bg-orange-600 p-2.5 rounded-xl shrink-0 transition-colors duration-300 text-white flex items-center justify-center w-10 h-10">
+                                        <i class="fa-solid <?= $item['icon'] ?> text-sm"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-bold text-black mb-1"><?= $item['title'] ?></h3>
+                                        <p class="text-gray-500 text-xs leading-relaxed"><?= $item['desc'] ?></p>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
-                        <div class="pt-3 border-top d-flex justify-content-between align-items-center" style="border-color: var(--border) !important; font-size: 0.84rem;">
-                            <span class="text-muted">
-                                <i class="fa fa-user-graduate text-warning me-1"></i>
-                                <strong><?= htmlspecialchars($proj['autor']) ?></strong>
-                            </span>
-                            <span class="fw-bold" style="color: var(--primary);">
-                                <i class="fa fa-trophy me-1"></i><?= (int)($proj['pontos'] ?? 0) ?> SP
-                            </span>
+
+                        <div class="pt-2 flex flex-wrap gap-3">
+                            <a href="/incubadora_ispsn/public/website/sobre.php"
+                               class="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md shadow-orange-200 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 text-sm sm:text-base">
+                                <span>Conheça a nossa história</span>
+                                <i class="fa-solid fa-building-columns text-xs"></i>
+                            </a>
+                            <a href="/incubadora_ispsn/public/website/candidatura.php"
+                               class="inline-flex items-center gap-2 bg-gray-100 hover:bg-orange-50 text-gray-800 hover:text-orange-600 border border-gray-200 hover:border-orange-200 px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm sm:text-base">
+                                <i class="fa-solid fa-rocket text-xs text-orange-500"></i>
+                                <span>Inscrever Ideia</span>
+                            </a>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
 
-        <?php if ($processo): ?>
-            <div class="edital-live-banner" data-aos="fade-up">
-                <div>
-                    <span class="badge bg-warning text-dark fw-bold mb-2 px-3 py-1 rounded-pill">
-                        <i class="fa fa-bullhorn me-1"></i> EDITAL ABERTO
-                    </span>
-                    <h3 class="fw-bold mb-1"><?= htmlspecialchars($processo['titulo']) ?></h3>
-                    <p class="mb-0 text-white-50" style="max-width: 680px;">
-                        <?= htmlspecialchars($processo['descricao'] ?: 'Estão abertas as candidaturas para novos projetos de estudantes e pré-licenciados do ISPSN.') ?>
-                        <?php if (!empty($processo['data_fim'])): ?>
-                            · Encerra em <strong><?= date('d/m/Y', strtotime($processo['data_fim'])) ?></strong>
-                        <?php endif; ?>
+                    <div class="w-full md:w-1/2 relative">
+                        <div class="absolute -bottom-6 -left-6 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                        <div class="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-xl">
+                            <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png"
+                                 alt="Inovação e Criatividade ISPSN"
+                                 class="w-full h-64 sm:h-80 md:h-96 object-cover hover:scale-105 transition-transform duration-700">
+                            <div class="absolute bottom-4 left-4 bg-black/75 backdrop-blur-sm text-white px-4 py-2.5 rounded-xl border border-white/10">
+                                <p class="text-xs text-orange-400 font-semibold">HONOR · LABOR · MERITUM</p>
+                                <p class="text-sm font-bold">Incubadora Académica ISPSN</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. POR QUE NOS ESCOLHER / NOSSOS DIFERENCIAIS (Grelha 3x2 de 6 Cards) -->
+        <section class="py-20 sm:py-28 bg-white border-t border-gray-100">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-14">
+                    <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">Por que nos escolher</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold text-black mb-4">
+                        Nossos <span class="text-orange-500">Diferenciais</span>
+                    </h2>
+                    <p class="text-gray-500 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+                        O que torna o ecossistema de inovação e empreendedorismo do Instituto Superior Politécnico Sol Nascente único
                     </p>
                 </div>
-                <a href="/incubadora_ispsn/public/website/candidatura.php" class="btn-hero-primary">
-                    <i class="fa fa-paper-plane me-2"></i> Submeter Candidatura
-                </a>
-            </div>
-        <?php endif; ?>
-    </div>
-</section>
 
-<!-- ADN DA INOVAÇÃO -->
-<section class="adn-section" id="adn">
-    <div class="section-container">
-        <div class="adn-grid">
-            <div class="adn-visual" data-aos="fade-right">
-                <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png" alt="Inovação ISPSN" class="adn-img-main">
-                <div class="adn-floating-box" data-aos="zoom-in" data-aos-delay="400">
-                    <i class="fa fa-lightbulb fa-2x mb-3"></i>
-                    <h4>Pensa Grande</h4>
-                    <p class="small mb-0">Nós ajudamos a encaixar as peças do teu sucesso empresarial.</p>
-                </div>
-            </div>
-            <div class="adn-content" data-aos="fade-left">
-                <span class="section-eyebrow">Nosso Conceito</span>
-                <h2 class="section-title">O ADN do Sucesso Académico</h2>
-                <p class="mt-4 mb-5" style="font-size:1.15rem; color:var(--text-muted)">Na Incubadora ISPSN, transformamos o conhecimento académico em valor de mercado. Nosso ecossistema foi desenhado para quem não tem medo de desafios.</p>
-                <div class="adn-features">
-                    <div class="adn-feat">
-                        <i class="fa fa-puzzle-piece"></i>
-                        <h5 class="fw-bold">Criatividade</h5>
-                        <p class="small text-muted">Soluções fora da caixa para problemas reais.</p>
-                    </div>
-                    <div class="adn-feat">
-                        <i class="fa fa-chart-line"></i>
-                        <h5 class="fw-bold">Oportunidade</h5>
-                        <p class="small text-muted">Acesso a mercados e investidores estratégicos.</p>
-                    </div>
-                    <div class="adn-feat">
-                        <i class="fa fa-brain"></i>
-                        <h5 class="fw-bold">Conhecimento</h5>
-                        <p class="small text-muted">Mentoria técnica de alto nível académico.</p>
-                    </div>
-                    <div class="adn-feat">
-                        <i class="fa fa-shield-halved"></i>
-                        <h5 class="fw-bold">Resiliência</h5>
-                        <p class="small text-muted">Suporte total em todas as fases do negócio.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- SEÇÃO PROPÓSITO - BENTO CREATIVE -->
-<section class="propósito-bento" id="mvv">
-    <div class="section-container">
-        <div class="bento-header" data-aos="fade-down">
-            <span class="bento-tag">HONOR – LABOR – MERITUM</span>
-            <h2 class="bento-title">Nossa Base &amp; <span class="text-warning">Propósito</span></h2>
-            <p class="mt-4 opacity-75" style="font-size: 1.1rem;">
-                O SOL NASCENTE não pretende ser apenas mais uma instituição de ensino superior, mas uma realidade universitária distinta. Essa distinção é sustentada pela nossa missão, visão e valores.
-            </p>
-        </div>
-
-        <div class="bento-grid">
-            <div class="bento-card b-main" data-aos="fade-right">
-                <div class="b-card-content">
-                    <div class="b-icon-box"><i class="fa fa-bullseye"></i></div>
-                    <h3>Missão</h3>
-                    <p><?= htmlspecialchars($textoMissao) ?></p>
-                </div>
-            </div>
-
-            <div class="bento-card b-visao" data-aos="fade-up" data-aos-delay="100">
-                <div class="b-icon-box"><i class="fa fa-eye"></i></div>
-                <div class="b-card-content">
-                    <h4>Visão</h4>
-                    <p><?= htmlspecialchars($textoVisao) ?></p>
-                </div>
-            </div>
-
-            <div class="bento-card b-valores" data-aos="fade-left" data-aos-delay="200">
-                <div class="b-card-content">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4>Valores Fundamentais</h4>
-                        <div class="b-icon-circle"><i class="fa fa-balance-scale"></i></div>
-                    </div>
-                    <div class="row g-4">
-                        <div class="col-md-4">
-                            <h6 class="fw-bold mb-2">Cientificismo</h6>
-                            <p class="small opacity-75">Construção e produção de conhecimento científico real.</p>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="fw-bold mb-2">Humanismo</h6>
-                            <p class="small opacity-75">Ciência despida de preconceitos, focada no valor humano.</p>
-                        </div>
-                        <div class="col-md-4">
-                            <h6 class="fw-bold mb-2">Responsabilidade</h6>
-                            <p class="small opacity-75">Formar indivíduos capazes de exercer liberdade com consciência.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="text-center mt-5">
-            <a href="sobre.php" class="btn-nexus">Ler História Completa <i class="fa fa-arrow-right ms-2"></i></a>
-        </div>
-    </div>
-</section>
-
-<!-- NOTÍCIAS -->
-<section class="news-section" id="noticias">
-    <div class="section-container">
-        <div class="section-header d-flex justify-content-between align-items-end" data-aos="fade-up">
-            <div>
-                <span class="section-eyebrow">Sala de Visitas</span>
-                <h2 class="section-title">Actualidade &amp; Eventos</h2>
-            </div>
-        </div>
-        
-        <div class="news-layout">
-            <?php if (empty($noticias)): ?>
-                <div class="text-center py-5 opacity-50 w-100"><p>Fique atento às nossas novidades em breve.</p></div>
-            <?php else: ?>
-                <!-- Notícia em Destaque (Esquerda) -->
-                <div class="news-featured" data-aos="fade-right">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                     <?php
-                    $feat    = $noticias[0];
-                    $featImg = resolver_imagem_site($feat['imagem'] ?? '', $fallbackBlogImg);
+                    $diferenciais = [
+                        ['icon' => 'fa-network-wired',  'title' => 'Rede Colaborativa',    'desc' => 'Conectamos estudantes, mentores e investidores para criar oportunidades reais de negócio.', 'accent' => 'bg-orange-50 text-orange-500 border-orange-100'],
+                        ['icon' => 'fa-chart-pie',      'title' => 'Apoio Estratégico',    'desc' => 'Orientação contínua em validação de modelo de negócio, gestão, tecnologia e finanças.',       'accent' => 'bg-blue-50 text-blue-500 border-blue-100'],
+                        ['icon' => 'fa-crosshairs',     'title' => 'Foco na Inovação',     'desc' => 'Soluções criativas, científicas e tecnológicas com impacto social e económico sustentável.', 'accent' => 'bg-purple-50 text-purple-500 border-purple-100'],
+                        ['icon' => 'fa-graduation-cap', 'title' => 'Mentores Experientes', 'desc' => 'Acompanhamento personalizado por docentes e especialistas para consolidar a sua startup.',     'accent' => 'bg-green-50 text-green-500 border-green-100'],
+                        ['icon' => 'fa-award',          'title' => 'Captação de Recursos', 'desc' => 'Preparamos o seu pitch e apoiamos na atração de financiamento público e privado.',           'accent' => 'bg-amber-50 text-amber-500 border-amber-100'],
+                        ['icon' => 'fa-globe',          'title' => 'Impacto Nacional',     'desc' => 'Projetos nascidos na academia com visão de escala para todo o mercado angolano.',            'accent' => 'bg-indigo-50 text-indigo-500 border-indigo-100'],
+                    ];
+                    foreach ($diferenciais as $dif):
                     ?>
-                    <a href="noticia.php?id=<?= (int)$feat['id'] ?>" class="feat-img-link">
-                        <img src="<?= htmlspecialchars($featImg) ?>" alt="Destaque" onerror="this.onerror=null;this.src='<?= $fallbackBlogImg ?>';">
-                    </a>
-                    <div class="feat-badge">Em destaque</div>
-                    <div class="feat-overlay">
-                        <h3 class="feat-title"><?= htmlspecialchars($feat['titulo']) ?></h3>
-                        <p class="feat-excerpt"><?= htmlspecialchars($feat['resumo']) ?></p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <a href="noticia.php?id=<?= (int)$feat['id'] ?>" class="btn-feat-more">Ler mais</a>
-                            <span class="feat-date"><?= date('d/m/Y', strtotime($feat['criado_em'])) ?></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Notícias Secundárias (Direita) -->
-                <div class="news-side-grid">
-                    <?php for ($i = 1; $i < count($noticias); $i++):
-                        $n    = $noticias[$i];
-                        $nImg = resolver_imagem_site($n['imagem'] ?? '', $fallbackBlogImg);
-                    ?>
-                    <div class="news-side-card" data-aos="fade-up" data-aos-delay="<?= $i * 100 ?>">
-                        <a href="noticia.php?id=<?= (int)$n['id'] ?>" class="side-card-img">
-                            <img src="<?= htmlspecialchars($nImg) ?>" alt="Notícia" onerror="this.onerror=null;this.src='<?= $fallbackBlogImg ?>';">
-                        </a>
-                        <div class="side-card-body">
-                            <h5 class="side-card-title"><?= htmlspecialchars($n['titulo']) ?></h5>
-                            <p class="side-card-excerpt"><?= htmlspecialchars($n['resumo']) ?></p>
-                            <div class="side-card-footer">
-                                <a href="noticia.php?id=<?= (int)$n['id'] ?>" class="side-card-link">LER MAIS</a>
-                                <span class="side-card-date"><?= date('d/m/Y', strtotime($n['criado_em'])) ?></span>
+                        <div class="group">
+                            <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-orange-200 transition-all duration-400 h-full flex flex-col">
+                                <div class="mb-6">
+                                    <div class="w-14 h-14 rounded-2xl border flex items-center justify-center <?= $dif['accent'] ?> group-hover:scale-110 transition-transform duration-300">
+                                        <i class="fa-solid <?= $dif['icon'] ?> text-xl"></i>
+                                    </div>
+                                </div>
+                                <h3 class="text-lg font-bold text-black mb-3"><?= $dif['title'] ?></h3>
+                                <p class="text-gray-500 text-sm leading-relaxed flex-1"><?= $dif['desc'] ?></p>
+                                <div class="w-10 h-0.5 bg-gray-200 rounded-full mt-6 group-hover:w-16 group-hover:bg-orange-400 transition-all duration-500"></div>
                             </div>
                         </div>
-                    </div>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                 </div>
-            <?php endif; ?>
-        </div>
-    </div>
-</section>
+            </div>
+        </section>
 
-<!-- GALERIA -->
-<section class="gallery-section" id="galeria">
-    <div class="section-container">
-        <div class="section-header text-center" data-aos="fade-up">
-            <span class="section-eyebrow">Momentos ISPSN</span>
-            <h2 class="section-title">Nossa História em Imagens</h2>
-        </div>
-        
-        <div class="gallery-modern-grid">
-            <?php if (empty($galeria)): ?>
-                <div class="col-12 text-center py-5 text-muted"><i class="fa fa-images fa-3x mb-3 opacity-50 d-block"></i><p>Fique atento às fotos dos nossos eventos e momentos em breve.</p></div>
-            <?php else: ?>
-                <?php foreach ($galeria as $i => $g): 
-                    $bentoClass = '';
-                    if ($i % 5 == 0) $bentoClass = 'g-wide';
-                    elseif ($i % 5 == 3) $bentoClass = 'g-tall';
-                    $galImg = resolver_imagem_site($g['imagem'] ?? '', $fallbackGenImg);
-                ?>
-                <div class="gallery-card <?= $bentoClass ?>" data-aos="fade-up" data-aos-delay="<?= $i * 50 ?>" onclick="openLightbox('<?= htmlspecialchars($galImg, ENT_QUOTES) ?>')">
-                    <div class="gallery-photo">
-                        <img src="<?= htmlspecialchars($galImg) ?>" alt="<?= htmlspecialchars($g['titulo'] ?? 'Galeria') ?>" loading="lazy" onerror="this.onerror=null;this.src='<?= $fallbackGenImg ?>';">
-                        <div class="photo-zoom"><i class="fa fa-expand"></i></div>
+        <!-- 4. RESULTADOS REAIS (Contadores Sincronizados com a BD) & PILARES ISPSN -->
+        <section class="py-20 sm:py-28 bg-gray-50">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-14">
+                    <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">Resultados em Tempo Real</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold font-poppins text-black mb-4">
+                        Impacto e <span class="text-orange-500">Propósito ISPSN</span>
+                    </h2>
+                    <p class="text-gray-500 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                        Indicadores sincronizados diretamente com o sistema de gestão da Incubadora Académica do ISPSN.
+                    </p>
+                </div>
+
+                <!-- 4 Contadores Reais da BD -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-20">
+                    <div class="bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm hover:shadow-md hover:border-orange-200 transition-all duration-300 group">
+                        <h3 class="text-4xl sm:text-5xl font-bold text-orange-500 mb-2 group-hover:scale-110 transition-transform duration-300 inline-block"><?= (int)$stats['startups'] ?></h3>
+                        <p class="text-gray-600 font-medium text-sm sm:text-base">Startups Selecionadas</p>
                     </div>
-                    <div class="gallery-caption">
-                        <h5><?= htmlspecialchars($g['titulo']) ?></h5>
-                        <p><?= htmlspecialchars($g['descricao']) ?></p>
+                    <div class="bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm hover:shadow-md hover:border-orange-200 transition-all duration-300 group">
+                        <h3 class="text-4xl sm:text-5xl font-bold text-orange-500 mb-2 group-hover:scale-110 transition-transform duration-300 inline-block"><?= (int)$stats['incubados'] ?></h3>
+                        <p class="text-gray-600 font-medium text-sm sm:text-base">Startups Incubadas</p>
+                    </div>
+                    <div class="bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm hover:shadow-md hover:border-orange-200 transition-all duration-300 group">
+                        <h3 class="text-4xl sm:text-5xl font-bold text-orange-500 mb-2 group-hover:scale-110 transition-transform duration-300 inline-block"><?= (int)$stats['mentores'] ?></h3>
+                        <p class="text-gray-600 font-medium text-sm sm:text-base">Mentores Ativos</p>
+                    </div>
+                    <div class="bg-white border border-gray-100 rounded-2xl p-8 text-center shadow-sm hover:shadow-md hover:border-orange-200 transition-all duration-300 group">
+                        <h3 class="text-4xl sm:text-5xl font-bold text-orange-500 mb-2 group-hover:scale-110 transition-transform duration-300 inline-block"><?= (int)$stats['membros'] ?></h3>
+                        <p class="text-gray-600 font-medium text-sm sm:text-base">Empreendedores</p>
                     </div>
                 </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
-    </div>
-</section>
 
-<!-- LIGHTBOX MODAL -->
-<div id="lightboxModal" onclick="closeLightbox()">
-    <span class="lightbox-close">&times;</span>
-    <img id="lightboxImg" src="" alt="Zoom">
-</div>
+                <!-- 3 Cards de Propósito Institucional ISPSN (Missão, Visão, Valores) no formato de Card do IPIL -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                    <?php
+                    $pilares = [
+                        [
+                            'initials' => 'MS',
+                            'name'     => 'Nossa Missão',
+                            'role'     => 'Formação & Liderança',
+                            'text'     => $textoMissao,
+                        ],
+                        [
+                            'initials' => 'VS',
+                            'name'     => 'Nossa Visão',
+                            'role'     => 'Excelência Interdisciplinar',
+                            'text'     => $textoVisao,
+                        ],
+                        [
+                            'initials' => 'VL',
+                            'name'     => 'Valores Fundamentais',
+                            'role'     => 'HONOR · LABOR · MERITUM',
+                            'text'     => 'Cientificismo na produção de conhecimento real, Humanismo focado na dignidade da pessoa humana e Responsabilidade Individual no exercício consciente da liberdade.',
+                        ],
+                    ];
+                    foreach ($pilares as $pil):
+                    ?>
+                        <div class="group relative">
+                            <div class="absolute -inset-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-3xl blur opacity-0 group-hover:opacity-15 transition duration-500 pointer-events-none"></div>
+                            <div class="relative bg-white p-8 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-orange-100/40 transition-all duration-500 flex flex-col h-full">
+                                <div class="text-5xl text-orange-500 font-serif leading-none mb-4 select-none">&ldquo;</div>
+                                <p class="text-gray-600 text-sm sm:text-base leading-relaxed flex-1 group-hover:text-gray-800 transition-colors duration-300">
+                                    <?= htmlspecialchars($pil['text']) ?>
+                                </p>
+                                <div class="w-full h-px bg-gray-100 group-hover:bg-orange-100 transition-colors duration-500 my-6"></div>
+                                <div class="flex items-center gap-4">
+                                    <div class="relative shrink-0">
+                                        <div class="relative w-11 h-11 bg-linear-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                            <?= $pil['initials'] ?>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-black text-sm group-hover:text-orange-600 transition-colors duration-300"><?= $pil['name'] ?></h4>
+                                        <span class="text-gray-500 text-xs group-hover:text-orange-400 transition-colors duration-300"><?= $pil['role'] ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
 
-<!-- FOOTER -->
-<footer class="footer">
-    <div class="footer-container">
-        <div class="footer-main-grid">
-            <div class="footer-brand">
-                <div class="f-logo">
-                    <a href="#hero" class="nav-logo" style="padding: 0; color: #fff;">
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="ISPSN" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+        <!-- 5. O QUE OFERECEMOS / NOSSOS SERVIÇOS (3 Cards com Barra Gradiente Superior) -->
+        <section class="py-20 sm:py-28 bg-gray-50 border-t border-gray-100">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-14">
+                    <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">O que oferecemos</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold font-poppins text-black mb-4">
+                        Nossos <span class="text-orange-500">Serviços</span>
+                    </h2>
+                    <p class="text-gray-500 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                        Oferecemos soluções completas e acompanhamento contínuo para transformar projetos académicos em empresas sólidas.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                    <?php
+                    $servicos = [
+                        [
+                            'icon'  => 'fa-table-cells-large',
+                            'title' => 'Espaços de Incubação & Cowork',
+                            'desc'  => 'Disponibilizamos salas e espaços colaborativos no ISPSN equipados para reuniões de equipa, desenvolvimento de protótipos e sessões de trabalho.',
+                        ],
+                        [
+                            'icon'  => 'fa-arrow-trend-up',
+                            'title' => 'Apoio ao Financiamento & Investidores',
+                            'desc'  => 'Auxiliamos na estruturação financeira e preparação de apresentações (Pitch Decks) perante bancas de avaliação e investidores estratégicos.',
+                        ],
+                        [
+                            'icon'  => 'fa-compass',
+                            'title' => 'Mentoria & Capacitação Intensiva',
+                            'desc'  => 'Realizamos diagnósticos de maturidade, definição de metas (OKRs), workshops e acompanhamento direto com mentores especializados.',
+                        ],
+                    ];
+                    foreach ($servicos as $srv):
+                    ?>
+                        <div class="group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-orange-100/30 hover:border-orange-200 transition-all duration-400 overflow-hidden">
+                            <div class="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                            <div class="p-8">
+                                <div class="mb-6 p-3.5 bg-orange-50 border border-orange-100 rounded-2xl w-fit group-hover:bg-orange-500 transition-colors duration-300">
+                                    <i class="fa-solid <?= $srv['icon'] ?> text-xl text-orange-500 group-hover:text-white transition-colors duration-300"></i>
+                                </div>
+                                <h3 class="text-lg font-bold text-black mb-4 leading-snug"><?= $srv['title'] ?></h3>
+                                <p class="text-gray-500 text-sm leading-relaxed"><?= $srv['desc'] ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. VITRINE DE STARTUPS & PROJETOS SELECIONADOS (Sincronizada com a BD) -->
+        <section id="startups" class="py-20 sm:py-28 bg-white">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-14">
+                    <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">Inovação em ação</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold font-poppins text-black mb-4">
+                        Startups &amp; <span class="text-transparent bg-clip-text bg-linear-to-r from-orange-500 to-amber-500">Projetos Selecionados</span>
+                    </h2>
+                    <p class="text-gray-500 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
+                        Conheça as startups já aprovadas e incubadas pela Comissão Técnica do ISPSN.
+                    </p>
+                </div>
+
+                <?php if (empty($projetos)): ?>
+                    <div class="bg-gray-50 border border-gray-100 rounded-2xl p-10 text-center max-w-2xl mx-auto shadow-sm">
+                        <div class="w-16 h-16 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                            <i class="fa-solid fa-rocket text-2xl text-orange-500"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-black mb-2">Seja a próxima Startup selecionada no ISPSN</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed mb-6">
+                            As startups aprovadas e incubadas pela Comissão Técnica são exibidas automaticamente nesta vitrine oficial. Submeta já a sua candidatura!
+                        </p>
+                        <a href="/incubadora_ispsn/public/website/candidatura.php"
+                           class="inline-flex items-center gap-2 px-7 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all duration-300">
+                            <i class="fa-solid fa-paper-plane text-xs"></i>
+                            <span>Submeter Candidatura</span>
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                        <?php foreach ($projetos as $idx => $proj):
+                            $faseKey   = (string)($proj['fase'] ?? 'ideacao');
+                            $estadoKey = (string)($proj['estado'] ?? 'aprovado');
+                            $faseTxt   = $labelsFase[$faseKey]     ?? ucfirst($faseKey);
+                            $estadoTxt = $labelsEstado[$estadoKey] ?? ucfirst($estadoKey);
+                            $areaTxt   = ucfirst((string)($proj['area_tematica'] ?? 'Tecnologia'));
+                            $cardImgs  = [$fallbackGenImg, $fallbackBlogImg, '/incubadora_ispsn/assets/img/galeria/gal_1777456481.png'];
+                            $cardImg   = resolver_imagem_site('', $cardImgs[$idx % count($cardImgs)]);
+                        ?>
+                            <div class="relative group h-80 sm:h-96 cursor-pointer rounded-2xl overflow-hidden shadow-lg"
+                                 onclick="window.location.href='/incubadora_ispsn/public/website/startups.php'">
+                                <img src="<?= htmlspecialchars($cardImg) ?>"
+                                     alt="<?= htmlspecialchars($proj['titulo']) ?>"
+                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-linear-to-t from-black/90 via-black/55 to-black/20"></div>
+                                <div class="absolute inset-0 bg-linear-to-t from-orange-600/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div class="absolute inset-0 rounded-2xl ring-1 ring-white/10 group-hover:ring-orange-400/40 transition-all duration-500"></div>
+
+                                <div class="absolute top-5 left-5">
+                                    <span class="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold rounded-full border border-white/20">
+                                        <?= htmlspecialchars($areaTxt) ?>
+                                    </span>
+                                </div>
+                                <div class="absolute top-5 right-5">
+                                    <span class="px-3 py-1.5 bg-linear-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-md">
+                                        <?= htmlspecialchars($estadoTxt) ?> · <?= htmlspecialchars($faseTxt) ?>
+                                    </span>
+                                </div>
+
+                                <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+                                    <h3 class="text-xl font-bold mb-1.5"><?= htmlspecialchars($proj['titulo']) ?></h3>
+                                    <p class="text-gray-300 text-sm leading-relaxed mb-3 line-clamp-2">
+                                        <?= htmlspecialchars($proj['descricao']) ?>
+                                    </p>
+                                    <div class="flex items-center justify-between pt-3 border-t border-white/15">
+                                        <span class="text-xs text-orange-300 font-medium">
+                                            <i class="fa-solid fa-user-graduate mr-1"></i> <?= htmlspecialchars($proj['autor']) ?>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-white group-hover:text-orange-300 transition-colors">
+                                            Explorar <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="text-center mt-12 flex flex-wrap justify-center gap-4">
+                    <a href="/incubadora_ispsn/public/website/startups.php"
+                       class="inline-flex items-center gap-3 px-8 py-3.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-semibold rounded-xl shadow-lg shadow-orange-200 hover:shadow-orange-300/50 hover:scale-105 hover:-translate-y-0.5 transition-all duration-300 text-sm sm:text-base">
+                        <span>Ver Portfólio de Startups</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                    <a href="/incubadora_ispsn/public/website/projetos.php"
+                       class="inline-flex items-center gap-3 px-8 py-3.5 bg-gray-100 hover:bg-orange-50 text-gray-800 hover:text-orange-600 border border-gray-200 hover:border-orange-200 font-semibold rounded-xl transition-all duration-300 text-sm sm:text-base">
+                        <span>Ver Todos os Projetos</span>
+                        <i class="fa-solid fa-layer-group text-xs"></i>
                     </a>
                 </div>
-                <p class="f-desc">
-                    Transformando o potencial académico em inovação de mercado. Somos o berço das próximas grandes empresas de Angola.
-                </p>
-                <div class="f-social-links">
-                    <a href="<?= htmlspecialchars(get_config('facebook_url', '#')) ?>"><i class="fab fa-facebook-f"></i></a>
-                    <a href="<?= htmlspecialchars(get_config('linkedin_url', '#')) ?>"><i class="fab fa-linkedin-in"></i></a>
-                    <a href="<?= htmlspecialchars(get_config('instagram_url', '#')) ?>"><i class="fab fa-instagram"></i></a>
-                </div>
-            </div>
 
-            <div class="footer-links">
-                <h6>Explorar</h6>
-                <ul>
-                    <li><a href="#hero">Início</a></li>
-                    <li><a href="#startups">Startups</a></li>
-                    <li><a href="#adn">Ecossistema</a></li>
-                    <li><a href="sobre.php">Sobre Nós</a></li>
-                    <li><a href="#galeria">Galeria</a></li>
-                    <li><a href="#noticias">Notícias</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-links">
-                <h6>Portal</h6>
-                <ul>
-                    <li><a href="/incubadora_ispsn/public/website/candidatura.php">Candidaturas</a></li>
-                    <li><a href="/incubadora_ispsn/public/login.php">Área do Membro</a></li>
-                </ul>
-            </div>
-
-            <div class="footer-contact">
-                <h6>Contactos</h6>
-                <div class="contact-item">
-                    <i class="fa fa-envelope-open"></i>
-                    <div>
-                        <span>E-mail</span>
-                        <strong><?= htmlspecialchars($emailContacto) ?></strong>
+                <?php if ($processo): ?>
+                    <div class="mt-14 relative overflow-hidden bg-[#0A0A0A] rounded-2xl p-8 sm:p-10 text-white shadow-xl">
+                        <div class="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div>
+                                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-orange-500/30 bg-orange-500/10 mb-3">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                                    <span class="text-orange-400 text-xs font-semibold uppercase tracking-wide">Edital Aberto</span>
+                                </div>
+                                <h3 class="text-xl sm:text-2xl font-bold text-white mb-2"><?= htmlspecialchars($processo['titulo'] ?? $processo['nome'] ?? 'Processo de Candidatura ISPSN') ?></h3>
+                                <p class="text-gray-400 text-sm leading-relaxed max-w-2xl">
+                                    <?= htmlspecialchars($processo['descricao'] ?: 'Estão abertas as candidaturas para novos projetos de estudantes e pré-licenciados do ISPSN.') ?>
+                                    <?php if (!empty($processo['data_fim'])): ?>
+                                        · Encerra em <strong class="text-orange-400"><?= date('d/m/Y', strtotime($processo['data_fim'])) ?></strong>
+                                    <?php endif; ?>
+                                </p>
+                            </div>
+                            <a href="/incubadora_ispsn/public/website/candidatura.php"
+                               class="shrink-0 inline-flex items-center gap-2 px-7 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all duration-300 text-sm">
+                                <i class="fa-solid fa-paper-plane text-xs"></i>
+                                <span>Candidatar-me Agora</span>
+                            </a>
+                        </div>
                     </div>
-                </div>
-                <div class="contact-item">
-                    <i class="fa fa-phone-volume"></i>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <!-- 7. ÚLTIMAS NOTÍCIAS (Sincronizada com publicacoes_website) -->
+        <?php if (!empty($noticias)): ?>
+        <section id="noticias" class="py-20 sm:py-28 bg-gray-50 border-t border-gray-100">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col sm:flex-row sm:items-end justify-between mb-14 gap-4">
                     <div>
-                        <span>Telefone</span>
-                        <strong><?= htmlspecialchars($telContacto) ?></strong>
+                        <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">Sala de Visitas</span>
+                        <h2 class="text-3xl sm:text-4xl font-bold text-black">
+                            Actualidade &amp; <span class="text-orange-500">Eventos</span>
+                        </h2>
                     </div>
+                    <a href="/incubadora_ispsn/public/website/noticias.php"
+                       class="inline-flex items-center gap-2 text-sm font-semibold text-orange-500 hover:text-orange-600">
+                        <span>Ver todas as notícias</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
                 </div>
-                <div class="contact-item">
-                    <i class="fa fa-location-dot"></i>
-                    <div>
-                        <span>Localização</span>
-                        <strong><?= htmlspecialchars($endContacto) ?></strong>
-                    </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                    <?php foreach ($noticias as $n):
+                        $nImg = resolver_imagem_site($n['imagem'] ?? '', $fallbackBlogImg);
+                    ?>
+                        <article class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-orange-100/30 hover:border-orange-200 transition-all duration-400 overflow-hidden flex flex-col h-full">
+                            <a href="/incubadora_ispsn/public/website/noticia.php?id=<?= (int)$n['id'] ?>" class="relative h-48 overflow-hidden bg-gray-100 shrink-0 block">
+                                <img src="<?= htmlspecialchars($nImg) ?>"
+                                     alt="<?= htmlspecialchars($n['titulo']) ?>"
+                                     class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                     onerror="this.onerror=null;this.src='<?= $fallbackBlogImg ?>';">
+                                <div class="absolute top-3 left-3">
+                                    <span class="px-2.5 py-1 bg-black/50 backdrop-blur-sm text-white text-xs font-medium rounded-full border border-white/20">
+                                        <?= htmlspecialchars($n['categoria'] ?: 'Notícia') ?>
+                                    </span>
+                                </div>
+                            </a>
+                            <div class="p-6 flex flex-col flex-1">
+                                <div class="flex items-center gap-2 text-xs text-gray-400 mb-3">
+                                    <i class="fa-regular fa-calendar text-orange-400"></i>
+                                    <span><?= date('d/m/Y', strtotime($n['criado_em'])) ?></span>
+                                </div>
+                                <h3 class="text-base sm:text-lg font-bold text-black mb-2 group-hover:text-orange-600 transition-colors duration-300 leading-snug">
+                                    <a href="/incubadora_ispsn/public/website/noticia.php?id=<?= (int)$n['id'] ?>">
+                                        <?= htmlspecialchars($n['titulo']) ?>
+                                    </a>
+                                </h3>
+                                <p class="text-gray-500 text-sm leading-relaxed line-clamp-3 mb-4 flex-1">
+                                    <?= htmlspecialchars($n['resumo']) ?>
+                                </p>
+                                <div class="flex items-center justify-between pt-4 border-t border-gray-50 mt-auto">
+                                    <span class="text-xs text-gray-400"><i class="fa-regular fa-user mr-1"></i> ISPSN</span>
+                                    <a href="/incubadora_ispsn/public/website/noticia.php?id=<?= (int)$n['id'] ?>"
+                                       class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600">
+                                        <span>Ler mais</span>
+                                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
                 </div>
             </div>
-        </div>
+        </section>
+        <?php endif; ?>
 
-        <div class="footer-bottom">
-            <div class="bottom-inner">
-                <p>&copy; <?= date('Y') ?> <strong>Incubadora Académica ISPSN</strong>. Todos os direitos reservados.</p>
-                <div class="bottom-links">
-                    <span>Desenvolvido por <strong class="text-white">GTI - Educa futuro</strong></span>
+        <!-- 8. PARCEIROS E APOIOS INSTITUCIONAIS (Carrossel Estilo IPIL) -->
+        <section class="py-16 sm:py-24 bg-white border-t border-gray-100">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12">
+                    <span class="inline-block text-xs font-semibold tracking-widest text-orange-500 uppercase mb-3">Quem nos apoia</span>
+                    <h2 class="text-3xl sm:text-4xl font-bold text-black mb-4">
+                        Ecossistema e <span class="text-orange-500">Apoios</span>
+                    </h2>
+                    <p class="text-gray-500 max-w-2xl mx-auto text-sm sm:text-base">
+                        Pilares institucionais que apoiam a nossa missão de inovação académica e empreendedorismo em Angola.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                    <?php
+                    $parceiros = [
+                        ['nome' => 'ISPSN — Sol Nascente',       'sub' => 'Ensino Superior'],
+                        ['nome' => 'GTI — Educa Futuro',         'sub' => 'Tecnologia & Inovação'],
+                        ['nome' => 'Investigação Científica',    'sub' => 'Laboratórios & Pesquisa'],
+                        ['nome' => 'Extensão Universitária',     'sub' => 'Impacto Comunitário'],
+                    ];
+                    foreach ($parceiros as $parc):
+                    ?>
+                        <div class="group bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center hover:border-orange-200 hover:bg-orange-50/30 transition-all duration-300">
+                            <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png"
+                                 alt="<?= htmlspecialchars($parc['nome']) ?>"
+                                 class="h-12 w-auto object-contain mx-auto mb-3 grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300"
+                                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn.jpg';">
+                            <p class="text-xs font-bold text-gray-800 group-hover:text-orange-600 transition-colors"><?= htmlspecialchars($parc['nome']) ?></p>
+                            <p class="text-[11px] text-gray-400 mt-0.5"><?= htmlspecialchars($parc['sub']) ?></p>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
-        </div>
-    </div>
-</footer>
+        </section>
+    </main>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-<script>
-AOS.init({ duration: 1000, once: true, offset: 100 });
-
-window.addEventListener('scroll', () => {
-    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 80);
-});
-
-const hamburger = document.getElementById('hamburger');
-const navMobile = document.getElementById('navMobile');
-
-function toggleMobileMenu() {
-    hamburger.classList.toggle('active');
-    navMobile.classList.toggle('open');
-    document.body.style.overflow = navMobile.classList.contains('open') ? 'hidden' : 'auto';
-}
-
-hamburger.addEventListener('click', toggleMobileMenu);
-
-// Counter Animation
-const counters = document.querySelectorAll('.stat-number');
-const obs = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            const el = entry.target;
-            const target = +el.dataset.target;
-            let count = 0;
-            const inc = Math.max(1, target / 40);
-            const update = () => {
-                count += inc;
-                if (count < target) {
-                    el.innerText = Math.ceil(count);
-                    setTimeout(update, 20);
-                } else {
-                    el.innerText = target;
-                }
-            };
-            update();
-            obs.unobserve(el);
-        }
-    });
-}, { threshold: 0.5 });
-counters.forEach(c => obs.observe(c));
-
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        const targetId = this.getAttribute('href');
-        if (!targetId || targetId === '#') return;
-        const targetElement = document.querySelector(targetId);
-        if (targetElement) {
-            e.preventDefault();
-            window.scrollTo({
-                top: targetElement.offsetTop - 80,
-                behavior: 'smooth'
-            });
-        }
-    });
-});
-
-const lightbox = document.getElementById('lightboxModal');
-const lightboxImg = document.getElementById('lightboxImg');
-
-function openLightbox(src) {
-    lightboxImg.src = src;
-    lightbox.classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeLightbox() {
-    lightbox.classList.remove('open');
-    document.body.style.overflow = 'auto';
-}
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeLightbox();
-});
-</script>
+    <?php require __DIR__ . '/partials/_footer.php'; ?>
+</div>
 </body>
 </html>
