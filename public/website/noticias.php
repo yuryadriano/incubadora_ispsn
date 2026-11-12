@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'noticias';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
 $q   = trim((string)($_GET['q'] ?? ''));
@@ -79,10 +79,6 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center text-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
-                     alt="Logo Incubadora Sol Nascente"
-                     class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <i class="fa-regular fa-newspaper text-xs text-orange-400"></i>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Notícias &amp; Atualizações</span>
@@ -210,7 +206,12 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
                             <?php else: ?>
                                 <div class="grid sm:grid-cols-2 gap-5">
                                     <?php foreach ($noticiasFiltradas as $art):
-                                        $artImg = resolver_imagem_site($art['imagem'] ?? '', $fallbackBlogImg);
+                                        $tLower = mb_strtolower((string)($art['titulo'] ?? ''));
+                                        if (str_contains($tLower, 'inscri') || str_contains($tLower, 'candidatura')) {
+                                            $artImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+                                        } else {
+                                            $artImg = resolver_imagem_site($art['imagem'] ?? '', $fallbackBlogImg);
+                                        }
                                     ?>
                                         <article class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-orange-100/30 hover:border-orange-200 transition-all duration-400 overflow-hidden flex flex-col h-full">
                                             <a href="/incubadora_ispsn/public/website/noticia.php?id=<?= (int)$art['id'] ?>" class="relative h-44 overflow-hidden bg-gray-50 shrink-0 block">
@@ -319,14 +320,9 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
                                     <i class="fa-solid fa-rocket text-white"></i>
                                 </div>
                                 <h3 class="text-lg font-bold text-white mb-1">Tem uma Ideia?</h3>
-                                <p class="text-white/75 text-xs leading-relaxed mb-5">
-                                    Inscreva o seu projeto no programa de incubação académica do ISPSN e receba mentoria especializada.
+                                <p class="text-white/80 text-xs leading-relaxed">
+                                    Participe no programa de incubação académica do ISPSN e transforme o seu talento em projetos com impacto real.
                                 </p>
-                                <a href="/incubadora_ispsn/public/website/candidatura.php"
-                                   class="w-full py-3 rounded-xl font-semibold text-sm bg-white text-orange-600 hover:bg-gray-50 transition-all duration-300 flex items-center justify-center gap-2 shadow-md">
-                                    <i class="fa-solid fa-paper-plane text-xs"></i>
-                                    <span>Submeter Candidatura</span>
-                                </a>
                             </div>
                         </div>
 

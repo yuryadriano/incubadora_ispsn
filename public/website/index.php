@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'inicio';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
 // Layout de startups e projetos tipográfico limpo (sem imagens de mock)
 
 // 1. Processo de candidatura aberto
@@ -161,16 +161,6 @@ $labelsEstado = [
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 max-w-3xl px-4 sm:px-6 py-20">
-                <div class="flex items-center justify-center mb-6">
-                    <div class="relative">
-                        <div class="absolute inset-0 bg-amber-400/20 rounded-full blur-2xl pointer-events-none"></div>
-                        <img src="/incubadora_ispsn/assets/img/logo_sn_dark_bg.png"
-                             alt="Incubadora de Empresas Sol Nascente — ISPSN"
-                             class="relative h-20 sm:h-24 w-auto object-contain drop-shadow-2xl"
-                             onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
-                    </div>
-                </div>
-
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-6">
                     <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
                     <span class="text-orange-300 text-xs sm:text-sm font-medium tracking-wide"><?= htmlspecialchars($heroBadge) ?></span>
@@ -185,11 +175,10 @@ $labelsEstado = [
                 </p>
 
                 <div class="flex flex-col sm:flex-row gap-4 items-center justify-center">
-                    <a href="/incubadora_ispsn/public/website/candidatura.php"
-                       class="flex items-center gap-2 px-7 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer text-sm sm:text-base w-full sm:w-auto justify-center">
-                        <i class="fa-solid fa-rocket text-xs"></i>
-                        <span><?= $processo ? 'Candidatar ao Edital Aberto' : 'Submeter Candidatura' ?></span>
-                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    <a href="#adn"
+                       class="flex items-center justify-center gap-2 px-7 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/30 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 cursor-pointer text-sm sm:text-base w-full sm:w-auto">
+                        <span>Conhecer a Incubadora</span>
+                        <i class="fa-solid fa-arrow-down text-xs"></i>
                     </a>
                     <a href="/incubadora_ispsn/public/website/startups.php"
                        class="flex items-center justify-center gap-2 px-7 py-3.5 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white font-semibold rounded-xl border border-white/20 transition-all duration-300 hover:scale-105 cursor-pointer text-sm sm:text-base w-full sm:w-auto">
@@ -245,11 +234,6 @@ $labelsEstado = [
                                class="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-xl font-semibold shadow-md shadow-orange-200 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 text-sm sm:text-base">
                                 <span>Conheça a nossa história</span>
                                 <i class="fa-solid fa-building-columns text-xs"></i>
-                            </a>
-                            <a href="/incubadora_ispsn/public/website/candidatura.php"
-                               class="inline-flex items-center gap-2 bg-gray-100 hover:bg-orange-50 text-gray-800 hover:text-orange-600 border border-gray-200 hover:border-orange-200 px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm sm:text-base">
-                                <i class="fa-solid fa-rocket text-xs text-orange-500"></i>
-                                <span>Inscrever Ideia</span>
                             </a>
                         </div>
                     </div>
@@ -468,13 +452,8 @@ $labelsEstado = [
                         </div>
                         <h3 class="text-xl font-bold text-black mb-2">Seja a próxima Startup selecionada no ISPSN</h3>
                         <p class="text-gray-500 text-sm leading-relaxed mb-6">
-                            As startups aprovadas e incubadas pela Comissão Técnica são exibidas automaticamente nesta vitrine oficial. Submeta já a sua candidatura!
+                            As startups aprovadas e incubadas pela Comissão Técnica são exibidas automaticamente nesta vitrine oficial do ISPSN.
                         </p>
-                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                           class="inline-flex items-center gap-2 px-7 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all duration-300">
-                            <i class="fa-solid fa-paper-plane text-xs"></i>
-                            <span>Submeter Candidatura</span>
-                        </a>
                     </div>
                 <?php else: ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -549,11 +528,6 @@ $labelsEstado = [
                                     <?php endif; ?>
                                 </p>
                             </div>
-                            <a href="/incubadora_ispsn/public/website/candidatura.php"
-                               class="shrink-0 inline-flex items-center gap-2 px-7 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 transition-all duration-300 text-sm">
-                                <i class="fa-solid fa-paper-plane text-xs"></i>
-                                <span>Candidatar-me Agora</span>
-                            </a>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -580,7 +554,12 @@ $labelsEstado = [
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
                     <?php foreach ($noticias as $n):
-                        $nImg = resolver_imagem_site($n['imagem'] ?? '', $fallbackBlogImg);
+                        $nTituloLower = mb_strtolower((string)($n['titulo'] ?? ''));
+                        if (str_contains($nTituloLower, 'inscri') || str_contains($nTituloLower, 'candidatura')) {
+                            $nImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+                        } else {
+                            $nImg = resolver_imagem_site($n['imagem'] ?? '', $fallbackBlogImg);
+                        }
                     ?>
                         <article class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:shadow-orange-100/30 hover:border-orange-200 transition-all duration-400 overflow-hidden flex flex-col h-full">
                             <a href="/incubadora_ispsn/public/website/noticia.php?id=<?= (int)$n['id'] ?>" class="relative h-48 overflow-hidden bg-gray-100 shrink-0 block">

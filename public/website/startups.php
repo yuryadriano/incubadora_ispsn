@@ -130,10 +130,6 @@ $labelsEstado = [
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center text-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
-                     alt="Logo Incubadora Sol Nascente"
-                     class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <i class="fa-solid fa-rocket text-xs text-orange-400"></i>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Ecossistema de Inovação ISPSN</span>
@@ -206,15 +202,10 @@ $labelsEstado = [
                         <div class="w-16 h-16 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <i class="fa-solid fa-rocket text-2xl text-orange-500"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-black mb-2">A sua Startup pode estar aqui</h3>
-                        <p class="text-gray-500 text-sm sm:text-base leading-relaxed max-w-xl mx-auto mb-6">
-                            Todas as startups selecionadas e aprovadas pela Comissão Técnica do ISPSN aparecem automaticamente neste portfólio oficial. Submeta a sua candidatura para integrar o próximo ciclo de incubação.
+                        <h3 class="text-2xl font-bold text-black mb-2">Startups em Incubação</h3>
+                        <p class="text-gray-500 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+                            Todas as startups selecionadas e aprovadas pela Comissão Técnica do ISPSN aparecerão automaticamente neste portfólio oficial.
                         </p>
-                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                           class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all duration-300">
-                            <i class="fa-solid fa-rocket text-xs"></i>
-                            <span>Candidatar a Minha Ideia</span>
-                        </a>
                     </div>
                 <?php else: ?>
                     <!-- Carrossel Interativo de Startups (Design Limpo e Profissional sem Imagens) -->
@@ -259,18 +250,14 @@ $labelsEstado = [
                                         <?= htmlspecialchars($st['descricao']) ?>
                                     </p>
 
-                                    <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+                                    <div class="pt-6 border-t border-gray-100 flex items-center justify-between">
                                         <button type="button"
                                                 onclick="openStartupModal(<?= $idx ?>)"
-                                                class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:shadow-orange-300/50 hover:scale-105 transition-all duration-300 cursor-pointer">
+                                                class="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:shadow-orange-300/50 hover:scale-105 transition-all duration-300 cursor-pointer">
                                             <i class="fa-solid fa-circle-info text-xs"></i>
-                                            <span>Ver Detalhes</span>
+                                            <span>Ver Detalhes Completos</span>
                                         </button>
-                                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                                           class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:border-orange-200 hover:text-orange-600 hover:bg-orange-50 transition-all duration-300">
-                                            <i class="fa-solid fa-rocket text-xs"></i>
-                                            <span>Candidatar</span>
-                                        </a>
+                                        <span class="text-xs text-gray-400">ISPSN Hub</span>
                                     </div>
                                 </div>
                             </div>
@@ -432,16 +419,10 @@ $labelsEstado = [
                         </ul>
 
                         <div class="flex flex-col sm:flex-row gap-4">
-                            <a href="/incubadora_ispsn/public/website/candidatura.php"
-                               class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 transition-all duration-300 text-sm">
-                                <i class="fa-solid fa-rocket text-xs"></i>
-                                <span>Submeter Candidatura</span>
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
-                            </a>
                             <a href="#processo"
-                               class="inline-flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-white transition-colors duration-300 px-6 py-3.5 border border-white/10 rounded-xl hover:border-white/20">
-                                <span>Ver o processo</span>
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                               class="inline-flex items-center justify-center gap-2 text-sm text-gray-300 hover:text-white transition-colors duration-300 px-6 py-3.5 border border-white/20 rounded-xl hover:border-orange-500 hover:bg-orange-500/10">
+                                <span>Conhecer as etapas do processo</span>
+                                <i class="fa-solid fa-arrow-right text-xs text-orange-400"></i>
                             </a>
                         </div>
                     </div>
@@ -473,12 +454,6 @@ $labelsEstado = [
                                     <span class="text-white text-sm font-semibold">Gratuito</span>
                                 </div>
                             </div>
-
-                            <a href="/incubadora_ispsn/public/website/candidatura.php"
-                               class="mt-8 w-full inline-flex items-center justify-center gap-2 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl transition-all duration-300 text-sm shadow-lg shadow-orange-500/20">
-                                <span>Candidatar-me agora</span>
-                                <i class="fa-solid fa-arrow-right text-xs"></i>
-                            </a>
                         </div>
                     </div>
                 </div>

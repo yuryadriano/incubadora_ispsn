@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'noticias';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) {
@@ -42,7 +42,12 @@ if ($resS) {
     }
 }
 
-$capaNoticia = resolver_imagem_site($noticia['imagem'] ?? '', $fallbackBlogImg);
+$tLower = mb_strtolower((string)($noticia['titulo'] ?? ''));
+if (str_contains($tLower, 'inscri') || str_contains($tLower, 'candidatura')) {
+    $capaNoticia = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+} else {
+    $capaNoticia = resolver_imagem_site($noticia['imagem'] ?? '', $fallbackBlogImg);
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-PT">

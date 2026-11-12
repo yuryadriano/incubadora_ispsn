@@ -355,8 +355,8 @@ function eliminar_projeto_completo(mysqli $db, int $idProjeto): bool {
     return (bool)@$db->query("DELETE FROM `projetos` WHERE `id` = " . (int)$idProjeto);
 }
 
-// Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro (imagem real do stand ISPSN)
-function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg'): string {
+// Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro (Flyer oficial do Edital ISPSN)
+function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png'): string {
     $url = trim((string)$url);
     if ($url === '') {
         return $fallback;
@@ -365,9 +365,18 @@ function resolver_imagem_site(?string $url, string $fallback = '/incubadora_isps
         return $url;
     }
     $cleanRel = preg_replace('#^/?incubadora_ispsn/#', '', ltrim($url, '/'));
-    $fullPath = __DIR__ . '/../' . $cleanRel;
-    if ($cleanRel !== '' && is_file($fullPath)) {
+    if ($cleanRel !== '' && is_file(__DIR__ . '/../' . $cleanRel)) {
         return '/incubadora_ispsn/' . $cleanRel;
+    }
+    $baseName = basename($cleanRel);
+    if ($baseName !== '' && is_file(__DIR__ . '/../assets/img/blog/' . $baseName)) {
+        return '/incubadora_ispsn/assets/img/blog/' . $baseName;
+    }
+    if ($baseName !== '' && is_file(__DIR__ . '/../assets/img/' . $baseName)) {
+        return '/incubadora_ispsn/assets/img/' . $baseName;
+    }
+    if ($baseName !== '' && is_file(__DIR__ . '/../uploads/' . $baseName)) {
+        return '/incubadora_ispsn/uploads/' . $baseName;
     }
     return $fallback;
 }

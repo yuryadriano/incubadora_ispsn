@@ -73,10 +73,6 @@ $bannerSobre = resolver_imagem_site(get_config('sobre_imagem', ''), $fallbackBlo
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center text-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
-                     alt="Logo Incubadora Sol Nascente"
-                     class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Página Institucional · HONOR · LABOR · MERITUM</span>

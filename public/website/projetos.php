@@ -98,10 +98,6 @@ if ($resProj) {
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 
             <div class="relative z-10 flex flex-col items-center px-4">
-                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png"
-                     alt="Logo Incubadora Sol Nascente"
-                     class="w-14 h-14 sm:w-18 sm:h-18 object-contain drop-shadow-2xl mb-4"
-                     onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
                 <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 backdrop-blur-sm mb-4">
                     <i class="fa-solid fa-layer-group text-xs text-orange-400"></i>
                     <span class="text-orange-300 text-xs font-medium tracking-wide">Inovação em ação</span>
@@ -141,15 +137,10 @@ if ($resProj) {
                         <div class="w-14 h-14 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <i class="fa-solid fa-layer-group text-xl text-orange-500"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-black mb-2">Submeta o seu Projeto Académico</h3>
-                        <p class="text-gray-500 text-sm leading-relaxed mb-6">
-                            Os projetos selecionados pela Comissão Técnica aparecerão listados aqui. Inscreva já a sua proposta!
+                        <h3 class="text-lg font-bold text-black mb-2">Projetos em Incubação</h3>
+                        <p class="text-gray-500 text-sm leading-relaxed">
+                            Os projetos selecionados pela Comissão Técnica aparecerão listados aqui após aprovação.
                         </p>
-                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                           class="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all">
-                            <i class="fa-solid fa-rocket text-xs"></i>
-                            <span>Candidatar Projeto</span>
-                        </a>
                     </div>
                 <?php else: ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -295,16 +286,10 @@ if ($resProj) {
                     <span class="text-xs text-gray-500 flex items-center gap-1.5">
                         <i class="fa-solid fa-shield-halved text-orange-500"></i> Projeto Validado pela Incubadora ISPSN
                     </span>
-                    <div class="flex items-center gap-2">
-                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                           class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition-all shadow-sm">
-                            <i class="fa-solid fa-rocket mr-1"></i> Submeter Projeto
-                        </a>
-                        <button type="button" onclick="closeProjetoModal()"
-                                class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer">
-                            Fechar
-                        </button>
-                    </div>
+                    <button type="button" onclick="closeProjetoModal()"
+                            class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer">
+                        Fechar
+                    </button>
                 </div>
             </div>
         </div>
