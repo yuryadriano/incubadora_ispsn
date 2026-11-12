@@ -8,7 +8,7 @@ header('Vary: Accept-Encoding');
 $css_version     = ASSET_VERSION;
 $activePage      = 'sobre';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 
 // Estatísticas reais sincronizadas com a BD
 $stats = ['startups' => 0, 'mentores' => 0, 'membros' => 0];
@@ -62,10 +62,10 @@ $bannerSobre = resolver_imagem_site(get_config('sobre_imagem', ''), $fallbackBlo
     <main class="flex-1">
         <!-- 1. BANNER HERO COMPACTO (Padrão IPIL) -->
         <section class="relative h-56 sm:h-72 md:h-96 overflow-hidden flex items-center justify-center">
-            <img src="<?= htmlspecialchars($bannerSobre) ?>"
+            <img src="<?= htmlspecialchars($bannerSobre) ?>?v=<?= $css_version ?>"
                  alt="Sobre a Incubadora ISPSN"
-                 class="absolute inset-0 w-full h-full object-cover"
-                 onerror="this.onerror=null;this.src='<?= $fallbackGenImg ?>';">
+                 class="absolute inset-0 w-full h-full object-cover object-center"
+                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';">
             <div class="absolute inset-0 bg-linear-to-b from-black/80 via-black/60 to-black/70"></div>
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 

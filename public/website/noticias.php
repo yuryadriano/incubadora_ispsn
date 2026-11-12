@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'noticias';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
 $q   = trim((string)($_GET['q'] ?? ''));
@@ -71,10 +71,10 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
     <main class="flex-1">
         <!-- 1. BANNER HERO COMPACTO (Padrão IPIL) -->
         <section class="relative h-56 sm:h-72 md:h-96 overflow-hidden flex items-center justify-center">
-            <img src="<?= htmlspecialchars($fallbackBlogImg) ?>"
+            <img src="<?= htmlspecialchars($fallbackBlogImg) ?>?v=<?= $css_version ?>"
                  alt="Banner Notícias — Incubadora ISPSN"
                  class="absolute inset-0 w-full h-full object-cover object-center"
-                 onerror="this.onerror=null;this.src='<?= $fallbackGenImg ?>';">
+                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';">
             <div class="absolute inset-0 bg-linear-to-b from-black/85 via-black/60 to-black/80"></div>
             <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-orange-500 to-transparent"></div>
 

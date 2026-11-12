@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'inicio';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
 // 1. Processo de candidatura aberto
@@ -106,12 +106,12 @@ $labelsEstado = [
     <?php require __DIR__ . '/partials/_navbar.php'; ?>
 
     <main class="flex-1">
-        <!-- 1. HERO SECTION (Padrão IPIL + Identidade Humana Sol Nascente ISPSN) -->
+        <!-- 1. HERO SECTION (Padrão IPIL + Imagem Real do Stand ISPSN) -->
         <section id="home" class="relative flex flex-col items-center justify-center text-white text-center overflow-hidden min-h-screen px-4">
-            <img src="<?= htmlspecialchars($heroImg) ?>"
-                 alt="Incubadora de Empresas Sol Nascente — ISPSN"
+            <img src="<?= htmlspecialchars($heroImg) ?>?v=<?= $css_version ?>"
+                 alt="Instituto Superior Politécnico Sol Nascente — ISPSN"
                  class="absolute inset-0 w-full h-full object-cover object-center"
-                 onerror="this.onerror=null;this.src='<?= $fallbackBlogImg ?>';">
+                 onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';">
             <div class="absolute inset-0 bg-linear-to-b from-black/85 via-black/60 to-black/80"></div>
             <!-- Aura Sol Nascente inspirada nos raios dourados do logótipo oficial -->
             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-orange-500/15 rounded-full blur-3xl pointer-events-none"></div>
@@ -213,15 +213,15 @@ $labelsEstado = [
 
                     <div class="w-full md:w-1/2 relative">
                         <div class="absolute -bottom-6 -left-6 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                        <div class="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-xl">
-                            <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png"
+                        <div class="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-xl bg-white p-3 sm:p-5">
+                            <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png?v=<?= $css_version ?>"
                                  alt="Inovação e Criatividade — Incubadora Sol Nascente ISPSN"
-                                 class="w-full h-64 sm:h-80 md:h-96 object-cover hover:scale-105 transition-transform duration-700">
-                            <div class="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/80 backdrop-blur-md text-white px-4 py-3 rounded-xl border border-white/15 flex items-center gap-3">
-                                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png" alt="SN" class="w-9 h-9 object-contain shrink-0">
+                                 class="w-full h-auto max-h-[420px] object-contain mx-auto hover:scale-105 transition-transform duration-700">
+                            <div class="mt-3 bg-black/85 backdrop-blur-md text-white px-4 py-2.5 rounded-xl border border-white/15 flex items-center gap-3">
+                                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png" alt="SN" class="w-8 h-8 object-contain shrink-0">
                                 <div>
-                                    <p class="text-[11px] text-amber-400 font-semibold tracking-wider">HONOR · LABOR · MERITUM</p>
-                                    <p class="text-sm font-bold">Incubadora de Empresas Sol Nascente</p>
+                                    <p class="text-[10px] text-amber-400 font-semibold tracking-wider">HONOR · LABOR · MERITUM</p>
+                                    <p class="text-xs font-bold">Incubadora de Empresas Sol Nascente</p>
                                 </div>
                             </div>
                         </div>

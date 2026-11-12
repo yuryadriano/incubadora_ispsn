@@ -8,7 +8,7 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_NAME', getenv('DB_NAME') ?: 'imcubadora_ispsn');
 
 // Versão fixa para cache busting de CSS/JS (alterar após cada deploy)
-define('ASSET_VERSION', '2026111201');
+define('ASSET_VERSION', '2026111202');
 
 // 1. Iniciar e libertar o lock de sessão ANTES de abrir conexão MySQL (elimina contenção de flock + conexões presas em 504)
 if (!defined('NO_SESSION') && PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE) {
@@ -337,8 +337,8 @@ function eliminar_projeto_completo(mysqli $db, int $idProjeto): bool {
     @$mysqli->query("INSERT INTO config_website (chave, valor, grupo, tipo, descricao) VALUES ('limpeza_dados_teste_v1', '1', 'Sistema', 'hidden', 'Limpeza inicial de dados de teste concluída') ON DUPLICATE KEY UPDATE valor = '1'");
 })();
 
-// Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro
-function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png'): string {
+// Helper para validar se uma imagem do website existe fisicamente no servidor e devolver fallback seguro (imagem real do stand ISPSN)
+function resolver_imagem_site(?string $url, string $fallback = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg'): string {
     $url = trim((string)$url);
     if ($url === '') {
         return $fallback;

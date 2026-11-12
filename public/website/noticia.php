@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'noticias';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) {
