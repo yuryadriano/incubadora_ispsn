@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'startups';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
+// Imagem não utilizada nos cartões das startups (design tipográfico limpo)
 $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 
 // Processo de candidatura aberto
@@ -202,116 +202,75 @@ $labelsEstado = [
                 </div>
 
                 <?php if (empty($startups)): ?>
-                    <div class="group relative max-w-4xl mx-auto">
-                        <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div class="grid md:grid-cols-2 gap-0">
-                                <div class="relative h-60 sm:h-72 md:h-full min-h-[280px] overflow-hidden bg-gray-100">
-                                    <img src="<?= htmlspecialchars($fallbackGenImg) ?>" alt="Incubadora ISPSN" class="w-full h-full object-cover">
-                                    <div class="absolute inset-0 bg-linear-to-t from-black/55 via-black/10 to-transparent"></div>
-                                    <div class="absolute top-4 left-4">
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-full shadow-md shadow-orange-500/30 uppercase tracking-wide">
-                                            <i class="fa-solid fa-rocket text-[11px]"></i> Seleções ISPSN
-                                        </span>
-                                    </div>
-                                    <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full border border-white/15">
-                                            <i class="fa-solid fa-location-dot text-[11px]"></i> Huambo, Angola
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="p-7 sm:p-8 md:p-10 flex flex-col justify-between">
-                                    <div>
-                                        <div class="mb-5">
-                                            <h3 class="text-2xl sm:text-3xl font-bold text-black mb-1 leading-snug">
-                                                A sua Startup pode estar aqui
-                                            </h3>
-                                            <div class="flex items-center gap-2 mt-2">
-                                                <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full"></div>
-                                                <p class="text-orange-500 text-xs font-semibold uppercase tracking-wide">Portfólio Sincronizado em Tempo Real</p>
-                                            </div>
-                                        </div>
-                                        <p class="text-gray-500 text-sm sm:text-base leading-relaxed">
-                                            Todas as startups selecionadas e aprovadas pela Comissão Técnica do ISPSN aparecem automaticamente neste portfólio oficial. Submeta a sua candidatura para integrar o próximo ciclo de incubação.
-                                        </p>
-                                    </div>
-                                    <div class="flex flex-col sm:flex-row gap-3 mt-8 pt-5 border-t border-gray-100">
-                                        <a href="/incubadora_ispsn/public/website/candidatura.php"
-                                           class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all duration-300">
-                                            <i class="fa-solid fa-rocket text-xs"></i>
-                                            <span>Candidatar a Minha Ideia</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="max-w-3xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-8 sm:p-12 text-center">
+                        <div class="w-16 h-16 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fa-solid fa-rocket text-2xl text-orange-500"></i>
                         </div>
+                        <h3 class="text-2xl font-bold text-black mb-2">A sua Startup pode estar aqui</h3>
+                        <p class="text-gray-500 text-sm sm:text-base leading-relaxed max-w-xl mx-auto mb-6">
+                            Todas as startups selecionadas e aprovadas pela Comissão Técnica do ISPSN aparecem automaticamente neste portfólio oficial. Submeta a sua candidatura para integrar o próximo ciclo de incubação.
+                        </p>
+                        <a href="/incubadora_ispsn/public/website/candidatura.php"
+                           class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:scale-105 transition-all duration-300">
+                            <i class="fa-solid fa-rocket text-xs"></i>
+                            <span>Candidatar a Minha Ideia</span>
+                        </a>
                     </div>
                 <?php else: ?>
-                    <!-- Carrossel Interativo 2 Colunas (Exatamente como incubadora.ipil.ao/startups) -->
+                    <!-- Carrossel Interativo de Startups (Design Limpo e Profissional sem Imagens) -->
                     <div id="startupCarousel" class="relative">
                         <?php foreach ($startups as $idx => $st):
                             $faseTxt   = $labelsFase[$st['fase'] ?? 'ideacao'] ?? ucfirst((string)$st['fase']);
                             $estadoTxt = $labelsEstado[$st['estado'] ?? 'aprovado'] ?? ucfirst((string)$st['estado']);
                             $setorTxt  = ucfirst((string)($st['area_tematica'] ?? 'Tecnologia'));
-                            $imgs      = [$fallbackGenImg, $fallbackBlogImg, '/incubadora_ispsn/assets/img/galeria/gal_1777456481.png'];
-                            $stImg     = resolver_imagem_site('', $imgs[$idx % count($imgs)]);
                         ?>
                             <div class="startup-slide <?= $idx === 0 ? '' : 'hidden' ?> group relative max-w-4xl mx-auto" data-index="<?= $idx ?>">
-                                <div class="absolute -inset-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500 pointer-events-none"></div>
-                                <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 group-hover:border-orange-200 overflow-hidden transition-all duration-500">
-                                    <div class="grid md:grid-cols-2 gap-0">
-                                        <div class="relative h-60 sm:h-72 md:h-full min-h-[280px] overflow-hidden bg-gray-100">
-                                            <img src="<?= htmlspecialchars($stImg) ?>"
-                                                 alt="<?= htmlspecialchars($st['titulo']) ?>"
-                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                            <div class="absolute inset-0 bg-linear-to-t from-black/55 via-black/10 to-transparent"></div>
-                                            <div class="absolute top-4 left-4">
-                                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-full shadow-md shadow-orange-500/30 uppercase tracking-wide">
-                                                    <i class="fa-solid fa-rocket text-[11px]"></i>
-                                                    <span><?= htmlspecialchars($setorTxt) ?></span>
-                                                </span>
-                                            </div>
-                                            <div class="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full border border-white/15">
-                                                    <i class="fa-solid fa-location-dot text-[11px]"></i> Huambo — ISPSN
-                                                </span>
-                                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black/50 backdrop-blur-sm text-white text-xs rounded-full border border-white/15">
-                                                    <i class="fa-solid fa-layer-group text-[11px]"></i> Fase: <?= htmlspecialchars($faseTxt) ?> (<?= htmlspecialchars($estadoTxt) ?>)
-                                                </span>
-                                            </div>
+                                <div class="relative bg-white rounded-2xl border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 group-hover:border-orange-200 overflow-hidden transition-all duration-500 p-8 sm:p-10">
+                                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-orange-500 to-amber-400"></div>
+                                    
+                                    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-xs font-bold rounded-full uppercase tracking-wide">
+                                                <i class="fa-solid fa-rocket text-[11px]"></i>
+                                                <span><?= htmlspecialchars($setorTxt) ?></span>
+                                            </span>
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-linear-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-xs">
+                                                <?= htmlspecialchars($estadoTxt) ?> · Fase: <?= htmlspecialchars($faseTxt) ?>
+                                            </span>
                                         </div>
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-gray-100 text-gray-500 text-xs font-medium rounded-full">
+                                            <i class="fa-solid fa-location-dot text-[11px] text-orange-500"></i> Huambo — ISPSN
+                                        </span>
+                                    </div>
 
-                                        <div class="p-7 sm:p-8 md:p-10 flex flex-col justify-between">
-                                            <div>
-                                                <div class="mb-5">
-                                                    <h3 class="text-2xl sm:text-3xl font-bold text-black mb-1 leading-snug group-hover:text-orange-600 transition-colors duration-300">
-                                                        <?= htmlspecialchars($st['titulo']) ?>
-                                                    </h3>
-                                                    <div class="flex items-center gap-2 mt-2">
-                                                        <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full"></div>
-                                                        <p class="text-orange-500 text-xs font-semibold uppercase tracking-wide">
-                                                            <?= htmlspecialchars($setorTxt) ?> · Fundador: <?= htmlspecialchars($st['autor']) ?>
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <p class="text-gray-500 text-sm sm:text-base leading-relaxed line-clamp-4">
-                                                    <?= htmlspecialchars($st['descricao']) ?>
-                                                </p>
-                                            </div>
-
-                                            <div class="flex flex-col sm:flex-row gap-3 mt-8 pt-5 border-t border-gray-100">
-                                                <button type="button"
-                                                        onclick="openStartupModal(<?= $idx ?>)"
-                                                        class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:shadow-orange-300/50 hover:scale-105 transition-all duration-300 cursor-pointer">
-                                                    <i class="fa-solid fa-circle-info text-xs"></i>
-                                                    <span>Ver Detalhes</span>
-                                                </button>
-                                                <a href="/incubadora_ispsn/public/website/candidatura.php"
-                                                   class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:border-orange-200 hover:text-orange-600 hover:bg-orange-50 transition-all duration-300">
-                                                    <i class="fa-solid fa-rocket text-xs"></i>
-                                                    <span>Candidatar</span>
-                                                </a>
-                                            </div>
+                                    <div class="mb-5">
+                                        <h3 class="text-2xl sm:text-3xl font-bold text-black mb-2 leading-snug group-hover:text-orange-600 transition-colors duration-300">
+                                            <?= htmlspecialchars($st['titulo']) ?>
+                                        </h3>
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full"></div>
+                                            <p class="text-orange-500 text-xs font-semibold uppercase tracking-wide">
+                                                Fundador: <?= htmlspecialchars($st['autor']) ?>
+                                            </p>
                                         </div>
+                                    </div>
+
+                                    <p class="text-gray-600 text-sm sm:text-base leading-relaxed mb-6 line-clamp-4">
+                                        <?= htmlspecialchars($st['descricao']) ?>
+                                    </p>
+
+                                    <div class="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+                                        <button type="button"
+                                                onclick="openStartupModal(<?= $idx ?>)"
+                                                class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl shadow-md shadow-orange-200 hover:shadow-orange-300/50 hover:scale-105 transition-all duration-300 cursor-pointer">
+                                            <i class="fa-solid fa-circle-info text-xs"></i>
+                                            <span>Ver Detalhes</span>
+                                        </button>
+                                        <a href="/incubadora_ispsn/public/website/candidatura.php"
+                                           class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:border-orange-200 hover:text-orange-600 hover:bg-orange-50 transition-all duration-300">
+                                            <i class="fa-solid fa-rocket text-xs"></i>
+                                            <span>Candidatar</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -527,26 +486,22 @@ $labelsEstado = [
         </section>
     </main>
 
-    <!-- MODAL DE DETALHES DA STARTUP (Padrão IPIL) -->
+    <!-- MODAL DE DETALHES DA STARTUP -->
     <?php if (!empty($startups)): ?>
     <div id="startupModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
         <div class="fixed inset-0 bg-black/75 backdrop-blur-sm" onclick="closeStartupModal()"></div>
         <div class="flex min-h-full items-center justify-center p-4">
-            <div class="relative bg-white rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
-                <div class="relative h-52 sm:h-64 overflow-hidden bg-gray-100">
-                    <img id="modalStImg" src="<?= htmlspecialchars($fallbackGenImg) ?>" alt="Startup" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-linear-to-t from-black/75 via-black/25 to-transparent"></div>
+            <div class="relative bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+                <div class="p-6 sm:p-8 bg-gray-900 text-white relative border-b border-gray-800">
                     <button type="button" onclick="closeStartupModal()"
-                            class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-white/15 backdrop-blur-sm border border-white/20 rounded-full text-white hover:bg-orange-500 hover:border-orange-500 transition-all duration-300 cursor-pointer">
+                            class="absolute top-5 right-5 w-9 h-9 flex items-center justify-center bg-white/10 rounded-full text-white hover:bg-orange-500 transition-all duration-300 cursor-pointer">
                         <i class="fa-solid fa-xmark text-sm"></i>
                     </button>
-                    <div class="absolute top-4 left-4">
-                        <span id="modalStSetor" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-full shadow-md shadow-orange-500/30 uppercase tracking-wide"></span>
+                    <div class="mb-3">
+                        <span id="modalStSetor" class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full uppercase tracking-wide"></span>
                     </div>
-                    <div class="absolute bottom-5 left-5 right-14">
-                        <h2 id="modalStTitle" class="text-2xl sm:text-3xl font-bold text-white leading-snug"></h2>
-                        <p id="modalStAutor" class="text-white/75 text-sm mt-1"></p>
-                    </div>
+                    <h2 id="modalStTitle" class="text-2xl sm:text-3xl font-bold text-white leading-snug"></h2>
+                    <p id="modalStAutor" class="text-gray-300 text-sm mt-1.5"></p>
                 </div>
                 <div class="max-h-[65vh] overflow-y-auto p-6 sm:p-8 space-y-6">
                     <div>
@@ -576,7 +531,7 @@ $labelsEstado = [
     </div>
 
     <script>
-    const startupsData = <?= json_encode(array_map(function($s) use ($fallbackGenImg) {
+    const startupsData = <?= json_encode(array_map(function($s) {
         return [
             'titulo'    => $s['titulo'],
             'descricao' => $s['descricao'],
@@ -584,7 +539,6 @@ $labelsEstado = [
             'solucao'   => $s['solucao'] ?: 'Solução em validação técnica na Incubadora ISPSN.',
             'setor'     => ucfirst((string)($s['area_tematica'] ?? 'Tecnologia')),
             'autor'     => 'Fundador: ' . ($s['autor'] ?? 'Estudante ISPSN'),
-            'imagem'    => $fallbackGenImg,
         ];
     }, $startups), JSON_UNESCAPED_UNICODE) ?>;
 

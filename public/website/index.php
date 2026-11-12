@@ -8,7 +8,7 @@ header('Vary: Accept-Encoding');
 $css_version     = ASSET_VERSION;
 $activePage      = 'inicio';
 $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
+// Layout de startups e projetos tipográfico limpo (sem imagens de mock)
 
 // 1. Processo de candidatura aberto
 $processo = null;
@@ -484,42 +484,35 @@ $labelsEstado = [
                             $faseTxt   = $labelsFase[$faseKey]     ?? ucfirst($faseKey);
                             $estadoTxt = $labelsEstado[$estadoKey] ?? ucfirst($estadoKey);
                             $areaTxt   = ucfirst((string)($proj['area_tematica'] ?? 'Tecnologia'));
-                            $cardImgs  = [$fallbackGenImg, $fallbackBlogImg, '/incubadora_ispsn/assets/img/galeria/gal_1777456481.png'];
-                            $cardImg   = resolver_imagem_site('', $cardImgs[$idx % count($cardImgs)]);
                         ?>
-                            <div class="relative group h-80 sm:h-96 cursor-pointer rounded-2xl overflow-hidden shadow-lg"
+                            <div class="group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-orange-100/40 hover:border-orange-200 transition-all duration-300 p-7 flex flex-col justify-between cursor-pointer"
                                  onclick="window.location.href='/incubadora_ispsn/public/website/startups.php'">
-                                <img src="<?= htmlspecialchars($cardImg) ?>"
-                                     alt="<?= htmlspecialchars($proj['titulo']) ?>"
-                                     class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
-                                <div class="absolute inset-0 bg-linear-to-t from-black/90 via-black/55 to-black/20"></div>
-                                <div class="absolute inset-0 bg-linear-to-t from-orange-600/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                <div class="absolute inset-0 rounded-2xl ring-1 ring-white/10 group-hover:ring-orange-400/40 transition-all duration-500"></div>
-
-                                <div class="absolute top-5 left-5">
-                                    <span class="px-3 py-1.5 bg-white/20 backdrop-blur-sm text-white text-xs font-semibold rounded-full border border-white/20">
-                                        <?= htmlspecialchars($areaTxt) ?>
-                                    </span>
-                                </div>
-                                <div class="absolute top-5 right-5">
-                                    <span class="px-3 py-1.5 bg-linear-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-md">
-                                        <?= htmlspecialchars($estadoTxt) ?> · <?= htmlspecialchars($faseTxt) ?>
-                                    </span>
-                                </div>
-
-                                <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-                                    <h3 class="text-xl font-bold mb-1.5"><?= htmlspecialchars($proj['titulo']) ?></h3>
-                                    <p class="text-gray-300 text-sm leading-relaxed mb-3 line-clamp-2">
-                                        <?= htmlspecialchars($proj['descricao']) ?>
-                                    </p>
-                                    <div class="flex items-center justify-between pt-3 border-t border-white/15">
-                                        <span class="text-xs text-orange-300 font-medium">
-                                            <i class="fa-solid fa-user-graduate mr-1"></i> <?= htmlspecialchars($proj['autor']) ?>
+                                <div class="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 to-amber-400 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div>
+                                    <div class="flex items-center justify-between gap-2 mb-4">
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-xs font-semibold rounded-full">
+                                            <i class="fa-solid fa-rocket text-[10px]"></i>
+                                            <?= htmlspecialchars($areaTxt) ?>
                                         </span>
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-white group-hover:text-orange-300 transition-colors">
-                                            Explorar <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        <span class="px-2.5 py-1 bg-linear-to-r from-orange-500 to-amber-500 text-white text-[11px] font-bold rounded-full shadow-xs">
+                                            <?= htmlspecialchars($estadoTxt) ?> · <?= htmlspecialchars($faseTxt) ?>
                                         </span>
                                     </div>
+                                    <h3 class="text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors mb-2 leading-snug">
+                                        <?= htmlspecialchars($proj['titulo']) ?>
+                                    </h3>
+                                    <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full mb-3 group-hover:w-16 transition-all duration-300"></div>
+                                    <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-4">
+                                        <?= htmlspecialchars($proj['descricao']) ?>
+                                    </p>
+                                </div>
+                                <div class="pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+                                    <span class="text-gray-500 font-medium">
+                                        <i class="fa-solid fa-user-graduate text-orange-500 mr-1.5"></i> <?= htmlspecialchars($proj['autor']) ?>
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 font-semibold text-orange-600 group-hover:translate-x-0.5 transition-transform">
+                                        Explorar <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </span>
                                 </div>
                             </div>
                         <?php endforeach; ?>

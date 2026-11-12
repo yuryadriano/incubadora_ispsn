@@ -7,7 +7,7 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'projetos';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
+// Cartões com layout tipográfico limpo (sem imagens de mock)
 $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 
 // Buscar startups e projetos selecionados/aprovados da Base de Dados
@@ -135,35 +135,33 @@ if ($resProj) {
                         <?php foreach ($projetos as $idx => $p): ?>
                             <div class="group relative cursor-pointer" onclick="window.location.href='/incubadora_ispsn/public/website/startups.php'">
                                 <div class="absolute -inset-0.5 bg-linear-to-br from-orange-500 to-amber-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500 pointer-events-none"></div>
-                                <div class="relative bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 transition-all duration-500">
-                                    <div class="relative h-48 sm:h-52 overflow-hidden bg-gray-100">
-                                        <img src="<?= htmlspecialchars($fallbackGenImg) ?>"
-                                             alt="<?= htmlspecialchars($p['titulo']) ?>"
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-                                        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-                                            <div class="flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full text-white text-xs font-semibold">
-                                                <span>Ver detalhes</span>
-                                                <i class="fa-solid fa-arrow-right text-[10px]"></i>
-                                            </div>
+                                <div class="relative bg-white rounded-2xl p-6 sm:p-7 border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 transition-all duration-300 flex flex-col justify-between">
+                                    <div class="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 to-amber-400 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                    <div>
+                                        <div class="flex items-center justify-between gap-2 mb-4">
+                                            <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-xs font-semibold rounded-full">
+                                                <i class="fa-solid fa-lightbulb text-[10px]"></i>
+                                                <?= htmlspecialchars($p['categoria'] ?? 'Projeto Académico') ?>
+                                            </span>
+                                            <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-full">
+                                                <?= htmlspecialchars($p['status'] ?? 'Em Incubação') ?>
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div class="p-5 sm:p-6">
-                                        <div class="mb-3">
-                                            <h3 class="text-base sm:text-lg font-bold text-black group-hover:text-orange-600 transition-colors duration-300">
-                                                <?= htmlspecialchars($p['titulo']) ?>
-                                            </h3>
-                                            <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full mt-2 group-hover:w-14 transition-all duration-500"></div>
-                                        </div>
-                                        <p class="text-gray-500 text-sm leading-relaxed line-clamp-3">
+                                        <h3 class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors mb-2 leading-snug">
+                                            <?= htmlspecialchars($p['titulo']) ?>
+                                        </h3>
+                                        <div class="w-8 h-0.5 bg-linear-to-r from-orange-500 to-amber-400 rounded-full mb-3 group-hover:w-16 transition-all duration-300"></div>
+                                        <p class="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-4">
                                             <?= htmlspecialchars($p['descricao']) ?>
                                         </p>
-                                        <div class="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-                                            <span class="text-xs text-gray-400"><?= htmlspecialchars($p['autor']) ?></span>
-                                            <div class="w-7 h-7 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                                <i class="fa-solid fa-arrow-right text-xs text-orange-500"></i>
-                                            </div>
-                                        </div>
+                                    </div>
+                                    <div class="pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+                                        <span class="text-gray-500 font-medium">
+                                            <i class="fa-solid fa-user-graduate text-orange-500 mr-1.5"></i> <?= htmlspecialchars($p['autor']) ?>
+                                        </span>
+                                        <span class="inline-flex items-center gap-1 font-semibold text-orange-600 group-hover:translate-x-0.5 transition-transform">
+                                            Ver detalhes <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
