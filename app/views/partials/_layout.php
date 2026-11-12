@@ -153,10 +153,10 @@ $badgeInfo = $labelsPerfil[$perfil] ?? $labelsPerfil['utilizador'];
 })();
 </script>
 
-<!-- Google Fonts -->
+<!-- Google Fonts (Poppins — Padrão Oficial do Website ISPSN) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
 <!-- Bootstrap 5 -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -214,7 +214,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
   --sp-err-text:       #DC2626;
   --sp-err-bg:         #FEF2F2;
   --sp-err-border:     #FECACA;
-  --sp-font-sans:      'Inter', system-ui, -apple-system, sans-serif;
+  --sp-font-sans:      'Poppins', system-ui, -apple-system, sans-serif;
   --sp-font-mono:      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --sp-fs-xs:          0.75rem;
   --sp-fs-sm:          0.84375rem;
@@ -698,24 +698,26 @@ if (document.documentElement.classList.contains('dark-mode')) {
 <aside class="sidebar" id="sidebar">
 
     <!-- Logo & Notificações -->
-    <div class="sidebar-brand-wrapper" style="padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 10px;">
-        <div class="d-flex align-items-center justify-content-between">
-            <a href="/incubadora_ispsn/public/website/" style="text-decoration: none; flex: 1;">
-                <div style="padding: 0; width: 100%; max-width: 180px; display: flex; align-items: center; justify-content: flex-start;">
-                    <img src="/incubadora_ispsn/assets/img/logo_sn_transparent.png" alt="Incubadora ISPSN" style="width: 100%; height: auto; max-height: 60px; object-fit: contain; filter: brightness(0) invert(1); opacity: 0.95;">
+    <div class="sidebar-brand-wrapper" style="padding: 18px 18px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 8px;">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <a href="/incubadora_ispsn/public/website/" class="d-flex align-items-center gap-2.5 text-decoration-none" style="flex: 1; min-width: 0;" title="Ver Website Público">
+                <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png" alt="ISPSN" style="width: 36px; height: 36px; object-fit: contain; flex-shrink: 0;" onerror="this.onerror=null;this.src='/incubadora_ispsn/assets/img/logo_sn_transparent.png';">
+                <div style="min-width: 0; line-height: 1.25;">
+                    <span style="font-size: 0.88rem; font-weight: 700; color: #FFFFFF; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em;">Incubadora ISPSN</span>
+                    <span style="font-size: 0.68rem; font-weight: 600; color: #F97316; display: block; text-transform: uppercase; letter-spacing: 0.04em;">Sol Nascente</span>
                 </div>
             </a>
 
             <!-- Dropdown de Notificações -->
             <div class="dropdown">
-                <button class="btn-notif-sidebar" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn-notif-sidebar" type="button" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false" title="Notificações">
                     <i class="fa fa-bell"></i>
                     <span id="notif-badge" class="badge-dot d-none"></span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="notifDropdown" style="width:280px; border:none; border-radius:var(--radius); padding:0; overflow:hidden; margin-top:10px;">
-                    <li class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background:var(--surface-1)">
+                    <li class="p-3 border-bottom d-flex justify-content-between align-items-center" style="background:var(--surface-2)">
                         <span class="fw-bold" style="font-size:0.85rem">Notificações</span>
-                        <button class="btn-ghost btn-sm p-0" onclick="marcarLidas()" style="font-size:0.7rem; color:var(--primary)">Limpar</button>
+                        <button class="btn-ghost btn-sm p-0" onclick="marcarLidas()" style="font-size:0.7rem; color:var(--primary); background:none; border:none;">Limpar</button>
                     </li>
                     <div id="notif-list" style="max-height:300px; overflow-y:auto;">
                         <li class="p-4 text-center text-muted small">A carregar...</li>
@@ -791,6 +793,12 @@ if (document.documentElement.classList.contains('dark-mode')) {
             </div>
         </div>
         <div class="topbar-right">
+            <!-- Link rápido para Website Público -->
+            <a href="/incubadora_ispsn/public/website/" class="btn btn-sm d-none d-sm-inline-flex align-items-center gap-1.5" style="border-radius: 999px; font-size: 0.76rem; font-weight: 600; padding: 5px 12px; background: rgba(249,115,22,0.1); color: var(--primary); border: 1px solid rgba(249,115,22,0.3); text-decoration: none; margin-right: 4px;" target="_blank" rel="noopener" title="Abrir Website Oficial">
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                <span>Ver Website</span>
+            </a>
+
             <!-- Alternador Dark Mode -->
             <button class="topbar-btn" type="button" id="btnDarkMode" onclick="toggleDarkMode()" title="Alternar Tema" style="margin-right: 4px;">
                 <i class="fa fa-moon" id="darkModeIcon"></i>

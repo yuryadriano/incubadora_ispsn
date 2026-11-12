@@ -21,9 +21,15 @@ if ($resProc) {
 $stats = ['startups' => 0, 'mentores' => 0, 'incubados' => 0, 'membros' => 0];
 $resStats = $mysqli->query("
     SELECT
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido')) AS total_startups,
+        (
+            (SELECT COUNT(*) FROM candidaturas WHERE estado IN ('selecionado','convocado','validado_presencial','convite_enviado','registado')) +
+            (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido'))
+        ) AS total_startups,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'mentor' AND activo = 1) AS total_mentores,
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('incubado','fundo_investimento','concluido')) AS total_incubados,
+        (
+            (SELECT COUNT(*) FROM candidaturas WHERE estado IN ('validado_presencial','registado')) +
+            (SELECT COUNT(*) FROM projetos WHERE estado IN ('incubado','fundo_investimento','concluido'))
+        ) AS total_incubados,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'utilizador' AND activo = 1) AS total_membros
 ");
 if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
@@ -33,22 +39,54 @@ if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['membros']   = (int)($rowSt['total_membros']   ?? 0);
 }
 
-// 3. Buscar apenas Startups JÁ SELECIONADAS (aprovadas, incubadas, investimento ou graduadas)
+// 3. Buscar Startups JÁ SELECIONADAS (Candidaturas selecionadas/convocadas + Projetos incubados/aprovados)
 $projetos = [];
-$resProj = $mysqli->query("
-    SELECT p.id, p.titulo, p.descricao, p.area_tematica, p.fase, p.tipo, p.estado, p.pontos, p.destaque_publico, u.nome AS autor
-    FROM projetos p
-    JOIN usuarios u ON u.id = p.criado_por
-    WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')
-    ORDER BY p.destaque_publico DESC,
-             FIELD(p.estado, 'incubado', 'fundo_investimento', 'concluido', 'aprovado'),
-             p.pontos DESC,
-             p.criado_em DESC
+
+// 3.1 Candidaturas Selecionadas ou Convocadas
+$resCand = $mysqli->query("
+    SELECT 
+        c.id,
+        c.titulo_ideia AS titulo,
+        COALESCE(NULLIF(c.descricao_ideia, ''), c.solucao, c.problema, 'Startup selecionada no processo de incubação do ISPSN.') AS descricao,
+        c.area_tematica,
+        'ideacao' AS fase,
+        'Inovação' AS tipo,
+        c.estado,
+        100 AS pontos,
+        1 AS destaque_publico,
+        c.nome AS autor,
+        c.criado_em,
+        'candidatura' AS origem
+    FROM candidaturas c
+    WHERE c.estado IN ('selecionado', 'convocado', 'validado_presencial', 'convite_enviado', 'registado')
+    ORDER BY FIELD(c.estado, 'registado', 'validado_presencial', 'convocado', 'convite_enviado', 'selecionado'),
+             c.criado_em DESC
     LIMIT 6
 ");
-if ($resProj) {
-    while ($row = $resProj->fetch_assoc()) {
+if ($resCand) {
+    while ($row = $resCand->fetch_assoc()) {
         $projetos[] = $row;
+    }
+}
+
+// 3.2 Projetos Aprovados / Incubados
+$limRestante = max(0, 6 - count($projetos));
+if ($limRestante > 0) {
+    $resProj = $mysqli->query("
+        SELECT p.id, p.titulo, p.descricao, p.area_tematica, p.fase, p.tipo, p.estado, p.pontos, p.destaque_publico, u.nome AS autor, p.criado_em, 'projeto' AS origem
+        FROM projetos p
+        JOIN usuarios u ON u.id = p.criado_por
+        WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')
+        ORDER BY p.destaque_publico DESC,
+                 FIELD(p.estado, 'incubado', 'fundo_investimento', 'concluido', 'aprovado'),
+                 p.pontos DESC,
+                 p.criado_em DESC
+        LIMIT {$limRestante}
+    ");
+    if ($resProj) {
+        while ($row = $resProj->fetch_assoc()) {
+            $projetos[] = $row;
+        }
     }
 }
 
@@ -85,7 +123,12 @@ $labelsFase = [
     'mercado'   => 'Mercado',
 ];
 $labelsEstado = [
-    'aprovado'           => 'Selecionada',
+    'selecionado'        => 'Selecionada',
+    'convocado'          => 'Convocada',
+    'validado_presencial'=> 'Admitida',
+    'convite_enviado'    => 'Selecionada',
+    'registado'          => 'Incubada',
+    'aprovado'           => 'Aprovada',
     'incubado'           => 'Incubada',
     'fundo_investimento' => 'Investimento',
     'concluido'          => 'Graduada',

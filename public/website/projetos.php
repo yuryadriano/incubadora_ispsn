@@ -10,11 +10,38 @@ $activePage      = 'projetos';
 $fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 
-// Buscar projetos aprovados/selecionados da Base de Dados
+// Buscar startups e projetos selecionados/aprovados da Base de Dados
 $projetos = [];
+
+// 1. Candidaturas Selecionadas ou Convocadas
+$resCand = $mysqli->query("
+    SELECT 
+        c.id,
+        c.titulo_ideia AS titulo,
+        COALESCE(NULLIF(c.descricao_ideia, ''), c.solucao, c.problema, 'Projeto selecionado no processo de incubação do ISPSN.') AS descricao,
+        c.problema,
+        c.solucao,
+        c.area_tematica,
+        'ideacao' AS fase,
+        c.estado,
+        c.criado_em,
+        c.nome AS autor,
+        'candidatura' AS origem
+    FROM candidaturas c
+    WHERE c.estado IN ('selecionado', 'convocado', 'validado_presencial', 'convite_enviado', 'registado')
+    ORDER BY FIELD(c.estado, 'registado', 'validado_presencial', 'convocado', 'convite_enviado', 'selecionado'),
+             c.criado_em DESC
+");
+if ($resCand) {
+    while ($row = $resCand->fetch_assoc()) {
+        $projetos[] = $row;
+    }
+}
+
+// 2. Projetos Aprovados / Incubados
 $resProj = $mysqli->query("
     SELECT p.id, p.titulo, p.descricao, p.problema, p.solucao, p.area_tematica, p.fase, p.estado, p.criado_em,
-           u.nome AS autor
+           u.nome AS autor, 'projeto' AS origem
     FROM projetos p
     JOIN usuarios u ON u.id = p.criado_por
     WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')

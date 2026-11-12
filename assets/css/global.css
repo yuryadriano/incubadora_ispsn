@@ -1,77 +1,81 @@
 /* ================================================================
    GLOBAL.CSS — Design System | Incubadora Académica ISPSN
+   Identidade Oficial: Instituto Superior Politécnico Sol Nascente
    ================================================================ */
 
-/* ── Google Font ─────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* ── Google Font (Poppins — Idêntica ao Website Oficial) ─────── */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
 /* ── CSS Custom Properties (Design Tokens) ─ */
 :root {
-  /* Cores principais: Instituição (Amarelo Escuro) */
-  --primary:        #D97706;   /* Amarelo Escuro / Amber 600 */
-  --primary-dark:   #B45309;   /* Amber 700 */
-  --primary-light:  #FBBF24;   /* Amber 400 */
-  --secondary:      #27272A;   /* Cinza Escuro quase preto para constraste */
-  --success:        #10B981;
-  --warning:        #F59E0B;
-  --danger:         #EF4444;
-  --info:           #3B82F6;
+  /* Cores principais: Sol Nascente (Laranja Vibrante + Âmbar Dourado) */
+  --primary:        #F97316;   /* Orange 500 */
+  --primary-dark:   #EA580C;   /* Orange 600 */
+  --primary-light:  #FDBA74;   /* Orange 300 */
+  --accent:         #F59E0B;   /* Amber 500 */
+  --secondary:      #18181B;   /* Zinc 900 */
+  --success:        #10B981;   /* Emerald 500 */
+  --warning:        #F59E0B;   /* Amber 500 */
+  --danger:         #EF4444;   /* Red 500 */
+  --info:           #3B82F6;   /* Blue 500 */
 
-  /* Superfícies: Branco Cremoso */
-  --bg:             #FDFAF5;   /* Branco Cremoso (Cream) */
-  --surface:        #FFFFFF;
-  --surface-2:      #FEF3C7;   /* Um creme ligeiramente mais forte para hovers/boxes */
-  --border:         #FDE68A;   /* Bordas amarelo muito claro */
-  --table-hover:    rgba(254, 243, 199, 0.4);
-  --surface-glass:  rgba(255, 255, 255, 0.85);
+  /* Superfícies: Leve, Limpa e Confortável */
+  --bg:             #F9FAFB;   /* Gray 50 (idêntico ao website) */
+  --surface:        #FFFFFF;   /* Branco puro para cards */
+  --surface-2:      #F3F4F6;   /* Gray 100 para hovers/caixas */
+  --border:         #E5E7EB;   /* Gray 200 para contornos suaves */
+  --border-subtle:  #F3F4F6;   /* Gray 100 */
+  --table-hover:    rgba(249, 115, 22, 0.04);
+  --surface-glass:  rgba(255, 255, 255, 0.90);
 
   /* Texto */
-  --text-primary:   #0F172A;
-  --text-secondary: #64748B;
-  --text-muted:     #94A3B8;
+  --text-primary:   #111827;   /* Gray 900 */
+  --text-secondary: #4B5563;   /* Gray 600 */
+  --text-muted:     #9CA3AF;   /* Gray 400 */
 
-  /* Sidebar */
-  --sidebar-bg:     #1C1917;   /* Fundo super escuro (warm black) */
+  /* Sidebar: Dark Moderno Sol Nascente */
+  --sidebar-bg:     #0A0A0A;   /* Preto suave acetinado */
   --sidebar-w:      260px;
-  --sidebar-item:   rgba(255,255,255,0.05);
-  --sidebar-active: rgba(217, 119, 6, 0.9); /* Amarelo escuro com alpha */
-  --sidebar-text:   #D6D3D1;
-  --sidebar-title:  #FAFAF9;
+  --sidebar-item:   rgba(255, 255, 255, 0.04);
+  --sidebar-active: #F97316;   /* Laranja ativo */
+  --sidebar-text:   #9CA3AF;
+  --sidebar-title:  #FFFFFF;
 
   /* Layout */
   --topbar-h:       64px;
   --radius:         12px;
-  --radius-lg:      18px;
-  --shadow:         0 4px 6px -1px rgba(139, 92, 26, 0.04), 0 2px 4px -2px rgba(139, 92, 26, 0.04);
-  --shadow-md:      0 10px 15px -3px rgba(139, 92, 26, 0.06), 0 4px 6px -4px rgba(139, 92, 26, 0.06);
-  --shadow-lg:      0 20px 25px -5px rgba(139, 92, 26, 0.08), 0 8px 10px -6px rgba(139, 92, 26, 0.08);
+  --radius-lg:      16px;
+  --shadow:         0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md:      0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg:      0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 
   /* Transições */
-  --transition:     0.22s cubic-bezier(0.4,0,0.2,1);
+  --transition:     0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Dark Mode Overrides ─────────────────── */
 body.dark-mode, html.dark-mode {
-  --bg:             #0F111A;   /* Fundo escuro azulado/cinza profundo */
-  --surface:        #181B28;   /* Superfícies escuras */
-  --surface-2:      #212536;   /* Cinza-azulado médio */
-  --border:         #2D3247;   /* Bordas escuras */
-  --table-hover:    rgba(255, 255, 255, 0.03);
-  --surface-glass:  rgba(24, 27, 40, 0.85);
+  --bg:             #09090B;   /* Zinc 950 */
+  --surface:        #18181B;   /* Zinc 900 */
+  --surface-2:      #27272A;   /* Zinc 800 */
+  --border:         #27272A;   /* Zinc 800 */
+  --border-subtle:  #18181B;
+  --table-hover:    rgba(249, 115, 22, 0.08);
+  --surface-glass:  rgba(24, 24, 27, 0.88);
 
-  --text-primary:   #F8FAFC;   /* Texto principal claro */
-  --text-secondary: #94A3B8;   /* Texto secundário */
-  --text-muted:     #64748B;
+  --text-primary:   #F9FAFB;   /* Gray 50 */
+  --text-secondary: #9CA3AF;   /* Gray 400 */
+  --text-muted:     #6B7280;   /* Gray 500 */
 
-  --sidebar-bg:     #0D0F16;
-  --sidebar-item:   rgba(255, 255, 255, 0.04);
-  --sidebar-active: rgba(217, 119, 6, 0.25);
-  --sidebar-text:   #94A3B8;
-  --sidebar-title:  #F8FAFC;
+  --sidebar-bg:     #050505;
+  --sidebar-item:   rgba(255, 255, 255, 0.03);
+  --sidebar-active: #F97316;
+  --sidebar-text:   #9CA3AF;
+  --sidebar-title:  #F9FAFB;
 
-  --shadow:         0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
-  --shadow-md:      0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
-  --shadow-lg:      0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.45);
+  --shadow:         0 1px 3px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md:      0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg:      0 10px 15px -3px rgba(0, 0, 0, 0.5);
 }
 
 /* ── Reset & Base ────────────────────────── */
@@ -80,9 +84,14 @@ body.dark-mode, html.dark-mode {
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text-primary);
+  font-size: 0.925rem;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
   font-size: 0.9375rem;
   line-height: 1.6;
   min-height: 100vh;
@@ -502,7 +511,7 @@ body {
 .btn-primary-custom:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79,70,229,0.35);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.30);
   color: #fff;
 }
 .btn-ghost {
@@ -535,7 +544,7 @@ body {
 }
 .form-control-custom:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
 }
 .form-label-custom {
   display: block;
@@ -624,12 +633,23 @@ body {
 }
 
 /* ── Gradients para cards coloridos ─────── */
-.grad-primary   { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: #fff; }
+.grad-primary   { background: linear-gradient(135deg, #F97316, #EA580C); color: #fff; }
 .grad-success   { background: linear-gradient(135deg, #059669, #10B981); color: #fff; }
-.grad-warning   { background: linear-gradient(135deg, #D97706, #F59E0B); color: #fff; }
+.grad-warning   { background: linear-gradient(135deg, #F97316, #F59E0B); color: #fff; }
 .grad-cyan      { background: linear-gradient(135deg, #0891B2, #06B6D4); color: #fff; }
 .grad-rose      { background: linear-gradient(135deg, #BE185D, #EC4899); color: #fff; }
-.grad-dark      { background: linear-gradient(135deg, #1E293B, #334155); color: #fff; }
+.grad-dark      { background: linear-gradient(135deg, #18181B, #27272A); color: #fff; }
+
+/* ── Modern Table Responsiveness & Mobile Enhancements ── */
+.table-responsive {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  -webkit-overflow-scrolling: touch;
+}
+.table-responsive table {
+  margin-bottom: 0;
+}
 
 /* ================================================================
    RESPONSIVE

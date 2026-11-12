@@ -21,9 +21,15 @@ if ($resProc) {
 $stats = ['startups' => 0, 'membros' => 0, 'incubados' => 0];
 $resStats = $mysqli->query("
     SELECT
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido')) AS total_startups,
+        (
+            (SELECT COUNT(*) FROM candidaturas WHERE estado IN ('selecionado','convocado','validado_presencial','convite_enviado','registado')) +
+            (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido'))
+        ) AS total_startups,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'utilizador' AND activo = 1) AS total_membros,
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('incubado','fundo_investimento','concluido')) AS total_incubados
+        (
+            (SELECT COUNT(*) FROM candidaturas WHERE estado IN ('validado_presencial','registado')) +
+            (SELECT COUNT(*) FROM projetos WHERE estado IN ('incubado','fundo_investimento','concluido'))
+        ) AS total_incubados
 ");
 if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['startups']  = (int)($rowSt['total_startups']  ?? 0);
@@ -31,12 +37,42 @@ if ($resStats && ($rowSt = $resStats->fetch_assoc())) {
     $stats['incubados'] = (int)($rowSt['total_incubados'] ?? 0);
 }
 
-// Buscar Startups JÁ SELECIONADAS na Base de Dados (colunas validadas com database/schema.sql)
+// Buscar Startups JÁ SELECIONADAS (Candidaturas selecionadas/convocadas + Projetos aprovados/incubados)
 $startups = [];
+
+// 1. Candidaturas Selecionadas ou Convocadas
+$resCand = $mysqli->query("
+    SELECT 
+        c.id,
+        c.titulo_ideia AS titulo,
+        COALESCE(NULLIF(c.descricao_ideia, ''), c.solucao, c.problema, 'Startup selecionada no processo de incubação do ISPSN.') AS descricao,
+        c.problema,
+        c.solucao,
+        c.area_tematica,
+        'ideacao' AS fase,
+        'Inovação' AS tipo,
+        c.estado,
+        100 AS pontos,
+        1 AS destaque_publico,
+        c.criado_em,
+        c.nome AS autor,
+        'candidatura' AS origem
+    FROM candidaturas c
+    WHERE c.estado IN ('selecionado', 'convocado', 'validado_presencial', 'convite_enviado', 'registado')
+    ORDER BY FIELD(c.estado, 'registado', 'validado_presencial', 'convocado', 'convite_enviado', 'selecionado'),
+             c.criado_em DESC
+");
+if ($resCand) {
+    while ($row = $resCand->fetch_assoc()) {
+        $startups[] = $row;
+    }
+}
+
+// 2. Projetos Aprovados / Incubados
 $resProj = $mysqli->query("
     SELECT p.id, p.titulo, p.descricao, p.problema, p.solucao,
            p.area_tematica, p.fase, p.tipo, p.estado, p.pontos, p.destaque_publico, p.criado_em,
-           u.nome AS autor
+           u.nome AS autor, 'projeto' AS origem
     FROM projetos p
     JOIN usuarios u ON u.id = p.criado_por
     WHERE p.estado IN ('aprovado', 'incubado', 'fundo_investimento', 'concluido')
@@ -59,6 +95,11 @@ $labelsFase = [
     'mercado'   => 'Mercado',
 ];
 $labelsEstado = [
+    'selecionado'        => 'Selecionada',
+    'convocado'          => 'Convocada',
+    'validado_presencial'=> 'Admitida',
+    'convite_enviado'    => 'Selecionada',
+    'registado'          => 'Incubada',
     'aprovado'           => 'Aprovada',
     'incubado'           => 'Incubada',
     'fundo_investimento' => 'Investimento',
