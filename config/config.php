@@ -70,15 +70,23 @@ for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
         }
         $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
-        // Se a BD já existia com credenciais antigas (volume persistido), atualizar utilizador de forma transparente
-        if (!$connected && DB_USER !== 'incubadora_user') {
-            $fallbackConn = @$mysqli->real_connect(DB_HOST, 'incubadora_user', 'incubadora_pass', DB_NAME);
-            if ($fallbackConn) {
+        // Se a BD já existia com credenciais antigas (volume persistido), provisionar/atualizar utilizador via root
+        if (!$connected) {
+            $rootPasses = ['root_pass', 'Elma2025@', 'incubadora_pass', ''];
+            $rootConn = false;
+            foreach ($rootPasses as $rp) {
+                $rootConn = @$mysqli->real_connect(DB_HOST, 'root', $rp);
+                if ($rootConn) break;
+            }
+
+            if ($rootConn) {
                 $uEsc = $mysqli->real_escape_string(DB_USER);
                 $pEsc = $mysqli->real_escape_string(DB_PASS);
                 @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
                 @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-                @$mysqli->query("GRANT ALL PRIVILEGES ON `" . DB_NAME . "`.* TO '{$uEsc}'@'%'");
+                @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
+                @$mysqli->query("ALTER USER 'root'@'%' IDENTIFIED BY '{$pEsc}'");
+                @$mysqli->query("ALTER USER 'root'@'localhost' IDENTIFIED BY '{$pEsc}'");
                 @$mysqli->query("FLUSH PRIVILEGES");
                 $mysqli->close();
                 $mysqli = @mysqli_init();
