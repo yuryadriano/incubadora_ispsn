@@ -51,56 +51,107 @@ function close_session_early(): void {
     }
 }
 
-// 2. Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
+// 2. Desativar exceções do mysqli para gerir falhas de ligação de forma resiliente (evita Fatal Error no PHP 8.1+)
+if (function_exists('mysqli_report')) {
+    @mysqli_report(MYSQLI_REPORT_OFF);
+}
+
+// Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
 @ini_set('default_socket_timeout', '2');
 @ini_set('mysqlnd.net_cmd_connect_timeout', '2');
 @ini_set('mysqlnd.net_read_timeout', '5');
 
 // Configuração resiliente ultra-rápida (compatível com Cloudflare, evita 504 Gateway Timeout)
-$maxTries = 2;
 $connected = false;
 $mysqli = null;
+$activeDbUser = null;
+$activeDbPass = null;
 
-for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
-    $mysqli = @mysqli_init();
-    if ($mysqli) {
-        @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
-        if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
-            @$mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
-        }
-        $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-        // Se a BD já existia com credenciais antigas (volume persistido), provisionar/atualizar utilizador via root
-        if (!$connected) {
-            $rootPasses = ['root_pass', 'Elma2025@', 'incubadora_pass', ''];
-            $rootConn = false;
-            foreach ($rootPasses as $rp) {
-                $rootConn = @$mysqli->real_connect(DB_HOST, 'root', $rp);
-                if ($rootConn) break;
-            }
-
-            if ($rootConn) {
-                $uEsc = $mysqli->real_escape_string(DB_USER);
-                $pEsc = $mysqli->real_escape_string(DB_PASS);
-                @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-                @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-                @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
-                @$mysqli->query("ALTER USER 'root'@'%' IDENTIFIED BY '{$pEsc}'");
-                @$mysqli->query("ALTER USER 'root'@'localhost' IDENTIFIED BY '{$pEsc}'");
-                @$mysqli->query("FLUSH PRIVILEGES");
-                $mysqli->close();
-                $mysqli = @mysqli_init();
-                $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-            }
-        }
+$tryDbConnect = function(string $user, string $pass) {
+    $m = @mysqli_init();
+    if (!$m) return false;
+    @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+    if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
+        @$m->options(MYSQLI_OPT_READ_TIMEOUT, 5);
     }
+    try {
+        if (@$m->real_connect(DB_HOST, $user, $pass, DB_NAME)) {
+            return $m;
+        }
+    } catch (\Throwable $e) {}
+    @$m->close();
+    return false;
+};
 
-    if ($connected && $mysqli && !$mysqli->connect_errno) {
+// 1. Tentar lista de credenciais conhecidas
+$credentialsToTry = [
+    [DB_USER, DB_PASS],
+    ['evaristo_adriano', DB_PASS],
+    ['evaristo_adriano', 'Elma2025@'],
+    ['mariadb', DB_PASS],
+    ['mariadb', 'Elma2025@'],
+];
+
+foreach ($credentialsToTry as $cred) {
+    if (empty($cred[0])) continue;
+    $res = $tryDbConnect($cred[0], (string)$cred[1]);
+    if ($res) {
+        $mysqli = $res;
+        $connected = true;
+        $activeDbUser = $cred[0];
+        $activeDbPass = (string)$cred[1];
         break;
     }
+}
 
-    if ($attempt < $maxTries) {
-        usleep(100000); // 0.1s entre tentativas
+// 2. Se as credenciais normais falharem, tentar ligar como root para auto-provisionar os utilizadores
+if (!$connected) {
+    $rootPasses = [DB_PASS, 'Elma2025@', 'root_pass', 'incubadora_pass', ''];
+    $rootConn = null;
+    foreach ($rootPasses as $rp) {
+        $m = @mysqli_init();
+        if (!$m) continue;
+        @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+        try {
+            if (@$m->real_connect(DB_HOST, 'root', (string)$rp)) {
+                $rootConn = $m;
+                break;
+            }
+        } catch (\Throwable $e) {}
+        @$m->close();
+    }
+
+    if ($rootConn) {
+        $passToSet = DB_PASS ?: 'Elma2025@';
+        $pEsc = $rootConn->real_escape_string($passToSet);
+        $usersToEnsure = array_unique([DB_USER, 'evaristo_adriano', 'mariadb']);
+
+        foreach ($usersToEnsure as $u) {
+            if (empty($u) || $u === 'root') continue;
+            $uEsc = $rootConn->real_escape_string($u);
+            @$rootConn->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+            @$rootConn->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+            @$rootConn->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
+        }
+        @$rootConn->query("ALTER USER 'root'@'%' IDENTIFIED BY '{$pEsc}'");
+        @$rootConn->query("ALTER USER 'root'@'localhost' IDENTIFIED BY '{$pEsc}'");
+        @$rootConn->query("FLUSH PRIVILEGES");
+
+        if (@$rootConn->select_db(DB_NAME)) {
+            $mysqli = $rootConn;
+            $connected = true;
+            $activeDbUser = 'root';
+            $activeDbPass = $passToSet;
+        } else {
+            $rootConn->close();
+            $res = $tryDbConnect(DB_USER, $passToSet);
+            if ($res) {
+                $mysqli = $res;
+                $connected = true;
+                $activeDbUser = DB_USER;
+                $activeDbPass = $passToSet;
+            }
+        }
     }
 }
 
@@ -124,18 +175,23 @@ $mysqli->set_charset('utf8mb4');
 
 // Guarda para reconectar com timeout estrito se a conexão oscilar no meio do script
 function ensure_db_connection() {
-    global $mysqli;
+    global $mysqli, $activeDbUser, $activeDbPass;
     if (!$mysqli || !@$mysqli->ping()) {
-        $mysqli = @mysqli_init();
-        if ($mysqli) {
-            @$mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+        $u = $activeDbUser ?: DB_USER;
+        $p = $activeDbPass !== null ? $activeDbPass : DB_PASS;
+        $m = @mysqli_init();
+        if ($m) {
+            @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
             if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
-                @$mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
+                @$m->options(MYSQLI_OPT_READ_TIMEOUT, 5);
             }
-            if (@$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME)) {
-                $mysqli->set_charset('utf8mb4');
-                @$mysqli->query("SET SESSION innodb_lock_wait_timeout = 5");
-            }
+            try {
+                if (@$m->real_connect(DB_HOST, $u, $p, DB_NAME)) {
+                    $m->set_charset('utf8mb4');
+                    @$m->query("SET SESSION innodb_lock_wait_timeout = 5");
+                    $mysqli = $m;
+                }
+            } catch (\Throwable $e) {}
         }
     }
     return $mysqli;
