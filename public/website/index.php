@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'inicio';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
 // 1. Processo de candidatura aberto
 $processo = null;
@@ -214,8 +214,8 @@ $labelsEstado = [
                     <div class="w-full md:w-1/2 relative">
                         <div class="absolute -bottom-6 -left-6 w-48 h-48 bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>
                         <div class="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-xl">
-                            <img src="/incubadora_ispsn/assets/img/hero_humano_sn.jpg"
-                                 alt="Talento Humano e Inovação — Incubadora Sol Nascente ISPSN"
+                            <img src="/incubadora_ispsn/assets/img/ilustracao_criatividade.png"
+                                 alt="Inovação e Criatividade — Incubadora Sol Nascente ISPSN"
                                  class="w-full h-64 sm:h-80 md:h-96 object-cover hover:scale-105 transition-transform duration-700">
                             <div class="absolute bottom-4 left-4 right-4 sm:right-auto bg-black/80 backdrop-blur-md text-white px-4 py-3 rounded-xl border border-white/15 flex items-center gap-3">
                                 <img src="/incubadora_ispsn/assets/img/logo_sn_bulb_dark.png" alt="SN" class="w-9 h-9 object-contain shrink-0">

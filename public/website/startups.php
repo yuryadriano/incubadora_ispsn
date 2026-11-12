@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'startups';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
 
 // Processo de candidatura aberto
 $processo = null;

@@ -7,8 +7,8 @@ header('Vary: Accept-Encoding');
 
 $css_version     = ASSET_VERSION;
 $activePage      = 'noticias';
-$fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_humano_sn.jpg';
-$fallbackGenImg  = '/incubadora_ispsn/assets/img/equipa_humana_sn.jpg';
+$fallbackBlogImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+$fallbackGenImg  = '/incubadora_ispsn/assets/img/ilustracao_criatividade.png';
 
 $q   = trim((string)($_GET['q'] ?? ''));
 $cat = trim((string)($_GET['cat'] ?? 'Todas'));
