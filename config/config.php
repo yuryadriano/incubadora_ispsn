@@ -56,12 +56,11 @@ if (function_exists('mysqli_report')) {
     @mysqli_report(MYSQLI_REPORT_OFF);
 }
 
-// Limites estritos de socket e leitura MySQL para impedir bloqueio de workers Apache (504 Gateway Timeout)
+// Limites estritos de socket e leitura MySQL (Fail Fast: máximo 1s por tentativa para impedir 504)
 @ini_set('default_socket_timeout', '2');
-@ini_set('mysqlnd.net_cmd_connect_timeout', '2');
-@ini_set('mysqlnd.net_read_timeout', '5');
+@ini_set('mysqlnd.net_cmd_connect_timeout', '1');
+@ini_set('mysqlnd.net_read_timeout', '3');
 
-// Configuração resiliente ultra-rápida (compatível com Cloudflare, evita 504 Gateway Timeout)
 $connected = false;
 $mysqli = null;
 $activeDbUser = null;
@@ -70,12 +69,24 @@ $activeDbPass = null;
 $tryDbConnect = function(string $user, string $pass) {
     $m = @mysqli_init();
     if (!$m) return false;
-    @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+    @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 1);
     if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
-        @$m->options(MYSQLI_OPT_READ_TIMEOUT, 5);
+        @$m->options(MYSQLI_OPT_READ_TIMEOUT, 3);
     }
     try {
-        if (@$m->real_connect(DB_HOST, $user, $pass, DB_NAME)) {
+        if (@$m->real_connect(DB_HOST, $user, $pass)) {
+            $dbCandidates = array_unique([DB_NAME, 'imcubadora_ispsn', 'incubadora_ispsn']);
+            $selected = false;
+            foreach ($dbCandidates as $dbCand) {
+                if (@$m->select_db($dbCand)) {
+                    $selected = true;
+                    break;
+                }
+            }
+            if (!$selected) {
+                @$m->query("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                @$m->select_db(DB_NAME);
+            }
             return $m;
         }
     } catch (\Throwable $e) {}
@@ -83,73 +94,49 @@ $tryDbConnect = function(string $user, string $pass) {
     return false;
 };
 
-// 1. Tentar lista de credenciais conhecidas
-$credentialsToTry = [
-    [DB_USER, DB_PASS],
-    ['evaristo_adriano', DB_PASS],
-    ['evaristo_adriano', 'Elma2025@'],
-    ['mariadb', DB_PASS],
-    ['mariadb', 'Elma2025@'],
-];
-
-foreach ($credentialsToTry as $cred) {
-    if (empty($cred[0])) continue;
-    $res = $tryDbConnect($cred[0], (string)$cred[1]);
-    if ($res) {
-        $mysqli = $res;
-        $connected = true;
-        $activeDbUser = $cred[0];
-        $activeDbPass = (string)$cred[1];
-        break;
-    }
-}
-
-// 2. Se as credenciais normais falharem, tentar ligar como root para auto-provisionar os utilizadores
-if (!$connected) {
-    $rootPasses = [DB_PASS, 'Elma2025@', 'root_pass', 'incubadora_pass', ''];
-    $rootConn = null;
-    foreach ($rootPasses as $rp) {
-        $m = @mysqli_init();
-        if (!$m) continue;
-        @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
-        try {
-            if (@$m->real_connect(DB_HOST, 'root', (string)$rp)) {
-                $rootConn = $m;
-                break;
-            }
-        } catch (\Throwable $e) {}
-        @$m->close();
-    }
-
-    if ($rootConn) {
-        $passToSet = DB_PASS ?: 'Elma2025@';
-        $pEsc = $rootConn->real_escape_string($passToSet);
-        $usersToEnsure = array_unique([DB_USER, 'evaristo_adriano', 'mariadb']);
-
-        foreach ($usersToEnsure as $u) {
-            if (empty($u) || $u === 'root') continue;
-            $uEsc = $rootConn->real_escape_string($u);
-            @$rootConn->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-            @$rootConn->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-            @$rootConn->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
+// 1. Tentar primeiro as credenciais do ambiente (DB_USER, DB_PASS)
+$mysqli = $tryDbConnect(DB_USER, DB_PASS);
+if ($mysqli) {
+    $connected = true;
+    $activeDbUser = DB_USER;
+    $activeDbPass = DB_PASS;
+} else {
+    // 2. Fallback 1: Testar o utilizador do sistema evaristo_adriano
+    if (DB_USER !== 'evaristo_adriano') {
+        $mysqli = $tryDbConnect('evaristo_adriano', 'Elma2025@');
+        if ($mysqli) {
+            $connected = true;
+            $activeDbUser = 'evaristo_adriano';
+            $activeDbPass = 'Elma2025@';
         }
-        @$rootConn->query("ALTER USER 'root'@'%' IDENTIFIED BY '{$pEsc}'");
-        @$rootConn->query("ALTER USER 'root'@'localhost' IDENTIFIED BY '{$pEsc}'");
-        @$rootConn->query("FLUSH PRIVILEGES");
+    }
 
-        if (@$rootConn->select_db(DB_NAME)) {
-            $mysqli = $rootConn;
+    // 3. Fallback 2: Testar conexão com root (garante 100% de disponibilidade caso utilizadores normais falhem)
+    if (!$connected) {
+        $mysqli = $tryDbConnect('root', 'Elma2025@');
+        if (!$mysqli && DB_PASS !== 'Elma2025@') {
+            $mysqli = $tryDbConnect('root', DB_PASS ?: 'root_pass');
+        }
+        if ($mysqli) {
             $connected = true;
             $activeDbUser = 'root';
-            $activeDbPass = $passToSet;
-        } else {
-            $rootConn->close();
-            $res = $tryDbConnect(DB_USER, $passToSet);
-            if ($res) {
-                $mysqli = $res;
-                $connected = true;
-                $activeDbUser = DB_USER;
-                $activeDbPass = $passToSet;
+            $activeDbPass = 'Elma2025@';
+
+            // Auto-provisionar utilizadores apenas uma vez (sem travar requisições futuras)
+            $lockFile = sys_get_temp_dir() . '/ispsn_db_provisioned.lock';
+            if (!file_exists($lockFile)) {
+                @$mysqli->query("CREATE USER IF NOT EXISTS 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
+                @$mysqli->query("ALTER USER 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
+                @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO 'evaristo_adriano'@'%' WITH GRANT OPTION");
+                if (DB_USER !== 'evaristo_adriano' && !empty(DB_USER)) {
+                    $uEsc = $mysqli->real_escape_string(DB_USER);
+                    $pEsc = $mysqli->real_escape_string(DB_PASS ?: 'Elma2025@');
+                    @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+                    @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+                    @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
+                }
+                @$mysqli->query("FLUSH PRIVILEGES");
+                @touch($lockFile);
             }
         }
     }
@@ -157,9 +144,9 @@ if (!$connected) {
 
 if (!$connected || !$mysqli || $mysqli->connect_errno) {
     $errMessage = ($mysqli && $mysqli->connect_error) ? $mysqli->connect_error : mysqli_connect_error();
-    error_log("DB connection failed after {$maxTries} attempts: " . $errMessage);
+    error_log("DB connection failed: " . $errMessage);
     http_response_code(503);
-    header('Retry-After: 8');
+    header('Retry-After: 3');
     header('Cache-Control: no-cache, no-store, must-revalidate');
     die('<div style="font-family: sans-serif; text-align: center; padding: 50px; color: #333;">
         <h2 style="color:#d97706;">⏳ A Conectar ao Servidor...</h2>
@@ -181,12 +168,16 @@ function ensure_db_connection() {
         $p = $activeDbPass !== null ? $activeDbPass : DB_PASS;
         $m = @mysqli_init();
         if ($m) {
-            @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 2);
+            @$m->options(MYSQLI_OPT_CONNECT_TIMEOUT, 1);
             if (defined('MYSQLI_OPT_READ_TIMEOUT')) {
-                @$m->options(MYSQLI_OPT_READ_TIMEOUT, 5);
+                @$m->options(MYSQLI_OPT_READ_TIMEOUT, 3);
             }
             try {
-                if (@$m->real_connect(DB_HOST, $u, $p, DB_NAME)) {
+                if (@$m->real_connect(DB_HOST, $u, $p)) {
+                    $dbCandidates = array_unique([DB_NAME, 'imcubadora_ispsn', 'incubadora_ispsn']);
+                    foreach ($dbCandidates as $dbCand) {
+                        if (@$m->select_db($dbCand)) break;
+                    }
                     $m->set_charset('utf8mb4');
                     @$m->query("SET SESSION innodb_lock_wait_timeout = 5");
                     $mysqli = $m;

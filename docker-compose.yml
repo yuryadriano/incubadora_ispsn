@@ -29,6 +29,7 @@ services:
     container_name: incubadora_db
     restart: always
     command: >
+      --skip-name-resolve
       --innodb-buffer-pool-size=128M
       --innodb-log-file-size=32M
       --innodb-flush-log-at-trx-commit=2

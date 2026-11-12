@@ -68,14 +68,16 @@ RUN printf '%s\n' \
 RUN printf '%s\n' \
     'ServerTokens Prod' \
     'ServerSignature Off' \
-    'TimeOut 15' \
-    'KeepAlive Off' \
+    'TimeOut 30' \
+    'KeepAlive On' \
+    'MaxKeepAliveRequests 100' \
+    'KeepAliveTimeout 3' \
     '<IfModule mpm_prefork_module>' \
-    '    StartServers             3' \
-    '    MinSpareServers          2' \
-    '    MaxSpareServers          5' \
-    '    MaxRequestWorkers       25' \
-    '    MaxConnectionsPerChild 500' \
+    '    StartServers             4' \
+    '    MinSpareServers          3' \
+    '    MaxSpareServers          6' \
+    '    MaxRequestWorkers       20' \
+    '    MaxConnectionsPerChild 1000' \
     '</IfModule>' \
     > /etc/apache2/conf-available/mpm-tuning.conf \
     && a2enconf mpm-tuning
