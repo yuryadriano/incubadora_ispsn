@@ -13,6 +13,27 @@ $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 // Buscar startups e projetos selecionados/aprovados da Base de Dados
 $projetos = [];
 
+$labelsFase = [
+    'ideacao'   => 'Ideação',
+    'validacao' => 'Validação',
+    'mvp'       => 'MVP',
+    'tracao'    => 'Tração',
+    'mercado'   => 'Mercado',
+];
+$labelsEstado = [
+    'submetido'           => 'Submetido',
+    'em_avaliacao'        => 'Em Avaliação',
+    'aprovado'            => 'Aprovado',
+    'incubado'            => 'Em Incubação',
+    'fundo_investimento'  => 'Fundo Investimento',
+    'concluido'           => 'Concluído',
+    'selecionado'         => 'Selecionado',
+    'convocado'           => 'Convocado',
+    'validado_presencial' => 'Incubado',
+    'registado'           => 'Registado',
+    'convite_enviado'     => 'Selecionado',
+];
+
 // 1. Candidaturas Selecionadas ou Convocadas
 $resCand = $mysqli->query("
     SELECT 
@@ -132,19 +153,25 @@ if ($resProj) {
                     </div>
                 <?php else: ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-                        <?php foreach ($projetos as $idx => $p): ?>
-                            <div class="group relative cursor-pointer" onclick="window.location.href='/incubadora_ispsn/public/website/startups.php'">
+                        <?php foreach ($projetos as $idx => $p): 
+                            $faseKey   = (string)($p['fase'] ?? 'ideacao');
+                            $estadoKey = (string)($p['estado'] ?? 'aprovado');
+                            $faseTxt   = $labelsFase[$faseKey]     ?? ucfirst($faseKey);
+                            $estadoTxt = $labelsEstado[$estadoKey] ?? ucfirst($estadoKey);
+                            $areaTxt   = ucfirst((string)($p['area_tematica'] ?? 'Tecnologia'));
+                        ?>
+                            <div class="group relative cursor-pointer" onclick="openProjetoModal(<?= $idx ?>)">
                                 <div class="absolute -inset-0.5 bg-linear-to-br from-orange-500 to-amber-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500 pointer-events-none"></div>
-                                <div class="relative bg-white rounded-2xl p-6 sm:p-7 border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 transition-all duration-300 flex flex-col justify-between">
+                                <div class="relative bg-white rounded-2xl p-6 sm:p-7 border border-gray-100 shadow-sm group-hover:shadow-xl group-hover:shadow-orange-100/30 transition-all duration-300 flex flex-col justify-between h-full">
                                     <div class="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-orange-500 to-amber-400 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                     <div>
                                         <div class="flex items-center justify-between gap-2 mb-4">
                                             <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-600 border border-orange-100 text-xs font-semibold rounded-full">
                                                 <i class="fa-solid fa-lightbulb text-[10px]"></i>
-                                                <?= htmlspecialchars($p['categoria'] ?? 'Projeto Académico') ?>
+                                                <?= htmlspecialchars($areaTxt) ?>
                                             </span>
                                             <span class="px-2.5 py-1 bg-gray-100 text-gray-700 text-[11px] font-bold rounded-full">
-                                                <?= htmlspecialchars($p['status'] ?? 'Em Incubação') ?>
+                                                <?= htmlspecialchars($estadoTxt) ?> · <?= htmlspecialchars($faseTxt) ?>
                                             </span>
                                         </div>
                                         <h3 class="text-lg sm:text-xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors mb-2 leading-snug">
@@ -213,6 +240,118 @@ if ($resProj) {
             </div>
         </section>
     </main>
+
+    <!-- MODAL DE DETALHES COMPLETOS DO PROJETO -->
+    <?php if (!empty($projetos)): ?>
+    <div id="projetoModal" class="hidden fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-black/75 backdrop-blur-sm" onclick="closeProjetoModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl" onclick="event.stopPropagation()">
+                <!-- Cabeçalho do Modal -->
+                <div class="p-6 sm:p-8 bg-gray-900 text-white relative border-b border-gray-800">
+                    <button type="button" onclick="closeProjetoModal()"
+                            class="absolute top-5 right-5 w-9 h-9 flex items-center justify-center bg-white/10 rounded-full text-white hover:bg-orange-500 transition-all duration-300 cursor-pointer"
+                            title="Fechar detalhes">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                    <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span id="modalProjArea" class="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-500 text-white text-xs font-bold rounded-full uppercase tracking-wide"></span>
+                        <span id="modalProjStatus" class="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 text-white text-xs font-semibold rounded-full"></span>
+                    </div>
+                    <h2 id="modalProjTitle" class="text-2xl sm:text-3xl font-bold text-white leading-snug"></h2>
+                    <p id="modalProjAutor" class="text-gray-300 text-sm mt-2 flex items-center gap-2"></p>
+                </div>
+
+                <!-- Conteúdo com a Descrição Completa -->
+                <div class="max-h-[65vh] overflow-y-auto p-6 sm:p-8 space-y-6">
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-align-left text-orange-500 text-sm"></i>
+                            <h3 class="text-sm font-bold text-black uppercase tracking-wider">Descrição Completa</h3>
+                        </div>
+                        <div id="modalProjDesc" class="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-line bg-gray-50/70 p-5 rounded-xl border border-gray-100"></div>
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="p-5 bg-orange-50 border-l-4 border-orange-500 rounded-r-xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-triangle-exclamation text-orange-500 text-xs"></i>
+                                <h4 class="text-xs font-bold text-black uppercase">Problema que Soluciona</h4>
+                            </div>
+                            <p id="modalProjProb" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
+                        </div>
+                        <div class="p-5 bg-gray-50 border border-gray-200 rounded-xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-lightbulb text-amber-500 text-xs"></i>
+                                <h4 class="text-xs font-bold text-black uppercase">Solução Proposta</h4>
+                            </div>
+                            <p id="modalProjSol" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rodapé do Modal -->
+                <div class="border-t border-gray-100 p-5 sm:p-6 bg-gray-50/80 flex flex-wrap items-center justify-between gap-3">
+                    <span class="text-xs text-gray-500 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-orange-500"></i> Projeto Validado pela Incubadora ISPSN
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <a href="/incubadora_ispsn/public/website/candidatura.php"
+                           class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition-all shadow-sm">
+                            <i class="fa-solid fa-rocket mr-1"></i> Submeter Projeto
+                        </a>
+                        <button type="button" onclick="closeProjetoModal()"
+                                class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const projetosData = <?= json_encode(array_map(function($p) use ($labelsFase, $labelsEstado) {
+        $faseKey   = (string)($p['fase'] ?? 'ideacao');
+        $estadoKey = (string)($p['estado'] ?? 'aprovado');
+        return [
+            'titulo'    => $p['titulo'],
+            'descricao' => $p['descricao'] ?: 'Sem descrição detalhada disponível.',
+            'problema'  => $p['problema'] ?: 'Problema em fase de detalhamento pelo fundador.',
+            'solucao'   => $p['solucao'] ?: 'Solução técnica em validação na Incubadora ISPSN.',
+            'area'      => ucfirst((string)($p['area_tematica'] ?? 'Tecnologia')),
+            'status'    => ($labelsEstado[$estadoKey] ?? ucfirst($estadoKey)) . ' · ' . ($labelsFase[$faseKey] ?? ucfirst($faseKey)),
+            'autor'     => 'Fundador: ' . ($p['autor'] ?? 'Estudante ISPSN'),
+        ];
+    }, $projetos), JSON_UNESCAPED_UNICODE) ?>;
+
+    function openProjetoModal(idx) {
+        const item = projetosData[idx];
+        if (!item) return;
+        document.getElementById('modalProjTitle').textContent = item.titulo;
+        document.getElementById('modalProjAutor').textContent = item.autor;
+        document.getElementById('modalProjArea').textContent = item.area;
+        document.getElementById('modalProjStatus').textContent = item.status;
+        document.getElementById('modalProjDesc').textContent = item.descricao;
+        document.getElementById('modalProjProb').textContent = item.problema;
+        document.getElementById('modalProjSol').textContent = item.solucao;
+        document.getElementById('projetoModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeProjetoModal() {
+        const modal = document.getElementById('projetoModal');
+        if (modal) modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeProjetoModal();
+        }
+    });
+    </script>
+    <?php endif; ?>
 
     <?php require __DIR__ . '/partials/_footer.php'; ?>
 </div>

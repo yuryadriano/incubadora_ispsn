@@ -505,17 +505,26 @@ $labelsEstado = [
                 </div>
                 <div class="max-h-[65vh] overflow-y-auto p-6 sm:p-8 space-y-6">
                     <div>
-                        <h3 class="text-sm font-bold text-black uppercase tracking-wider mb-2">Sobre a Startup</h3>
-                        <p id="modalStDesc" class="text-gray-600 text-sm sm:text-base leading-relaxed"></p>
+                        <div class="flex items-center gap-2 mb-2">
+                            <i class="fa-solid fa-align-left text-orange-500 text-sm"></i>
+                            <h3 class="text-sm font-bold text-black uppercase tracking-wider">Sobre a Startup &amp; Descrição Completa</h3>
+                        </div>
+                        <div id="modalStDesc" class="text-gray-700 text-sm sm:text-base leading-relaxed whitespace-pre-line bg-gray-50/70 p-5 rounded-xl border border-gray-100"></div>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-4">
                         <div class="p-5 bg-orange-50 border-l-4 border-orange-500 rounded-r-xl">
-                            <h4 class="text-xs font-bold text-black uppercase mb-1.5">Problema que Soluciona</h4>
-                            <p id="modalStProb" class="text-gray-600 text-sm leading-relaxed"></p>
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-triangle-exclamation text-orange-500 text-xs"></i>
+                                <h4 class="text-xs font-bold text-black uppercase">Problema que Soluciona</h4>
+                            </div>
+                            <p id="modalStProb" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
                         </div>
-                        <div class="p-5 bg-gray-50 border border-gray-100 rounded-xl">
-                            <h4 class="text-xs font-bold text-black uppercase mb-1.5">Solução Proposta</h4>
-                            <p id="modalStSol" class="text-gray-600 text-sm leading-relaxed"></p>
+                        <div class="p-5 bg-gray-50 border border-gray-200 rounded-xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fa-solid fa-lightbulb text-amber-500 text-xs"></i>
+                                <h4 class="text-xs font-bold text-black uppercase">Solução Proposta</h4>
+                            </div>
+                            <p id="modalStSol" class="text-gray-600 text-sm leading-relaxed whitespace-pre-line"></p>
                         </div>
                     </div>
                 </div>
@@ -589,10 +598,17 @@ $labelsEstado = [
     }
 
     function closeStartupModal() {
-        document.getElementById('startupModal').classList.add('hidden');
+        const modal = document.getElementById('startupModal');
+        if (modal) modal.classList.add('hidden');
         document.body.style.overflow = 'auto';
         isCarouselPaused = false;
     }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeStartupModal();
+        }
+    });
     </script>
     <?php endif; ?>
 
