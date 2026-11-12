@@ -69,6 +69,22 @@ for ($attempt = 1; $attempt <= $maxTries; $attempt++) {
             @$mysqli->options(MYSQLI_OPT_READ_TIMEOUT, 5);
         }
         $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+
+        // Se a BD já existia com credenciais antigas (volume persistido), atualizar utilizador de forma transparente
+        if (!$connected && DB_USER !== 'incubadora_user') {
+            $fallbackConn = @$mysqli->real_connect(DB_HOST, 'incubadora_user', 'incubadora_pass', DB_NAME);
+            if ($fallbackConn) {
+                $uEsc = $mysqli->real_escape_string(DB_USER);
+                $pEsc = $mysqli->real_escape_string(DB_PASS);
+                @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+                @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+                @$mysqli->query("GRANT ALL PRIVILEGES ON `" . DB_NAME . "`.* TO '{$uEsc}'@'%'");
+                @$mysqli->query("FLUSH PRIVILEGES");
+                $mysqli->close();
+                $mysqli = @mysqli_init();
+                $connected = @$mysqli->real_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+            }
+        }
     }
 
     if ($connected && $mysqli && !$mysqli->connect_errno) {
