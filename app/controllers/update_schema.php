@@ -441,7 +441,12 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS `candidatura_historico` (
     KEY `idx_hist_data` (`alterado_em`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-echo "Schema updated v2.6 (Módulo de Convocatórias e Validação Presencial)!";
+// Índices essenciais para desempenho e prevenção de 504 Gateway Timeout
+adicionarIndiceSeNaoExistir($mysqli, 'usuarios', '`perfil`, `activo`', 'idx_usu_perfil_activo');
+adicionarIndiceSeNaoExistir($mysqli, 'projetos', '`estado`, `destaque_publico`, `pontos`', 'idx_proj_estado');
+adicionarIndiceSeNaoExistir($mysqli, 'candidaturas', '`estado`, `criado_em`', 'idx_cand_estado');
+
+echo "Schema updated v2.7 (Otimização de Índices e Prevenção de 504)!";
 ?>
 
 

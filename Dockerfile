@@ -68,27 +68,26 @@ RUN printf '%s\n' \
 RUN printf '%s\n' \
     'ServerTokens Prod' \
     'ServerSignature Off' \
-    'TimeOut 30' \
-    'KeepAlive On' \
-    'MaxKeepAliveRequests 100' \
-    'KeepAliveTimeout 3' \
+    'TimeOut 15' \
+    'KeepAlive Off' \
     '<IfModule mpm_prefork_module>' \
-    '    StartServers             4' \
-    '    MinSpareServers          3' \
-    '    MaxSpareServers          8' \
-    '    MaxRequestWorkers       50' \
-    '    MaxConnectionsPerChild 400' \
+    '    StartServers             3' \
+    '    MinSpareServers          2' \
+    '    MaxSpareServers          5' \
+    '    MaxRequestWorkers       25' \
+    '    MaxConnectionsPerChild 500' \
     '</IfModule>' \
     > /etc/apache2/conf-available/mpm-tuning.conf \
     && a2enconf mpm-tuning
 
 # 8. Configuração de Produção do PHP + OPcache + Limpeza de Sessões
 RUN printf '%s\n' \
-    'max_execution_time = 25' \
-    'max_input_time = 25' \
-    'default_socket_timeout = 5' \
-    'mysqlnd.net_read_timeout = 8' \
-    'memory_limit = 256M' \
+    'max_execution_time = 15' \
+    'max_input_time = 15' \
+    'default_socket_timeout = 3' \
+    'mysqlnd.net_cmd_connect_timeout = 2' \
+    'mysqlnd.net_read_timeout = 5' \
+    'memory_limit = 128M' \
     'post_max_size = 20M' \
     'upload_max_filesize = 16M' \
     'expose_php = Off' \
@@ -96,10 +95,10 @@ RUN printf '%s\n' \
     'session.gc_divisor = 100' \
     'session.gc_maxlifetime = 7200' \
     'opcache.enable = 1' \
-    'opcache.memory_consumption = 128' \
-    'opcache.interned_strings_buffer = 16' \
+    'opcache.memory_consumption = 64' \
+    'opcache.interned_strings_buffer = 8' \
     'opcache.max_accelerated_files = 4000' \
-    'opcache.revalidate_freq = 2' \
+    'opcache.revalidate_freq = 60' \
     'opcache.fast_shutdown = 1' \
     > /usr/local/etc/php/conf.d/zz-production.ini
 

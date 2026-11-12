@@ -18,7 +18,8 @@ services:
       - incubadora_blog_img:/var/www/html/assets/img/blog
       - incubadora_galeria_img:/var/www/html/assets/img/galeria
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - incubadora_network
 
@@ -28,10 +29,15 @@ services:
     container_name: incubadora_db
     restart: always
     command: >
+      --innodb-buffer-pool-size=128M
+      --innodb-log-file-size=32M
+      --innodb-flush-log-at-trx-commit=2
+      --innodb-lock-wait-timeout=5
       --wait-timeout=60
       --interactive-timeout=60
-      --max-connections=200
-      --innodb-lock-wait-timeout=10
+      --max-connections=100
+      --table-open-cache=400
+      --query-cache-type=0
     environment:
       - MYSQL_DATABASE=imcubadora_ispsn
       - MYSQL_USER=incubadora_user
@@ -42,7 +48,7 @@ services:
       - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
       retries: 5
     networks:

@@ -14,7 +14,10 @@ $fallbackBlogImg = '/incubadora_ispsn/assets/img/hero_ispsn_real.jpg';
 $stats = ['startups' => 0, 'mentores' => 0, 'membros' => 0];
 $resStats = $mysqli->query("
     SELECT
-        (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido')) AS total_startups,
+        (
+            (SELECT COUNT(*) FROM candidaturas WHERE estado IN ('selecionado','convocado','validado_presencial','convite_enviado','registado')) +
+            (SELECT COUNT(*) FROM projetos WHERE estado IN ('aprovado','incubado','fundo_investimento','concluido'))
+        ) AS total_startups,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'mentor' AND activo = 1) AS total_mentores,
         (SELECT COUNT(*) FROM usuarios WHERE perfil = 'utilizador' AND activo = 1) AS total_membros
 ");

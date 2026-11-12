@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `activo` tinyint(1) NOT NULL DEFAULT 1,
   `criado_em` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  KEY `idx_usu_perfil_activo` (`perfil`, `activo`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS `projetos` (
   PRIMARY KEY (`id`),
   KEY `id_responsavel` (`id_responsavel`),
   KEY `criado_por` (`criado_por`),
+  KEY `idx_proj_estado` (`estado`, `destaque_publico`, `pontos`),
   CONSTRAINT `projetos_ibfk_1` FOREIGN KEY (`id_responsavel`) REFERENCES `usuarios` (`id`),
   CONSTRAINT `projetos_ibfk_2` FOREIGN KEY (`criado_por`) REFERENCES `usuarios` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -144,7 +146,8 @@ CREATE TABLE IF NOT EXISTS `candidaturas` (
   `tipo_candidato` enum('estudante','pre_licenciado') COLLATE utf8mb4_unicode_ci DEFAULT 'estudante',
   `ip_submissao` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `criado_em` datetime DEFAULT current_timestamp(),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  KEY `idx_cand_estado` (`estado`, `criado_em`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------
