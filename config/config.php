@@ -94,51 +94,55 @@ $tryDbConnect = function(string $user, string $pass) {
     return false;
 };
 
-// 1. Tentar primeiro as credenciais do ambiente (DB_USER, DB_PASS)
-$mysqli = $tryDbConnect(DB_USER, DB_PASS);
-if ($mysqli) {
-    $connected = true;
-    $activeDbUser = DB_USER;
-    $activeDbPass = DB_PASS;
-} else {
-    // 2. Fallback 1: Testar o utilizador do sistema evaristo_adriano
-    if (DB_USER !== 'evaristo_adriano') {
-        $mysqli = $tryDbConnect('evaristo_adriano', 'Elma2025@');
-        if ($mysqli) {
-            $connected = true;
-            $activeDbUser = 'evaristo_adriano';
-            $activeDbPass = 'Elma2025@';
-        }
+// Cache leve da credencial que funcionou (evita falhas de handshake repetidas e max_connect_errors no MariaDB)
+$credCacheFile = sys_get_temp_dir() . '/ispsn_db_cred_' . md5(DB_HOST . '|' . DB_NAME) . '.json';
+$credenciais = [];
+if (is_file($credCacheFile) && (time() - @filemtime($credCacheFile)) < 300) {
+    $cached = @json_decode((string)@file_get_contents($credCacheFile), true);
+    if (is_array($cached) && isset($cached['u'], $cached['p'])) {
+        $credenciais[] = [$cached['u'], $cached['p'], true];
     }
+}
+$credenciais[] = [DB_USER, DB_PASS, false];
+if (DB_USER !== 'evaristo_adriano') {
+    $credenciais[] = ['evaristo_adriano', 'Elma2025@', false];
+}
+$credenciais[] = ['root', 'Elma2025@', false];
+if (DB_PASS !== 'Elma2025@') {
+    $credenciais[] = ['root', DB_PASS ?: 'root_pass', false];
+}
 
-    // 3. Fallback 2: Testar conexão com root (garante 100% de disponibilidade caso utilizadores normais falhem)
-    if (!$connected) {
-        $mysqli = $tryDbConnect('root', 'Elma2025@');
-        if (!$mysqli && DB_PASS !== 'Elma2025@') {
-            $mysqli = $tryDbConnect('root', DB_PASS ?: 'root_pass');
+foreach ($credenciais as [$candUser, $candPass, $fromCache]) {
+    $mysqli = $tryDbConnect((string)$candUser, (string)$candPass);
+    if ($mysqli) {
+        $connected = true;
+        $activeDbUser = (string)$candUser;
+        $activeDbPass = (string)$candPass;
+        if (!$fromCache) {
+            @file_put_contents($credCacheFile, json_encode(['u' => $activeDbUser, 'p' => $activeDbPass]), LOCK_EX);
         }
-        if ($mysqli) {
-            $connected = true;
-            $activeDbUser = 'root';
-            $activeDbPass = 'Elma2025@';
+        break;
+    } elseif ($fromCache) {
+        @unlink($credCacheFile);
+    }
+}
 
-            // Auto-provisionar utilizadores apenas uma vez (sem travar requisições futuras)
-            $lockFile = sys_get_temp_dir() . '/ispsn_db_provisioned.lock';
-            if (!file_exists($lockFile)) {
-                @$mysqli->query("CREATE USER IF NOT EXISTS 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
-                @$mysqli->query("ALTER USER 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
-                @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO 'evaristo_adriano'@'%' WITH GRANT OPTION");
-                if (DB_USER !== 'evaristo_adriano' && !empty(DB_USER)) {
-                    $uEsc = $mysqli->real_escape_string(DB_USER);
-                    $pEsc = $mysqli->real_escape_string(DB_PASS ?: 'Elma2025@');
-                    @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-                    @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
-                    @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
-                }
-                @$mysqli->query("FLUSH PRIVILEGES");
-                @touch($lockFile);
-            }
+if ($connected && $activeDbUser === 'root') {
+    // Auto-provisionar utilizadores apenas uma vez (sem travar requisições futuras)
+    $lockFile = sys_get_temp_dir() . '/ispsn_db_provisioned.lock';
+    if (!file_exists($lockFile)) {
+        @$mysqli->query("CREATE USER IF NOT EXISTS 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
+        @$mysqli->query("ALTER USER 'evaristo_adriano'@'%' IDENTIFIED BY 'Elma2025@'");
+        @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO 'evaristo_adriano'@'%' WITH GRANT OPTION");
+        if (DB_USER !== 'evaristo_adriano' && !empty(DB_USER)) {
+            $uEsc = $mysqli->real_escape_string(DB_USER);
+            $pEsc = $mysqli->real_escape_string(DB_PASS ?: 'Elma2025@');
+            @$mysqli->query("CREATE USER IF NOT EXISTS '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+            @$mysqli->query("ALTER USER '{$uEsc}'@'%' IDENTIFIED BY '{$pEsc}'");
+            @$mysqli->query("GRANT ALL PRIVILEGES ON *.* TO '{$uEsc}'@'%' WITH GRANT OPTION");
         }
+        @$mysqli->query("FLUSH PRIVILEGES");
+        @touch($lockFile);
     }
 }
 

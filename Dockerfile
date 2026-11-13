@@ -65,22 +65,26 @@ RUN printf '%s\n' \
     && a2enconf no-php-uploads
 
 # 7. Tuning do Apache MPM Prefork e Timeouts (Prevenção definitiva de 504 Gateway Timeout)
+# Em proxy reverso (Traefik/Cloudflare), KeepAlive Off liberta o worker imediatamente após cada resposta.
 RUN printf '%s\n' \
     'ServerTokens Prod' \
     'ServerSignature Off' \
-    'TimeOut 30' \
-    'KeepAlive On' \
-    'MaxKeepAliveRequests 100' \
-    'KeepAliveTimeout 3' \
+    'TimeOut 25' \
+    'KeepAlive Off' \
+    'GracefulShutdownTimeout 5' \
     '<IfModule mpm_prefork_module>' \
     '    StartServers             4' \
     '    MinSpareServers          3' \
-    '    MaxSpareServers          6' \
-    '    MaxRequestWorkers       20' \
+    '    MaxSpareServers          8' \
+    '    MaxRequestWorkers       50' \
     '    MaxConnectionsPerChild 1000' \
     '</IfModule>' \
     > /etc/apache2/conf-available/mpm-tuning.conf \
     && a2enconf mpm-tuning
+
+# Healthcheck para Zero-Downtime Deployment no Coolify/Traefik
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+    CMD php -r "exit(@file_get_contents('http://127.0.0.1/health.php') === 'ok' ? 0 : 1);"
 
 # 8. Configuração de Produção do PHP + OPcache + Limpeza de Sessões
 RUN printf '%s\n' \

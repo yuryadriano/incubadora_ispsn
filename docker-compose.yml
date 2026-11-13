@@ -17,6 +17,12 @@ services:
       - incubadora_uploads:/var/www/html/uploads
       - incubadora_blog_img:/var/www/html/assets/img/blog
       - incubadora_galeria_img:/var/www/html/assets/img/galeria
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1/health.php') === 'ok' ? 0 : 1);\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +36,7 @@ services:
     restart: always
     command: >
       --skip-name-resolve
+      --max-connect-errors=10000
       --innodb-buffer-pool-size=128M
       --innodb-log-file-size=32M
       --innodb-flush-log-at-trx-commit=2
