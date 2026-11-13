@@ -3,7 +3,24 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['mentor', 'admin', 'superadmin']);
 
-$idUsuario = (int)$_SESSION['usuario_id'];
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'mentor';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
+if ($isAdminOrSuper && !empty($_GET['id_usuario'])) {
+    $idUsuario = (int)$_GET['id_usuario'];
+    $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ? LIMIT 1");
+    if ($stmtU) {
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uRow = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        if ($uRow) {
+            $nomeUsuario = $uRow['nome'];
+            $perfil = 'mentor';
+        }
+    }
+} else {
+    $idUsuario = (int)$_SESSION['usuario_id'];
+}
 
 // Buscar ID do mentor
 $stmt = $mysqli->prepare("SELECT id FROM mentores WHERE id_usuario = ?");
@@ -82,7 +99,7 @@ require_once __DIR__ . '/../partials/_layout.php';
 <style>
     /* BARRA DE FILTROS AVANÇADA */
     .filter-bar {
-        background: white;
+        background: var(--surface);
         padding: 16px 24px;
         border-radius: 20px;
         border: 1px solid var(--border);
@@ -96,6 +113,8 @@ require_once __DIR__ . '/../partials/_layout.php';
         flex: 1;
         border: none;
         outline: none;
+        background: transparent;
+        color: var(--text-primary);
         font-size: 0.9rem;
         font-weight: 600;
         color: var(--text-primary);
@@ -117,7 +136,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         gap: 24px;
     }
     .startup-card {
-        background: white;
+        background: var(--surface);
         border-radius: 24px;
         padding: 24px;
         border: 1px solid var(--border);

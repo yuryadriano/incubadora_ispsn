@@ -3,7 +3,24 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['mentor', 'admin', 'superadmin']);
 
-$idUsuario = (int)$_SESSION['usuario_id'];
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'mentor';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
+if ($isAdminOrSuper && !empty($_GET['id_usuario'])) {
+    $idUsuario = (int)$_GET['id_usuario'];
+    $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ? LIMIT 1");
+    if ($stmtU) {
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uRow = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        if ($uRow) {
+            $nomeUsuario = $uRow['nome'];
+            $perfil = 'mentor';
+        }
+    }
+} else {
+    $idUsuario = (int)$_SESSION['usuario_id'];
+}
 
 // Buscar startups mentoradas para o dropdown de agendamento
 $stmt = $mysqli->prepare("

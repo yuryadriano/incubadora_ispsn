@@ -141,8 +141,9 @@ require_once __DIR__ . '/../partials/_layout.php';
         display: flex;
         gap: 10px;
         margin-bottom: 25px;
-        border-bottom: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border);
         padding-bottom: 0;
+        flex-wrap: wrap;
     }
     .nav-link-custom {
         padding: 10px 20px;
@@ -157,7 +158,7 @@ require_once __DIR__ . '/../partials/_layout.php';
     .nav-link-custom.active {
         color: var(--primary);
         border-bottom: 2px solid var(--primary);
-        background: rgba(79, 70, 229, 0.05);
+        background: rgba(217, 119, 6, 0.08);
     }
     .tab-content-custom { display: none; transition: opacity 0.3s; }
     .tab-content-custom.active { display: block; opacity: 1; }
@@ -165,8 +166,9 @@ require_once __DIR__ . '/../partials/_layout.php';
     .task-item {
         padding: 15px;
         border-radius: var(--radius);
-        border: 1px solid var(--border-color);
-        background: white;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text-primary);
         margin-bottom: 10px;
         display: flex;
         justify-content: space-between;
@@ -174,9 +176,9 @@ require_once __DIR__ . '/../partials/_layout.php';
         transition: transform 0.2s;
     }
     .task-item:hover { transform: translateX(5px); border-color: var(--primary); }
-    .task-priority-baixa { border-left: 4px solid var(--success); }
-    .task-priority-media { border-left: 4px solid var(--warning); }
-    .task-priority-alta { border-left: 4px solid var(--danger); }
+    .task-priority-baixa { border-left: 4px solid #10B981; }
+    .task-priority-media { border-left: 4px solid #F59E0B; }
+    .task-priority-alta { border-left: 4px solid #EF4444; }
 </style>
 
 <!-- HEADER -->
@@ -666,12 +668,12 @@ require_once __DIR__ . '/../partials/_layout.php';
 
         <!-- TAB 5: CHAT -->
         <div id="tab-chat" class="tab-content-custom">
-            <div class="card-custom border-0 shadow-sm" style="overflow: hidden; border-radius: 20px;">
-                <div class="card-header-custom d-flex justify-content-between align-items-center bg-white border-bottom p-3">
+            <div class="card-custom shadow-sm" style="overflow: hidden; border-radius: 20px;">
+                <div class="card-header-custom d-flex justify-content-between align-items-center border-bottom p-3" style="background:var(--surface); border-color:var(--border) !important;">
                     <div class="card-title-custom mb-0"><i class="fa fa-comments text-primary me-2"></i> Canal de Mentoria Direta</div>
-                    <span class="badge bg-light text-secondary rounded-pill px-3 py-1" style="font-size:0.75rem; border:1px solid var(--border)">Espaço Colaborativo</span>
+                    <span class="badge rounded-pill px-3 py-1" style="background:var(--surface-2); color:var(--text-secondary); font-size:0.75rem; border:1px solid var(--border)">Espaço Colaborativo</span>
                 </div>
-                <div class="card-body-custom p-0 bg-light">
+                <div class="card-body-custom p-0" style="background:var(--surface-2);">
                     <div id="chat-container-ment" style="height: 480px; overflow-y: auto; padding: 24px; display:flex; flex-direction:column; gap:16px;">
                         <?php 
                         $msgQuery = $mysqli->prepare("
@@ -709,8 +711,8 @@ require_once __DIR__ . '/../partials/_layout.php';
                                             <span class="fw-bold"><?= htmlspecialchars($m['nome']) ?></span> 
                                             <span class="badge rounded-pill px-2 py-0.5" style="background:<?= $roleStyle['bg'] ?>; color:<?= $roleStyle['color'] ?>; font-size:0.55rem; font-weight:800; border:1px solid <?= $roleStyle['color'] ?>22;"><?= strtoupper($m['perfil']) ?></span>
                                         </div>
-                                        <div class="p-3 shadow-sm <?= $isMe ? 'bg-primary text-white' : 'bg-white text-dark' ?>" 
-                                             style="border-radius: <?= $isMe ? '18px 18px 2px 18px' : '18px 18px 18px 2px' ?>; font-size: 0.9rem; line-height:1.5; border: <?= $isMe ? 'none' : '1px solid var(--border)' ?>;">
+                                        <div class="p-3 shadow-sm <?= $isMe ? 'text-white' : '' ?>" 
+                                             style="background: <?= $isMe ? 'var(--primary)' : 'var(--surface)' ?>; color: <?= $isMe ? '#fff' : 'var(--text-primary)' ?>; border-radius: <?= $isMe ? '18px 18px 2px 18px' : '18px 18px 18px 2px' ?>; font-size: 0.9rem; line-height:1.5; border: <?= $isMe ? 'none' : '1px solid var(--border)' ?>;">
                                             <div style="white-space: pre-wrap;"><?= htmlspecialchars($m['mensagem']) ?></div>
                                             <div class="mt-1" style="font-size: 0.65rem; opacity: 0.8; text-align: right;">
                                                 <i class="fa fa-clock me-1"></i><?= date('H:i', strtotime($m['criado_at'])) ?>
@@ -721,13 +723,13 @@ require_once __DIR__ . '/../partials/_layout.php';
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>
-                    <div class="p-3 bg-white border-top">
+                    <div class="p-3 border-top" style="background:var(--surface); border-color:var(--border) !important;">
                         <form action="/incubadora_ispsn/app/controllers/projeto_action.php" method="POST" class="d-flex gap-2">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="enviar_mensagem">
                             <input type="hidden" name="id_projeto" value="<?= $idProjeto ?>">
                             <input type="hidden" name="redirect" value="<?= $_SERVER['REQUEST_URI'] ?>#tab-chat">
-                            <textarea name="mensagem" class="form-control" rows="2" placeholder="Escreva a sua mensagem de consultoria..." required style="resize:none; padding:12px; border-radius: 12px; border:1px solid var(--border); font-size:0.875rem;"></textarea>
+                            <textarea name="mensagem" class="form-control" rows="2" placeholder="Escreva a sua mensagem de consultoria..." required style="resize:none; padding:12px; border-radius: 12px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-primary); font-size:0.875rem;"></textarea>
                             <button type="submit" class="btn btn-primary fw-bold text-white d-flex align-items-center justify-content-center px-4" style="border-radius: 12px; background:var(--primary); border:none;">
                                 <i class="fa fa-paper-plane" style="font-size:1.1rem"></i>
                             </button>

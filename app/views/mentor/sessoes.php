@@ -3,7 +3,24 @@
 require_once __DIR__ . '/../../../config/auth.php';
 obrigarPerfil(['mentor', 'admin', 'superadmin']);
 
-$idUsuario = (int)$_SESSION['usuario_id'];
+$realPerfil = $_SESSION['usuario_perfil'] ?? 'mentor';
+$isAdminOrSuper = in_array($realPerfil, ['admin', 'superadmin'], true);
+if ($isAdminOrSuper && !empty($_GET['id_usuario'])) {
+    $idUsuario = (int)$_GET['id_usuario'];
+    $stmtU = $mysqli->prepare("SELECT nome FROM usuarios WHERE id = ? LIMIT 1");
+    if ($stmtU) {
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uRow = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        if ($uRow) {
+            $nomeUsuario = $uRow['nome'];
+            $perfil = 'mentor';
+        }
+    }
+} else {
+    $idUsuario = (int)$_SESSION['usuario_id'];
+}
 
 // Buscar ID do mentor
 $stmt = $mysqli->prepare("SELECT id FROM mentores WHERE id_usuario = ?");
@@ -88,7 +105,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: white;
+        background: var(--surface);
         border: 4px solid var(--primary);
         z-index: 2;
         display: flex;
@@ -97,7 +114,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary), transparent 90%);
     }
     .timeline-card {
-        background: white;
+        background: var(--surface);
         border-radius: 20px;
         padding: 24px;
         border: 1px solid var(--border);
@@ -137,7 +154,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         font-weight: 700;
     }
     .session-topics {
-        background: #f8fafc;
+        background: var(--surface-2);
         padding: 12px 16px;
         border-radius: 12px;
         font-size: 0.875rem;
@@ -161,7 +178,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         justify-content: space-between;
         margin-top: 20px;
         padding-top: 16px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--border);
     }
     .rating-stars { color: #fbbf24; font-size: 0.9rem; }
     
@@ -173,7 +190,7 @@ require_once __DIR__ . '/../partials/_layout.php';
         margin-bottom: 5px;
     }
     .pulse-tag {
-        background: white;
+        background: var(--surface);
         border: 1px solid var(--border);
         padding: 6px 14px;
         border-radius: 50px;

@@ -688,7 +688,7 @@ function abrirModalMeta(idMeta, titulo) {
         <?php else: ?>
             <?php foreach ($mensagensChat as $msg):
                 $souEu = ((int)$msg['id_usuario'] === (int)$idUsuario);
-                $dataEnvio = $msg['data_envio'] ?? ($msg['criado_em'] ?? '');
+                $dataEnvio = $msg['criado_at'] ?? ($msg['data_envio'] ?? ($msg['criado_em'] ?? ''));
             ?>
                 <div class="chat-msg <?= $souEu ? 'me' : 'other' ?>">
                     <?php if (!$souEu): ?>

@@ -149,16 +149,16 @@ if ($idMentor > 0) {
     $tarefasPendentes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
 
-    // Próximas Reuniões
+    // Próximas Reuniões (suporta registos gravados com id_usuario ou id_mentor)
     $proximasReunioes = [];
     $stmt = $mysqli->prepare("
         SELECT r.*, p.titulo as projeto_nome
         FROM reunioes r
         JOIN projetos p ON p.id = r.id_projeto
-        WHERE r.id_mentor = ? AND r.data_reuniao >= NOW() AND r.status = 'agendada'
+        WHERE r.id_mentor IN (?, ?) AND r.data_reuniao >= NOW() AND r.status = 'agendada'
         ORDER BY r.data_reuniao ASC
     ");
-    $stmt->bind_param('i', $idMentor);
+    $stmt->bind_param('ii', $idUsuario, $idMentor);
     $stmt->execute();
     $proximasReunioes = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();

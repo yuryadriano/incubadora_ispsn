@@ -331,7 +331,7 @@ require_once __DIR__ . '/../partials/_layout.php';
                         <i class="fa fa-bullseye"></i> Consultar Metas da Fase
                     </a>
                 </div>
-            <?php elseif (!empty($metasFase)): ?>
+            <?php elseif (!empty($metasFase) || !empty($tarefasPendentes)): ?>
                 <div class="d-flex flex-column gap-3">
                     <?php foreach (array_slice($metasFase, 0, 3) as $mf):
                         $estM = (string)($mf['estado'] ?? 'inactiva');
@@ -359,20 +359,27 @@ require_once __DIR__ . '/../partials/_layout.php';
                             </div>
                         </div>
                     <?php endforeach; ?>
-                </div>
-            <?php elseif (!empty($tarefasPendentes)): ?>
-                <div class="d-flex flex-column gap-2">
-                    <?php foreach ($tarefasPendentes as $t): ?>
-                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--border) !important;">
-                            <div>
-                                <div class="fw-bold" style="font-size:0.88rem;"><?= htmlspecialchars($t['titulo']) ?></div>
-                                <small class="text-muted">Prazo: <?= !empty($t['data_limite']) ? date('d/m/Y', strtotime($t['data_limite'])) : 'Sem prazo' ?></small>
+
+                    <?php if (!empty($tarefasPendentes)): ?>
+                        <div class="pt-1">
+                            <div class="text-muted fw-bold text-uppercase mb-2" style="font-size:0.72rem; letter-spacing:0.5px;">
+                                <i class="fa fa-list-check me-1" style="color:var(--primary)"></i> Tarefas Atribuídas pelo Mentor
                             </div>
-                            <a href="<?= htmlspecialchars($urlMetas) ?>&aba=tarefas" class="btn-primary-custom" style="padding:5px 12px; font-size:0.76rem;">
-                                Entregar Tarefa
-                            </a>
+                            <div class="d-flex flex-column gap-2">
+                                <?php foreach ($tarefasPendentes as $t): ?>
+                                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--border) !important;">
+                                        <div>
+                                            <div class="fw-bold" style="font-size:0.88rem;"><?= htmlspecialchars($t['titulo']) ?></div>
+                                            <small class="text-muted">Prazo: <?= !empty($t['data_limite']) ? date('d/m/Y', strtotime($t['data_limite'])) : 'Sem prazo' ?></small>
+                                        </div>
+                                        <a href="<?= htmlspecialchars($urlMetas) ?>&aba=tarefas" class="btn-primary-custom" style="padding:5px 12px; font-size:0.76rem;">
+                                            Entregar Tarefa
+                                        </a>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
-                    <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">

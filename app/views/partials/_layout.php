@@ -35,6 +35,12 @@ $hrefPainelEstudante = $isSimulando
     ? ('/incubadora_ispsn/app/views/dashboard/utilizador.php' . $qsEstudante)
     : '/incubadora_ispsn/public/index.php';
 
+$isSimulandoMentor = ($perfil === 'mentor' && in_array($realPerfilSessao, ['admin', 'superadmin'], true) && $idUsuario > 0);
+$qsMentor          = $isSimulandoMentor ? ('?id_usuario=' . (int)$idUsuario) : '';
+$hrefPainelMentor  = $isSimulandoMentor
+    ? ('/incubadora_ispsn/app/views/dashboard/mentor.php' . $qsMentor)
+    : '/incubadora_ispsn/public/index.php';
+
 // Contar notificações não lidas
 $naoLidas = 0;
 $stmtN = $mysqli->prepare("SELECT COUNT(*) FROM notificacoes WHERE id_usuario = ? AND lida = 0");
@@ -116,12 +122,12 @@ $menus = [
         ['icon'=>'fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php',           'id'=>'perfil'],
     ],
     'mentor' => [
-        ['icon'=>'fa-solid fa-house',           'label'=>'Painel Mentor',    'href'=>'/incubadora_ispsn/public/index.php',                      'id'=>'dashboard'],
-        ['icon'=>'fa-solid fa-rocket',          'label'=>'Minhas Startups',  'href'=>'/incubadora_ispsn/app/views/mentor/startups.php',        'id'=>'projetos'],
-        ['icon'=>'fa-solid fa-calendar-check', 'label'=>'Sessões Realizadas','href'=>'/incubadora_ispsn/app/views/mentor/sessoes.php',         'id'=>'sessoes'],
-        ['icon'=>'fa-solid fa-calendar-days',  'label'=>'Agenda de Reuniões','href'=>'/incubadora_ispsn/app/views/mentor/agenda.php',          'id'=>'agenda'],
-        ['icon'=>'fa-solid fa-file-lines',      'label'=>'Relatórios',       'href'=>'/incubadora_ispsn/app/views/mentor/relatorios.php',      'id'=>'relatorios'],
-        ['icon'=>'fa-solid fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php',           'id'=>'perfil'],
+        ['icon'=>'fa-solid fa-house',           'label'=>'Painel Mentor',    'href'=>$hrefPainelMentor,                                                                'id'=>'dashboard'],
+        ['icon'=>'fa-solid fa-rocket',          'label'=>'Minhas Startups',  'href'=>'/incubadora_ispsn/app/views/mentor/startups.php' . $qsMentor,                  'id'=>'projetos'],
+        ['icon'=>'fa-solid fa-calendar-check',  'label'=>'Sessões Realizadas','href'=>'/incubadora_ispsn/app/views/mentor/sessoes.php' . $qsMentor,                  'id'=>'sessoes'],
+        ['icon'=>'fa-solid fa-calendar-days',   'label'=>'Agenda de Reuniões','href'=>'/incubadora_ispsn/app/views/mentor/agenda.php' . $qsMentor,                   'id'=>'agenda'],
+        ['icon'=>'fa-solid fa-file-lines',      'label'=>'Relatórios',       'href'=>'/incubadora_ispsn/app/views/mentor/relatorios.php' . $qsMentor,                'id'=>'relatorios'],
+        ['icon'=>'fa-solid fa-user',            'label'=>'Meu Perfil',       'href'=>'/incubadora_ispsn/app/views/auth/perfil.php' . $qsMentor,                      'id'=>'perfil'],
     ],
 ];
 
