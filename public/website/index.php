@@ -556,7 +556,7 @@ $labelsEstado = [
                     <?php foreach ($noticias as $n):
                         $nTituloLower = mb_strtolower((string)($n['titulo'] ?? ''));
                         if (str_contains($nTituloLower, 'inscri') || str_contains($nTituloLower, 'candidatura')) {
-                            $nImg = '/incubadora_ispsn/assets/img/blog/inicio_inscricoes_flyer.jpg?v=' . $css_version;
+                            $nImg = '/incubadora_ispsn/assets/img/inicio_inscricoes_flyer.jpg?v=' . $css_version;
                         } else {
                             $nImg = resolver_imagem_site($n['imagem'] ?? '', $fallbackBlogImg);
                         }

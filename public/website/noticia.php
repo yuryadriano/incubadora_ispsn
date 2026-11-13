@@ -44,7 +44,7 @@ if ($resS) {
 
 $tLower = mb_strtolower((string)($noticia['titulo'] ?? ''));
 if (str_contains($tLower, 'inscri') || str_contains($tLower, 'candidatura')) {
-    $capaNoticia = '/incubadora_ispsn/assets/img/blog/inicio_inscricoes_flyer.jpg?v=' . $css_version;
+    $capaNoticia = '/incubadora_ispsn/assets/img/inicio_inscricoes_flyer.jpg?v=' . $css_version;
 } else {
     $capaNoticia = resolver_imagem_site($noticia['imagem'] ?? '', $fallbackBlogImg);
 }
@@ -142,7 +142,7 @@ if (str_contains($tLower, 'inscri') || str_contains($tLower, 'candidatura')) {
                         <?php foreach ($sugestoes as $s):
                             $sLower = mb_strtolower((string)($s['titulo'] ?? ''));
                             if (str_contains($sLower, 'inscri') || str_contains($sLower, 'candidatura')) {
-                                $imgSug = '/incubadora_ispsn/assets/img/blog/inicio_inscricoes_flyer.jpg?v=' . $css_version;
+                                $imgSug = '/incubadora_ispsn/assets/img/inicio_inscricoes_flyer.jpg?v=' . $css_version;
                             } else {
                                 $imgSug = resolver_imagem_site($s['imagem'] ?? '', $fallbackBlogImg);
                             }
