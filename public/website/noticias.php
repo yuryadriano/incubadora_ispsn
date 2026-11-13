@@ -102,7 +102,12 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
 
                         <!-- Artigo em Destaque -->
                         <?php if ($destaque):
-                            $destImg = resolver_imagem_site($destaque['imagem'] ?? '', $fallbackBlogImg);
+                            $destTituloLower = mb_strtolower((string)($destaque['titulo'] ?? ''));
+                            if (str_contains($destTituloLower, 'inscri') || str_contains($destTituloLower, 'candidatura')) {
+                                $destImg = '/incubadora_ispsn/assets/img/blog/inicio_inscricoes_flyer.jpg?v=' . $css_version;
+                            } else {
+                                $destImg = resolver_imagem_site($destaque['imagem'] ?? '', $fallbackBlogImg);
+                            }
                         ?>
                             <div class="group relative overflow-hidden rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-orange-100/30 transition-all duration-500 bg-white">
                                 <div class="grid md:grid-cols-2 gap-0">
@@ -208,7 +213,7 @@ $emailContacto = get_config('contacto_email', 'incubadora@ispsn.org');
                                     <?php foreach ($noticiasFiltradas as $art):
                                         $tLower = mb_strtolower((string)($art['titulo'] ?? ''));
                                         if (str_contains($tLower, 'inscri') || str_contains($tLower, 'candidatura')) {
-                                            $artImg = '/incubadora_ispsn/assets/img/blog/candidaturas_brevemente.png';
+                                            $artImg = '/incubadora_ispsn/assets/img/blog/inicio_inscricoes_flyer.jpg?v=' . $css_version;
                                         } else {
                                             $artImg = resolver_imagem_site($art['imagem'] ?? '', $fallbackBlogImg);
                                         }
